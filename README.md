@@ -179,6 +179,8 @@ Remaining heuristics do not yet have dedicated live fixture coverage.
 
 ## Project Structure
 
+For Background Agent integration points, constraints and the proposed `src/background/` layout, see [ARCHITECTURE.md](ARCHITECTURE.md).
+
 ```
 src/
 ├── extension.ts              # Entry point: init parser + register commands

@@ -4,3 +4,8 @@ node_modules
 .vscode-test/
 *.vsix
 .env
+
+# Spec Kit (local only)
+.specify/
+**/.claude/skills/speckit-*/
+specs/
