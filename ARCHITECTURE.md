@@ -166,19 +166,19 @@ Every rule below applies to all Background Agent work. The integration points an
 
 ## Proposed modules
 
-**This is a proposal: card 01 creates none of these files.** All new Background Agent code goes under `src/background/`, split by responsibility. Paths are relative to `src/`.
+**This is a proposal. Card 01 created none of these files; card 10 created `background/detector/detector.ts` and its offline test.** All new Background Agent code goes under `src/background/`, split by responsibility. Paths are relative to `src/`.
 
-| path                                    | responsibility                                                                                                                | cards          | dependsOn                                                            | vscodeFree            |
-| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | -------------- | -------------------------------------------------------------------- | --------------------- |
-| `background/detector/detector.ts`       | The detector contract: input, output, error types and the `Detector` interface                                                | 10             | `comment/tcResult.ts`                                                | yes                   |
-| `background/detector/mockDetector.ts`   | Deterministic async mock with configurable delay and an inspectable call counter                                              | 03             | `detector/detector.ts`, `scheduler/clock.ts`                         | yes                   |
-| `background/events/fileEventMonitor.ts` | Turns VS Code open, active-editor and change events for supported Java files into `FileSnapshot`s                             | 02             | `vscode`, scheduler's `SnapshotSink`                                 | no (adapter)          |
-| `background/scheduler/scheduler.ts`     | Per-file state: pending snapshot, coalescing, debounce, cooldown, in-flight dedup, cache check, detector call                 | 05, 06, 07, 08 | `detector/detector.ts`, `cache/resultCache.ts`, `scheduler/clock.ts` | yes                   |
-| `background/scheduler/clock.ts`         | `Clock` interface (`now`, `setTimeout`, `clearTimeout`), plus real and fake implementations                                   | 06, 07, 09     | none                                                                 | yes                   |
-| `background/cache/resultCache.ts`       | SHA-256 content hashing and cache identity (workspace + file URI + content hash + detector version) over a `CacheStore`       | 04             | `detector/detector.ts`, Node `crypto`                                | yes                   |
-| `background/cache/vscodeCacheStore.ts`  | `CacheStore` backed by VS Code extension storage, so results survive Extension Host restarts                                  | 04             | `vscode`, `cache/resultCache.ts`                                     | no (adapter)          |
-| `background/backgroundAgent.ts`         | Composition root: `startBackgroundAgent(context)` wires the monitor, scheduler, cache and detector, and registers disposables | 02–08, 10      | everything above                                                     | no (composition root) |
-| `test/background/*.test.ts`             | Offline unit tests with a fake clock and an in-memory `CacheStore`; never imports `@/utils/claude`                            | 09             | the vscode-free modules above                                        | yes                   |
+| path                                    | responsibility                                                                                                                                  | cards          | dependsOn                                                            | vscodeFree            |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | -------------------------------------------------------------------- | --------------------- |
+| `background/detector/detector.ts`       | **Created on card 10.** The detector contract: input, output, result/failure types, the `Detector` interface, `isCacheable`, `failureFromAbort` | 10             | `comment/tcResult.ts`                                                | yes                   |
+| `background/detector/mockDetector.ts`   | Deterministic async mock with configurable delay and an inspectable call counter                                                                | 03             | `detector/detector.ts`, `scheduler/clock.ts`                         | yes                   |
+| `background/events/fileEventMonitor.ts` | Turns VS Code open, active-editor and change events for supported Java files into `FileSnapshot`s                                               | 02             | `vscode`, scheduler's `SnapshotSink`                                 | no (adapter)          |
+| `background/scheduler/scheduler.ts`     | Per-file state: pending snapshot, coalescing, debounce, cooldown, in-flight dedup, cache check, detector call                                   | 05, 06, 07, 08 | `detector/detector.ts`, `cache/resultCache.ts`, `scheduler/clock.ts` | yes                   |
+| `background/scheduler/clock.ts`         | `Clock` interface (`now`, `setTimeout`, `clearTimeout`), plus real and fake implementations                                                     | 06, 07, 09     | none                                                                 | yes                   |
+| `background/cache/resultCache.ts`       | SHA-256 content hashing and cache identity (workspace + file URI + content hash + detector version) over a `CacheStore`                         | 04             | `detector/detector.ts`, Node `crypto`                                | yes                   |
+| `background/cache/vscodeCacheStore.ts`  | `CacheStore` backed by VS Code extension storage, so results survive Extension Host restarts                                                    | 04             | `vscode`, `cache/resultCache.ts`                                     | no (adapter)          |
+| `background/backgroundAgent.ts`         | Composition root: `startBackgroundAgent(context)` wires the monitor, scheduler, cache and detector, and registers disposables                   | 02–08, 10      | everything above                                                     | no (composition root) |
+| `test/background/*.test.ts`             | Offline unit tests with a fake clock and an in-memory `CacheStore`; never imports `@/utils/claude`                                              | 09             | the vscode-free modules above                                        | yes                   |
 
 Design notes:
 
@@ -189,59 +189,73 @@ Design notes:
 
 ## Proposed contracts
 
-These are proposals from this review. **Card 10 finalises the detector contract, and cards 02 and 05 finalise the event hand-off.**
+The detector contract is agreed on card 10 (pending review). The file-event hand-off is still a proposal, which cards 02 and 05 finalise.
 
 ### Detector (card 10)
+
+**Agreed on card 10, pending the scheduler author's review.** Source: `src/background/detector/detector.ts`, covered by the offline test `src/test/background/detectorContract.test.ts`.
 
 The scheduler talks to a detector only through this interface, so the Sprint 1 mock can be replaced by a live detector without redesigning the scheduler.
 
 ```ts
 import type { TCResult } from '@/comment/tcResult';
 
-/** One immutable snapshot of a supported file, as captured by the event monitor. */
 export interface DetectorInput {
-  workspaceId: string; // stable id of the workspace folder
-  fileUri: string; // document URI as a string
-  languageId: 'java';
-  version: number; // editor document version at capture time
-  contentHash: string; // SHA-256 hex of `content`
-  content: string;
+  readonly workspaceId: string;
+  readonly fileUri: string; // string, not vscode.Uri (C1)
+  readonly languageId: 'java';
+  readonly version: number; // editor document version at capture time
+  readonly contentHash: string; // SHA-256 hex of `content`, computed by the caller
+  readonly content: string;
 }
 
-/** A single finding located in the file. */
 export interface DetectorFinding {
-  result: TCResult; // reuse the existing finding shape
-  line: number; // 0-based insertion/anchor line
+  readonly line: number; // 0-based class/interface declaration line
+  readonly result: TCResult; // existing shape; always is_tc_candidate: true
 }
 
 export interface DetectorOutput {
-  detectorId: string; // e.g. "mock", later "claude"
-  detectorVersion: string; // part of the cache identity (card 04)
-  findings: DetectorFinding[]; // empty array is a valid, cacheable result
+  readonly detectorId: string;
+  readonly detectorVersion: string; // covers code and configuration
+  readonly findings: readonly DetectorFinding[]; // empty = valid, cacheable success
 }
 
-export type DetectorError =
-  | { kind: 'timeout' }
-  | { kind: 'cancelled' }
-  | { kind: 'failed'; message: string };
+export type DetectorFailure =
+  | { readonly kind: 'timeout' }
+  | { readonly kind: 'cancelled' }
+  | { readonly kind: 'failed'; readonly message: string };
+
+export type DetectorResult =
+  | { readonly ok: true; readonly output: DetectorOutput }
+  | { readonly ok: false; readonly failure: DetectorFailure };
 
 export interface Detector {
   readonly id: string;
-  readonly version: string;
-  /** Must not block the editor; must honour `signal`. Rejects with DetectorError. */
-  analyse(input: DetectorInput, signal: AbortSignal): Promise<DetectorOutput>;
+  readonly version: string; // known before any call, so the cache can skip calls
+  analyse(input: DetectorInput, signal: AbortSignal): Promise<DetectorResult>;
 }
+
+export function isCacheable(result: DetectorResult): boolean; // result.ok
+export function failureFromAbort(signal: AbortSignal): DetectorResult; // TimeoutError → 'timeout', else 'cancelled'
 ```
 
-Rules:
+**Failures are returned, not rejected.** Promise rejections can't be typed, and a discriminated union forces every caller to handle the failure branch. It also keeps the contract clear of the repo's `no-throw-literal` lint rule. The card 01 draft rejected with a plain `{ kind }` object, which would have failed lint.
 
-1. **Asynchronous and non-blocking.** `analyse` resolves on a later tick, and editing continues while it runs (card 03).
-2. **No side effects on documents.** A detector never edits text; delivery happens elsewhere.
-3. **Failures are not cached.** Only a resolved `DetectorOutput` is cacheable (card 04).
-4. **Versioned.** Changing `detectorVersion` invalidates cached results (card 04).
-5. **Cancellable.** When the signal is aborted, `analyse` rejects with `{ kind: 'cancelled' }`. The scheduler aborts a request when its file is closed or its result would be superseded and discarded.
+| #   | Rule                                                                                              | Who            |
+| --- | ------------------------------------------------------------------------------------------------- | -------------- |
+| 1   | `analyse` resolves on a later tick and never blocks editing                                       | Every detector |
+| 2   | `analyse` never rejects; problems are returned as `ok: false`                                     | Every detector |
+| 3   | Never edit a document, show UI, or touch `vscode`                                                 | Every detector |
+| 4   | Honour `signal`: once it aborts, resolve promptly with `failureFromAbort(signal)`                 | Every detector |
+| 5   | `output.detectorId`/`detectorVersion` equal `this.id`/`this.version`                              | Every detector |
+| 6   | Findings are candidates only, with the existing `TCResult` shape and a 0-based declaration `line` | Every detector |
+| 7   | Depend only on this module, never on a concrete detector                                          | Every caller   |
+| 8   | Own the timeout policy (`AbortSignal.timeout`, combined with cancellation via `AbortSignal.any`)  | Every caller   |
+| 9   | Cache only when `isCacheable(result)` is true; empty results are cacheable, failures never are    | Card 04        |
+| 10  | Treat an unexpected rejection (a defect) as `{ kind: 'failed', message }`                         | Card 05        |
+| 11  | Never import `@/utils/claude` or `@anthropic-ai/sdk` in Sprint 1                                  | Every detector |
 
-The mock detector (card 03) must have a configurable delay, an inspectable call counter, and deterministic findings for a given `contentHash`. It must never import `@/utils/claude` or `@anthropic-ai/sdk`.
+The mock detector (card 03) adds a configurable delay, an inspectable call counter, and deterministic findings for a given `contentHash`. These are extras on the concrete class, and the scheduler must not depend on them.
 
 ### File events → scheduler (cards 02 and 05)
 
