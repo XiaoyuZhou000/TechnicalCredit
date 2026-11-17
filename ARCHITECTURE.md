@@ -8,6 +8,40 @@ Sprint 1 scope is a mock detector only, with **no live Claude calls**.
 
 ## Build & launch
 
+### Prerequisites
+
+| Tool    | Required                                      | Verified on card 01 |
+| ------- | --------------------------------------------- | ------------------- |
+| Node.js | **20.19+**, 22.13+ or 24+ (ESLint 10's range) | 20.14.0 (see below) |
+| npm     | 10+                                           | 10.7.0              |
+| VS Code | 1.120+ (`engines.vscode`)                     | 1.145.2             |
+
+The README says Node 18+, but ESLint 10 requires `^20.19.0 || ^22.13.0 || >=24`. On Node 20.14, `npm install` prints `EBADENGINE` warnings, yet lint still runs correctly. Use Node 20.19 or newer to avoid the warnings.
+
+No `.env` or API key is needed to build or launch. The `Anthropic` client in `src/utils/claude.ts` is created at import time, and constructing it without a key does not throw (checked against `@anthropic-ai/sdk` 0.127.0). A missing key only surfaces when **Analyse for TC** actually makes a call.
+
+### Steps
+
+From the repository root, the same on Windows, macOS and Linux:
+
+1. `npm install`
+2. `npm run compile`
+3. Open the folder in VS Code and press **F5** ("Run Extension").
+
+### What happens
+
+- **`npm run compile`** runs `tsc --noEmit`, then `eslint src --max-warnings=0`, then `node esbuild.js`. esbuild bundles `src/extension.ts` into `dist/extension.js` (CommonJS, `vscode` external, `@/` alias resolved) and copies `web-tree-sitter.wasm` and `tree-sitter-java.wasm` into `dist/`.
+- **F5** runs the `.vscode/launch.json` "Run Extension" configuration. Its `preLaunchTask` is the default build task `watch`, which runs `watch:tsc` and `watch:esbuild` in parallel, and then it opens an Extension Development Host with `--extensionDevelopmentPath` set to the repository.
+- **Activation**: `activationEvents` is `"*"`, so the extension activates at startup, not when the first command runs. The Background Agent therefore starts with the window.
+- **Java parser**: `setExtensionPath()` loads the tree-sitter WASM from `<extension>/dist`. If nothing has been built, analysis fails at call time, not at activation.
+
+### Verification on card 01
+
+- `npm run compile` exits 0 and produces `dist/extension.js`, `dist/extension.js.map` and both `.wasm` files.
+- `npm run tsc:check` and `npm run lint:check` exit 0.
+- `npm run format:check` passes on CI (Linux). On Windows with `core.autocrlf=true`, every file is checked out with CRLF line endings and Prettier (`endOfLine: lf` by default) flags all of them. This is a line-ending artefact, not a formatting problem: `npx prettier --check . --end-of-line auto` passes. To make the local check match CI, use `git config core.autocrlf input`.
+- F5 launch without `.env`: see [Known issues & follow-ups](#known-issues--follow-ups) for the manual check result.
+
 ## Command reference
 
 ## Integration points
