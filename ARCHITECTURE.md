@@ -149,6 +149,26 @@ The five areas named on card 01, as they stand on `tc-bg-task01-repo-setup`. "At
 - **Constraints**: C1, C6
 - **Serves cards**: 10
 
+## Manual vs background responsibilities
+
+Agreed on card 10. The two paths share building blocks but not control flow.
+
+| Concern                | Manual "Analyse for TC"                                          | Background Agent (Sprint 1)                                   |
+| ---------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------- |
+| Trigger                | The user runs the command                                        | File open, active-editor change, edit (card 02)               |
+| Unit of analysis       | One construct at the cursor                                      | One file snapshot (`DetectorInput`)                           |
+| Detector               | The existing pipeline in `analyse.ts` (live Claude)              | Any `Detector`; in Sprint 1, the mock (card 03)               |
+| Cache                  | None: always bypassed                                            | SHA-256 result cache (card 04)                                |
+| Scheduling             | None: runs immediately                                           | Coalesce, debounce, cooldown, in-flight dedup (cards 05–08)   |
+| Result display         | `PendingAnnotation` preview, which inserts text                  | None in Sprint 1: results go to the cache and inspection only |
+| Live calls in Sprint 1 | Yes, on demand (unchanged)                                       | No                                                            |
+| Shared pieces (future) | `buildContextFromSource`, the prompts, `TCResult`                | The same pieces, wrapped behind a live `Detector`             |
+| Never shared           | `analyseForTC()`'s UI flow; `previewAll` for unsolicited results | —                                                             |
+
+The manual command **bypasses the background cache and all scheduling**, so running it twice on an unchanged class makes the live calls twice. It is **not changed** in Sprint 1.
+
+A future live detector reuses `buildContextFromSource`, the heuristic prompts and the `TCResult` shape. It must not reuse `analyseForTC()` itself (which mixes in active-editor reads, progress and notifications) or call `previewAll` for results the user didn't ask to see.
+
 ## Constraints
 
 Every rule below applies to all Background Agent work. The integration points and proposed modules refer to these ids.
