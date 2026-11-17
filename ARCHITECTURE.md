@@ -29,7 +29,9 @@ If F5 then seems to do nothing, a `watch` task from the failed attempt is probab
 
 The README says Node 18+, but ESLint 10 requires `^20.19.0 || ^22.13.0 || >=24`. On Node 20.14, `npm install` prints `EBADENGINE` warnings, yet lint still runs correctly. Use Node 20.19 or newer to avoid the warnings.
 
-No `.env` or API key is needed to build or launch. The `Anthropic` client in `src/utils/claude.ts` is created at import time, and constructing it without a key does not throw (checked against `@anthropic-ai/sdk` 0.127.0). A missing key only surfaces when **Analyse for TC** actually makes a call.
+No `.env` or API key is needed to build or launch. The `Anthropic` client in `src/utils/claude.ts` is created at import time, and constructing it without a key does not throw (checked against `@anthropic-ai/sdk` 0.127.0). A missing key only surfaces when **Analyse for TC** actually makes a call. It then shows `Analyse for TC failed: Error: Could not resolve authentication method…`.
+
+That error is raised by the SDK's header validation, which runs while the request is being built and before `fetch`, so **no request leaves the machine and nothing is billed**. Verified on card 01 by running the command on `src/test/creational/prototype/Positive.java` with no `.env`. The message doesn't say how to fix it; a friendlier "set `ANTHROPIC_API_KEY` in `.env`" message would be a small follow-up.
 
 ### Steps
 
