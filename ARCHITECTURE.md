@@ -6,6 +6,12 @@ Sprint 1 scope is a mock detector only, with **no live Claude calls**.
 
 ## Overview
 
+Today the extension is **manual and construct-level**. A developer puts the cursor in a Java class, interface, method or field and runs **Analyse for TC**. The extension then makes 8 live Claude calls (one per heuristic), plus one ADR-matching call per candidate, and inserts preview annotations to accept or dismiss.
+
+The Sprint 1 Background Agent adds an **automatic, per-file** path. It watches Java file activity, coalesces, debounces, cools down and deduplicates the triggers, checks a SHA-256 result cache that survives restarts, and only then calls a detector. In Sprint 1 that detector is a deterministic mock.
+
+This document covers how to build and launch the extension, the commands, where the agent attaches to the five existing areas, the constraints it must follow, a proposed `src/background/` layout and contracts, a card-by-card mapping, and the known issues found during the review.
+
 ## Build & launch
 
 ### Prerequisites
@@ -279,3 +285,24 @@ Every Sprint 1 card from 02 to 10 maps to at least one integration point and at 
 | 10 · Shared Detector Interface        | Analysis flow; Context building; Pending-annotation display           | `detector/detector.ts`, `backgroundAgent.ts`        |
 
 ## Known issues & follow-ups
+
+Found during the card 01 review. Only item 1 was fixed on this card; the rest are recorded for follow-up tickets.
+
+| #   | Issue                                                                                                                                                                                  | Status / proposed follow-up                                                                                                |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `compile` and `package` called `npm run lint`, which doesn't exist (the script is `lint:check`), so `npm run compile` failed after the type check.                                     | **Fixed on this card**: both now call `lint:check`.                                                                        |
+| 2   | F5 launch without `.env`.                                                                                                                                                              | **Pending**: the manual check (task T007) result goes here.                                                                |
+| 3   | The only offline test, `src/test/buildContextCore.test.ts`, reads `src/test/mockCode/MockTest.java`, which isn't tracked in git, so it fails.                                          | Not fixed. Restore the fixture or point the test at an existing one.                                                       |
+| 4   | The README Testing section refers to `src/test/mockCode/` and `priorityHeuristicTests/h1…h5`, neither of which exists. The live tests now live under `src/test/creational/prototype/`. | Not fixed. Update the README.                                                                                              |
+| 5   | There is no way to run only offline tests: `npm test` runs everything, including billed live tests.                                                                                    | Not fixed. Propose a `test:offline` script (e.g. `jest src/test/background`) and/or move live tests behind an opt-in flag. |
+| 6   | The README says Node 18+, but ESLint 10 needs Node `^20.19.0 \|\| ^22.13.0 \|\| >=24`.                                                                                                 | Not fixed. Update the README prerequisites.                                                                                |
+| 7   | `@types/vscode` is `^1.138.0` while `engines.vscode` is `^1.120.0`. F5 works, but `vsce package` refuses a types version newer than the engine.                                        | Not fixed. Align the two before packaging.                                                                                 |
+| 8   | `package.json` depends on `anthropic-ai@0.0.10`, an unofficial package from a different publisher than the official `@anthropic-ai/sdk`. Nothing in `src/` or `scripts/` imports it.   | Not fixed. Propose removing it; it is a needless supply-chain exposure (C8: ask the team first).                           |
+| 9   | `npm install` reports 31 vulnerabilities (27 moderate, 2 high, 2 critical).                                                                                                            | Not fixed. Review `npm audit` output; Dependabot PRs cover part of this.                                                   |
+| 10  | `package-lock.json` was written by a newer npm. Running `npm install` with npm 10.7 strips its `libc` fields, which shows up as a spurious diff.                                       | Don't commit that drift (`git checkout -- package-lock.json`). Using a current npm avoids it.                              |
+| 11  | On Windows with `core.autocrlf=true`, `npm run format:check` flags every file (CRLF vs. Prettier's LF), and `npm run format` would rewrite every file.                                 | Not fixed. Use `git config core.autocrlf input` locally, or add a `.gitattributes` with `* text=auto eol=lf`.              |
+| 12  | The README clone URL points at `cielbellerose/TechnicalCredit`, while this checkout's `origin` is the fork `XiaoyuZhou000/TechnicalCredit`.                                            | Not fixed. Confirm which repository the team treats as canonical.                                                          |
+| 13  | `resolveInsertLine` in `src/context/buildContext.ts` uses a non-null assertion (`enclosingClassStartRow!`), which goes against the repository's no-`!` convention.                     | Not fixed. Model the type so the assertion isn't needed.                                                                   |
+| 14  | Live detection is construct-level (it needs a cursor anchor), but the agent is per-file.                                                                                               | Card 10: decide how a live detector picks constructs in a file.                                                            |
+| 15  | Before showing a background result, check it still matches the document's current `contentHash` (US-09).                                                                               | Card 10 follow-up, before any live integration.                                                                            |
+| 16  | `PendingAnnotation` can't show unsolicited background results (see [Pending-annotation display](#pending-annotation-display)).                                                         | Card 10: outline delivery through the labeling UI.                                                                         |
