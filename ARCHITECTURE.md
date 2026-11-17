@@ -315,6 +315,45 @@ Rules:
 3. All listeners are registered through `context.subscriptions`, via `registry.ts`.
 4. Text inserted by the manual **Analyse for TC** preview also fires `onDidChangeTextDocument`. It is treated as a normal edit and absorbed by the debounce, so no special case is needed in Sprint 1.
 
+## Live integration outline
+
+Written on card 10. **None of this is built in Sprint 1.** It records how background findings will reach users, and what must be true before a live detector replaces the mock.
+
+### Delivery through the labeling UI
+
+**Recommended.** The Background Agent never inserts text on its own:
+
+1. When the visible document has a valid cached result with findings, and that result's `contentHash` equals the document's **current** hash, show a "TC suggestion available" CodeLens on each finding's `line`.
+2. Clicking it calls the existing `PendingAnnotation.previewAll` for that file. The edit is then user-initiated, so the current Accept/Dismiss flow is reused unchanged.
+
+**Alternatives considered:**
+
+- **Diagnostics in the Problems panel**: makes no edits, but is a different UI from the team's labeling flow.
+- **Decorations**: noisy, and offers no Accept/Dismiss.
+
+**Gap to fix first:** `previewAll` calls `dismissAll()` across **all** files, so previewing one background suggestion would discard pending previews in other files. Scope that call to the target file before wiring this up.
+
+### Stale-result guard (US-09)
+
+**A prerequisite for live integration.** A result produced for one version of a file must never be shown, or cached as current, against a different version.
+
+- The scheduler drops a result when a newer snapshot of the same file arrived while the detector was running.
+- The display layer re-checks `contentHash` against the document immediately before showing a suggestion.
+
+With the mock this is harmless. With a live detector taking seconds per call, it is the difference between a correct and a misplaced annotation.
+
+### Construct selection
+
+**Open decision.** The live pipeline is construct-level: `buildContextFromSource` needs an anchor line and column. The agent analyses whole files, so a live detector must choose which constructs in a file to analyse.
+
+| Option | Approach                                                                                              | Trade-off                                                                        |
+| ------ | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| (a)    | Analyse every top-level class or interface, calling `buildContextFromSource` at each declaration line | Simplest, and reuses everything; costs 8 live calls per construct                |
+| (b)    | Analyse only the constructs whose text changed since the last cached result                           | Far fewer calls; needs a per-construct hash on top of the file hash              |
+| (c)    | One whole-file prompt                                                                                 | Fewest calls; needs new prompts, which conflicts with C2 (OPRO-tuned heuristics) |
+
+**Recommendation:** (a) for the first live version, then (b) once call volume matters.
+
 ## Card mapping
 
 Every Sprint 1 card from 02 to 10 maps to at least one integration point and at least one proposed module.
@@ -353,6 +392,6 @@ Found during the card 01 review. Only item 1 was fixed on this card; the rest ar
 | 11  | On Windows with `core.autocrlf=true`, `npm run format:check` flags every file (CRLF vs. Prettier's LF), and `npm run format` would rewrite every file.                                                                                                             | Not fixed. Use `git config core.autocrlf input` locally, or add a `.gitattributes` with `* text=auto eol=lf`.                             |
 | 12  | The README clone URL points at `cielbellerose/TechnicalCredit`, while this checkout's `origin` is the fork `XiaoyuZhou000/TechnicalCredit`.                                                                                                                        | Not fixed. Confirm which repository the team treats as canonical.                                                                         |
 | 13  | `resolveInsertLine` in `src/context/buildContext.ts` uses a non-null assertion (`enclosingClassStartRow!`), which goes against the repository's no-`!` convention.                                                                                                 | Not fixed. Model the type so the assertion isn't needed.                                                                                  |
-| 14  | Live detection is construct-level (it needs a cursor anchor), but the agent is per-file.                                                                                                                                                                           | Card 10: decide how a live detector picks constructs in a file.                                                                           |
-| 15  | Before showing a background result, check it still matches the document's current `contentHash` (US-09).                                                                                                                                                           | Card 10 follow-up, before any live integration.                                                                                           |
-| 16  | `PendingAnnotation` can't show unsolicited background results (see [Pending-annotation display](#pending-annotation-display)).                                                                                                                                     | Card 10: outline delivery through the labeling UI.                                                                                        |
+| 14  | Live detection is construct-level (it needs a cursor anchor), but the agent is per-file.                                                                                                                                                                           | Outlined on card 10, not built: see [Construct selection](#construct-selection).                                                          |
+| 15  | Before showing a background result, check it still matches the document's current `contentHash` (US-09).                                                                                                                                                           | Outlined on card 10, not built; a prerequisite for live integration: see [Stale-result guard (US-09)](#stale-result-guard-us-09).         |
+| 16  | `PendingAnnotation` can't show unsolicited background results (see [Pending-annotation display](#pending-annotation-display)).                                                                                                                                     | Outlined on card 10, not built: see [Delivery through the labeling UI](#delivery-through-the-labeling-ui).                                |
