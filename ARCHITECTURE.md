@@ -44,6 +44,29 @@ From the repository root, the same on Windows, macOS and Linux:
 
 ## Command reference
 
+Run every command from the repository root. **Billed** commands make live Claude calls, cost money, and need `ANTHROPIC_API_KEY` in `.env`. Run them only when asked (C3).
+
+| command                | purpose                                                                                            | when                                                      | cost       |
+| ---------------------- | -------------------------------------------------------------------------------------------------- | --------------------------------------------------------- | ---------- |
+| `npm install`          | Install dependencies from `package-lock.json`                                                      | First setup, or after the lockfile changes                | free       |
+| `npm run compile`      | Type-check, lint (zero warnings), then bundle to `dist/`                                           | Before a manual launch or a PR                            | free       |
+| `npm run watch`        | `watch:tsc` and `watch:esbuild` in parallel                                                        | While developing; F5 starts it automatically              | free       |
+| F5 "Run Extension"     | Run the `watch` task and open an Extension Development Host                                        | To try the extension by hand                              | free¹      |
+| `npm run tsc:check`    | Type-check only (`tsc --noEmit`)                                                                   | Any time; CI job `tsc-check`                              | free       |
+| `npm run lint:check`   | `eslint src --max-warnings=0`                                                                      | Any time; CI job `lint-check`                             | free       |
+| `npm run lint:fix`     | Auto-fix lint issues                                                                               | When `lint:check` fails on fixable rules                  | free       |
+| `npm run format`       | `prettier --write .`                                                                               | Before pushing (see the Windows line-ending note above)   | free       |
+| `npm run format:check` | `prettier --check .`                                                                               | Any time; CI job `format-check`                           | free       |
+| `npx jest <path>`      | Run only the Jest tests under `<path>`, e.g. `npx jest src/test/background`                        | Offline unit tests for the Background Agent               | free²      |
+| `npm test`             | Run **every** `src/**/*.test.ts`, including the live heuristic tests; `dotenv/config` loads `.env` | Only when explicitly asked                                | **billed** |
+| `npm run package`      | Production build (minified, no sourcemaps)                                                         | Release builds                                            | free       |
+| `npm run opro`         | Bundle and run `scripts/opro.ts`, which regenerates the heuristic prompts using Claude             | Only when explicitly asked; it rewrites the tuned prompts | **billed** |
+
+¹ Launching is free. Clicking **Analyse for TC** in the host makes 8 or more live calls, which are billed.
+² Free only when `<path>` holds offline tests alone. `src/test/creational/prototype/*.test.ts` are live tests, so never point `npx jest` at `src/test` as a whole.
+
+CI runs three checks on every PR, and all must pass: `tsc-check`, `lint-check` and `format-check`.
+
 ## Integration points
 
 The five areas named on card 01, as they stand on `tc-bg-task01-repo-setup`. "Attachment" says how the Background Agent connects to each one. Constraint ids refer to [Constraints](#constraints).
@@ -124,22 +147,135 @@ Every rule below applies to all Background Agent work. The integration points an
 
 ## Proposed modules
 
+**This is a proposal: card 01 creates none of these files.** All new Background Agent code goes under `src/background/`, split by responsibility. Paths are relative to `src/`.
+
+| path                                    | responsibility                                                                                                                | cards          | dependsOn                                                            | vscodeFree            |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | -------------- | -------------------------------------------------------------------- | --------------------- |
+| `background/detector/detector.ts`       | The detector contract: input, output, error types and the `Detector` interface                                                | 10             | `comment/tcResult.ts`                                                | yes                   |
+| `background/detector/mockDetector.ts`   | Deterministic async mock with configurable delay and an inspectable call counter                                              | 03             | `detector/detector.ts`, `scheduler/clock.ts`                         | yes                   |
+| `background/events/fileEventMonitor.ts` | Turns VS Code open, active-editor and change events for supported Java files into `FileSnapshot`s                             | 02             | `vscode`, scheduler's `SnapshotSink`                                 | no (adapter)          |
+| `background/scheduler/scheduler.ts`     | Per-file state: pending snapshot, coalescing, debounce, cooldown, in-flight dedup, cache check, detector call                 | 05, 06, 07, 08 | `detector/detector.ts`, `cache/resultCache.ts`, `scheduler/clock.ts` | yes                   |
+| `background/scheduler/clock.ts`         | `Clock` interface (`now`, `setTimeout`, `clearTimeout`), plus real and fake implementations                                   | 06, 07, 09     | none                                                                 | yes                   |
+| `background/cache/resultCache.ts`       | SHA-256 content hashing and cache identity (workspace + file URI + content hash + detector version) over a `CacheStore`       | 04             | `detector/detector.ts`, Node `crypto`                                | yes                   |
+| `background/cache/vscodeCacheStore.ts`  | `CacheStore` backed by VS Code extension storage, so results survive Extension Host restarts                                  | 04             | `vscode`, `cache/resultCache.ts`                                     | no (adapter)          |
+| `background/backgroundAgent.ts`         | Composition root: `startBackgroundAgent(context)` wires the monitor, scheduler, cache and detector, and registers disposables | 02–08, 10      | everything above                                                     | no (composition root) |
+| `test/background/*.test.ts`             | Offline unit tests with a fake clock and an in-memory `CacheStore`; never imports `@/utils/claude`                            | 09             | the vscode-free modules above                                        | yes                   |
+
+Design notes:
+
+- **The scheduler owns all per-file state.** Card 07 defines the earliest start as `max(lastChange + debounce, lastCompletion + cooldown)`, which needs debounce, cooldown, coalescing and in-flight state together. Separate wrappers would each repeat the same bookkeeping.
+- **Time is injected.** The scheduler and mock detector read time only through `Clock`, so card 09's fake-clock tests and the scripted 0 → 1 → 2 → 2 demo are deterministic without patching globals.
+- **No new dependencies.** Hashing uses `crypto.createHash('sha256')`, and storage goes through a small `CacheStore` interface, so tests use an in-memory store (C8).
+- **The dependency direction is one way**: adapters → core. Only the three "no" rows import `vscode` (C1), and nothing under `background/` imports `@/utils/claude` (C7).
+
 ## Proposed contracts
+
+These are proposals from this review. **Card 10 finalises the detector contract, and cards 02 and 05 finalise the event hand-off.**
+
+### Detector (card 10)
+
+The scheduler talks to a detector only through this interface, so the Sprint 1 mock can be replaced by a live detector without redesigning the scheduler.
+
+```ts
+import type { TCResult } from '@/comment/tcResult';
+
+/** One immutable snapshot of a supported file, as captured by the event monitor. */
+export interface DetectorInput {
+  workspaceId: string; // stable id of the workspace folder
+  fileUri: string; // document URI as a string
+  languageId: 'java';
+  version: number; // editor document version at capture time
+  contentHash: string; // SHA-256 hex of `content`
+  content: string;
+}
+
+/** A single finding located in the file. */
+export interface DetectorFinding {
+  result: TCResult; // reuse the existing finding shape
+  line: number; // 0-based insertion/anchor line
+}
+
+export interface DetectorOutput {
+  detectorId: string; // e.g. "mock", later "claude"
+  detectorVersion: string; // part of the cache identity (card 04)
+  findings: DetectorFinding[]; // empty array is a valid, cacheable result
+}
+
+export type DetectorError =
+  | { kind: 'timeout' }
+  | { kind: 'cancelled' }
+  | { kind: 'failed'; message: string };
+
+export interface Detector {
+  readonly id: string;
+  readonly version: string;
+  /** Must not block the editor; must honour `signal`. Rejects with DetectorError. */
+  analyse(input: DetectorInput, signal: AbortSignal): Promise<DetectorOutput>;
+}
+```
+
+Rules:
+
+1. **Asynchronous and non-blocking.** `analyse` resolves on a later tick, and editing continues while it runs (card 03).
+2. **No side effects on documents.** A detector never edits text; delivery happens elsewhere.
+3. **Failures are not cached.** Only a resolved `DetectorOutput` is cacheable (card 04).
+4. **Versioned.** Changing `detectorVersion` invalidates cached results (card 04).
+5. **Cancellable.** When the signal is aborted, `analyse` rejects with `{ kind: 'cancelled' }`. The scheduler aborts a request when its file is closed or its result would be superseded and discarded.
+
+The mock detector (card 03) must have a configurable delay, an inspectable call counter, and deterministic findings for a given `contentHash`. It must never import `@/utils/claude` or `@anthropic-ai/sdk`.
+
+### File events → scheduler (cards 02 and 05)
+
+The event monitor is the only background module that touches VS Code document events. It turns them into plain snapshots for the vscode-free scheduler.
+
+| VS Code event                        | Emits a snapshot when                                       |
+| ------------------------------------ | ----------------------------------------------------------- |
+| `workspace.onDidOpenTextDocument`    | the document is supported                                   |
+| `window.onDidChangeActiveTextEditor` | the newly active document is supported                      |
+| `workspace.onDidChangeTextDocument`  | the document is supported and `contentChanges` is non-empty |
+| Already-open documents at activation | each supported document, once                               |
+
+**Supported** means `languageId === 'java'` and `uri.scheme === 'file'`. Everything else (`untitled`, `git`, output channels, non-Java files) is ignored without an error.
+
+```ts
+export type TriggerKind = 'open' | 'activate' | 'edit' | 'startup';
+
+export interface FileSnapshot {
+  workspaceId: string;
+  fileUri: string;
+  languageId: 'java';
+  version: number;
+  content: string;
+  trigger: TriggerKind;
+  observedAt: number; // from the injected Clock, not Date.now()
+}
+
+export interface SnapshotSink {
+  submit(snapshot: FileSnapshot): void; // synchronous, never throws, never calls a detector
+}
+```
+
+Rules:
+
+1. `submit` only records state. Hashing, coalescing, debounce, cooldown and dedup all happen in the scheduler.
+2. Two snapshots with the same `fileUri` and `version` count as duplicates and are coalesced into one pending entry (card 05).
+3. All listeners are registered through `context.subscriptions`, via `registry.ts`.
+4. Text inserted by the manual **Analyse for TC** preview also fires `onDidChangeTextDocument`. It is treated as a normal edit and absorbed by the debounce, so no special case is needed in Sprint 1.
 
 ## Card mapping
 
 Every Sprint 1 card from 02 to 10 maps to at least one integration point and at least one proposed module.
 
-| Card                                  | Integration points                                                    | Proposed modules |
-| ------------------------------------- | --------------------------------------------------------------------- | ---------------- |
-| 02 · Java File Event Monitoring       | Command registry (listeners registered as disposables)                |                  |
-| 03 · Asynchronous Mock Detector       | Context building (shape it must stay compatible with)                 |                  |
-| 04 · SHA-256 Persistent Result Cache  | Command registry (extension storage from `context`)                   |                  |
-| 05 · Event Coalescing                 | Command registry (via the composition root)                           |                  |
-| 06 · Per-file Debounce                | Command registry (timers disposed on deactivation)                    |                  |
-| 07 · Per-file Cooldown                | Command registry (timers disposed on deactivation)                    |                  |
-| 08 · In-flight Deduplication          | Command registry (via the composition root)                           |                  |
-| 09 · Auto Save / Restart Tests & Demo | Command registry (agent is re-created on each Extension Host restart) |                  |
-| 10 · Shared Detector Interface        | Analysis flow; Context building; Pending-annotation display           |                  |
+| Card                                  | Integration points                                                    | Proposed modules                                    |
+| ------------------------------------- | --------------------------------------------------------------------- | --------------------------------------------------- |
+| 02 · Java File Event Monitoring       | Command registry (listeners registered as disposables)                | `events/fileEventMonitor.ts`, `backgroundAgent.ts`  |
+| 03 · Asynchronous Mock Detector       | Context building (shape it must stay compatible with)                 | `detector/mockDetector.ts`                          |
+| 04 · SHA-256 Persistent Result Cache  | Command registry (extension storage from `context`)                   | `cache/resultCache.ts`, `cache/vscodeCacheStore.ts` |
+| 05 · Event Coalescing                 | Command registry (via the composition root)                           | `scheduler/scheduler.ts`                            |
+| 06 · Per-file Debounce                | Command registry (timers disposed on deactivation)                    | `scheduler/scheduler.ts`, `scheduler/clock.ts`      |
+| 07 · Per-file Cooldown                | Command registry (timers disposed on deactivation)                    | `scheduler/scheduler.ts`, `scheduler/clock.ts`      |
+| 08 · In-flight Deduplication          | Command registry (via the composition root)                           | `scheduler/scheduler.ts`                            |
+| 09 · Auto Save / Restart Tests & Demo | Command registry (agent is re-created on each Extension Host restart) | `test/background/*.test.ts`, `scheduler/clock.ts`   |
+| 10 · Shared Detector Interface        | Analysis flow; Context building; Pending-annotation display           | `detector/detector.ts`, `backgroundAgent.ts`        |
 
 ## Known issues & follow-ups
