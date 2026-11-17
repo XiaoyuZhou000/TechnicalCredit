@@ -46,6 +46,67 @@ From the repository root, the same on Windows, macOS and Linux:
 
 ## Integration points
 
+The five areas named on card 01, as they stand on `tc-bg-task01-repo-setup`. "Attachment" says how the Background Agent connects to each one. Constraint ids refer to [Constraints](#constraints).
+
+### Activation entry point
+
+- **Location**: `src/extension.ts`
+- **Owns**: `activate()` calls `setExtensionPath(context.extensionPath)`, which starts loading the Java parser's WASM from `dist/`, and then `register(context)`. `deactivate()` is empty, because everything is disposed through `context.subscriptions`.
+- **Attachment**: none. All wiring belongs in the command registry, so this file stays two lines of logic.
+- **Constraints**: C1
+- **Serves cards**: none, since nothing attaches here.
+
+### Command registry
+
+- **Location**: `src/registry.ts`
+- **Owns**: creates the single `PendingAnnotation` controller, registers it as a CodeLens provider for `file:` documents, and registers the `technicalcredit.analyseForTC`, `technicalcredit.acceptTCComment` and `technicalcredit.dismissTCComment` commands. Every disposable goes into `context.subscriptions`.
+- **Attachment**: add one call, `startBackgroundAgent(context)`, from `src/background/backgroundAgent.ts`. That function registers its own listeners, timers and storage adapter as disposables, so deactivation cleans them up the same way as the existing commands. The existing registrations are left as they are.
+- **Constraints**: C1, C7
+- **Serves cards**: 02, 04, 10
+
+### Analysis flow
+
+- **Location**: `src/analyse.ts`
+- **Owns**: the manual **Analyse for TC** command, `analyseForTC(controller)`:
+  1. reads `window.activeTextEditor`, then `buildContext(editor)`;
+  2. `findAdrs(workspaceRoot)`, then `createUserPrompt(context)`;
+  3. inside `withProgress`, makes one `callClaude` per entry in `HEURISTIC_CATEGORIES` in parallel (8 live calls);
+  4. for each candidate, when ADRs exist, makes one more ADR-matching `callClaude`;
+  5. `formatTCComment`, then `controller.previewAll(...)`.
+
+  Errors surface as VS Code notifications.
+
+- **Attachment**: none in Sprint 1. The background path must **not** call `analyseForTC`. It mixes UI (active editor, progress, notifications, preview) with the pipeline, and it makes live calls. The manual command bypasses the background cache and scheduler, and keeps its current behaviour. A future live detector would reuse the pipeline pieces (`buildContextFromSource`, `createUserPrompt`, the heuristic prompts, and `TCResult`), not this function.
+- **Constraints**: C2, C5, C6, C7
+- **Serves cards**: 10 (splitting manual and background responsibilities)
+
+### Context building
+
+- **Location**: `src/context/buildContext.ts`
+- **Owns**:
+  - `buildContextFromSource(source, anchorLine, anchorCol, languageId, fileName)` is pure and vscode-free. It extracts imports and the package line, gets Java construct metrics from the tree-sitter parser, and resolves the insert line and indent. It returns `TcContext`, or `null` when the anchor is not inside a supported construct or the language isn't Java.
+  - `buildContext(editor)` is a thin VS Code wrapper that supplies the cursor anchor.
+- **Attachment**: the future live detector reuses `buildContextFromSource` unchanged. The pipeline is **construct-level** (it needs an anchor line and column), while the Background Agent works **per file**, so a live detector has to decide which constructs in a file to analyse. That open item belongs to card 10. The Sprint 1 mock detector doesn't need this module.
+- **Constraints**: C1
+- **Serves cards**: 03, 10
+
+### Pending-annotation display
+
+- **Location**: `src/comment/pendingAnnotation.ts`
+- **Owns**: `PendingAnnotation` (a CodeLens provider and disposable).
+  - `previewAll(editor, texts, insertLine)` first calls `dismissAll()` across **all** files, then inserts real comment text above `insertLine` in the given visible editor and dims it with a decoration.
+  - The Accept and Dismiss CodeLenses then keep or delete that text and shift the ranges of the items below.
+- **Attachment**: none in Sprint 1. It is unsuitable for unsolicited background results:
+  - it edits the document the user may be typing in;
+  - it wipes every other pending preview;
+  - it needs a visible editor;
+  - its own insertions fire `onDidChangeTextDocument`, which would retrigger the agent.
+
+  Card 10 outlines result delivery through the labeling UI before any live integration.
+
+- **Constraints**: C1, C6
+- **Serves cards**: 10
+
 ## Constraints
 
 Every rule below applies to all Background Agent work. The integration points and proposed modules refer to these ids.
@@ -66,5 +127,19 @@ Every rule below applies to all Background Agent work. The integration points an
 ## Proposed contracts
 
 ## Card mapping
+
+Every Sprint 1 card from 02 to 10 maps to at least one integration point and at least one proposed module.
+
+| Card                                  | Integration points                                                    | Proposed modules |
+| ------------------------------------- | --------------------------------------------------------------------- | ---------------- |
+| 02 · Java File Event Monitoring       | Command registry (listeners registered as disposables)                |                  |
+| 03 · Asynchronous Mock Detector       | Context building (shape it must stay compatible with)                 |                  |
+| 04 · SHA-256 Persistent Result Cache  | Command registry (extension storage from `context`)                   |                  |
+| 05 · Event Coalescing                 | Command registry (via the composition root)                           |                  |
+| 06 · Per-file Debounce                | Command registry (timers disposed on deactivation)                    |                  |
+| 07 · Per-file Cooldown                | Command registry (timers disposed on deactivation)                    |                  |
+| 08 · In-flight Deduplication          | Command registry (via the composition root)                           |                  |
+| 09 · Auto Save / Restart Tests & Demo | Command registry (agent is re-created on each Extension Host restart) |                  |
+| 10 · Shared Detector Interface        | Analysis flow; Context building; Pending-annotation display           |                  |
 
 ## Known issues & follow-ups
