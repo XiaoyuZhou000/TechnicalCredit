@@ -259,7 +259,7 @@ export function isCacheable(result: DetectorResult): boolean; // result.ok
 export function failureFromAbort(signal: AbortSignal): DetectorResult; // TimeoutError → 'timeout', else 'cancelled'
 ```
 
-**Failures are returned, not rejected.** Promise rejections can't be typed, and a discriminated union forces every caller to handle the failure branch. It also keeps the contract clear of the repo's `no-throw-literal` lint rule. The card 01 draft rejected with a plain `{ kind }` object, which would have failed lint.
+**Failures are returned, not rejected.** Promise rejections can't be typed, and a discriminated union forces every caller to handle the failure branch. It also makes the caching rule a single `ok` check, and keeps expected outcomes like cancellation out of exception handling. The card 01 draft rejected with a plain `{ kind }` object. That would fail the repo's `no-throw-literal` lint rule if written as `throw { kind: … }` in an `async` method, though not if written as `Promise.reject(…)`.
 
 | #   | Rule                                                                                              | Who            |
 | --- | ------------------------------------------------------------------------------------------------- | -------------- |
