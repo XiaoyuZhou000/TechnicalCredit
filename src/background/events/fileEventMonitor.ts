@@ -29,7 +29,11 @@ export function startFileEventMonitor(
     vscode.workspace.onDidChangeTextDocument((e) =>
       handler.changed(e.document, e.contentChanges.length),
     ),
+    vscode.workspace.onDidSaveTextDocument((doc) => handler.saved(doc)),
+    vscode.workspace.onDidCloseTextDocument((doc) => handler.closed(doc)),
   ];
+
+  handler.startup(vscode.workspace.textDocuments);
 
   return vscode.Disposable.from(...listeners, {
     dispose: () => handler.stop(),

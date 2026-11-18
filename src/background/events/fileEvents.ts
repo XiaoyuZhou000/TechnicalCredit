@@ -84,6 +84,33 @@ export class FileEventHandler<D extends MonitoredDocument> {
     this.forward(doc, 'edit');
   }
 
+  startup(docs: readonly D[]): void {
+    for (const doc of docs) {
+      this.forward(doc, 'startup');
+    }
+  }
+
+  /**
+   * Saves don't change the version, so this repeats the last edit's version and text.
+   * Whether a save triggers analysis is the scheduler's decision (card 05).
+   */
+  saved(doc: D): void {
+    this.forward(doc, 'save');
+  }
+
+  /** Only reports the close; the scheduler decides what happens to pending or in-flight work. */
+  closed(doc: D): void {
+    if (this.stopped || !isSupported(doc)) {
+      return;
+    }
+    const notice: FileClosedNotice = {
+      workspaceId: this.workspaceIdFor(doc),
+      fileUri: doc.uri.toString(),
+      observedAt: this.options.now(),
+    };
+    this.deliver(() => this.options.sink.closed(notice));
+  }
+
   stop(): void {
     this.stopped = true;
   }

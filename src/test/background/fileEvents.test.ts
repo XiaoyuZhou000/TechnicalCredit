@@ -201,3 +201,81 @@ describe('US2', () => {
     expect(sink.snapshots).toEqual([]);
   });
 });
+
+describe('US3', () => {
+  const notes = (): FakeDoc =>
+    fakeDoc({ uri: 'file:///w/notes.txt', languageId: 'plaintext' });
+
+  it('reports each supported document already open at startup once', () => {
+    const { handler, sink } = makeHandler();
+    handler.startup([fakeDoc(), notes(), fakeDoc({ uri: 'file:///w/B.java' })]);
+
+    expect(sink.snapshots.map((s) => [s.trigger, s.fileUri])).toEqual([
+      ['startup', 'file:///w/A.java'],
+      ['startup', 'file:///w/B.java'],
+    ]);
+  });
+
+  it('forwards a save with the current version and text', () => {
+    const { handler, sink } = makeHandler();
+    handler.saved(fakeDoc({ version: 5, text: 'class A { }' }));
+
+    expect(sink.snapshots).toEqual([
+      expect.objectContaining({
+        trigger: 'save',
+        version: 5,
+        content: 'class A { }',
+      }),
+    ]);
+  });
+
+  it('reports a close without any file text', () => {
+    const { handler, sink } = makeHandler();
+    handler.closed(fakeDoc());
+    handler.closed(notes());
+
+    expect(sink.notices).toEqual([
+      {
+        workspaceId: 'file:///w',
+        fileUri: 'file:///w/A.java',
+        observedAt: 1000,
+      },
+    ]);
+    expect(sink.snapshots).toEqual([]);
+  });
+
+  it('forwards nothing after stop', () => {
+    const { handler, sink } = makeHandler();
+    const doc = fakeDoc();
+    handler.stop();
+
+    handler.opened(doc);
+    handler.activated(doc);
+    handler.changed(doc, 1);
+    handler.saved(doc);
+    handler.closed(doc);
+    handler.startup([doc]);
+
+    expect(sink.snapshots).toEqual([]);
+    expect(sink.notices).toEqual([]);
+  });
+
+  it('reports a throwing closed() and keeps forwarding later events', () => {
+    const boom = new Error('boom');
+    const delivered: FileSnapshot[] = [];
+    const { handler, errors } = makeHandler({
+      sink: {
+        submit: (snapshot) => delivered.push(snapshot),
+        closed: () => {
+          throw boom;
+        },
+      },
+    });
+
+    handler.closed(fakeDoc());
+    handler.opened(fakeDoc());
+
+    expect(errors).toEqual([boom]);
+    expect(delivered.map((s) => s.trigger)).toEqual(['open']);
+  });
+});
