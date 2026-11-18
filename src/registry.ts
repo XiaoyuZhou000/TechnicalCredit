@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 
 import { analyseForTC } from '@/analyse';
+import { startBackgroundAgent } from '@/background/backgroundAgent';
 import { PendingAnnotation } from '@/comment/pendingAnnotation';
 
 /** Registers all commands, providers, and subscriptions for the extension. */
@@ -37,4 +38,7 @@ export function register(context: vscode.ExtensionContext): void {
       async () => await analyseForTC(annotationController),
     ),
   );
+
+  // Background Agent (Sprint 1): file monitoring only; see ARCHITECTURE.md.
+  startBackgroundAgent(context);
 }
