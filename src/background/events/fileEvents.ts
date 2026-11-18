@@ -76,6 +76,14 @@ export class FileEventHandler<D extends MonitoredDocument> {
     this.forward(doc, 'activate');
   }
 
+  /** Change events with no content changes only flip the dirty or saved state. */
+  changed(doc: D, contentChangeCount: number): void {
+    if (contentChangeCount === 0) {
+      return;
+    }
+    this.forward(doc, 'edit');
+  }
+
   stop(): void {
     this.stopped = true;
   }

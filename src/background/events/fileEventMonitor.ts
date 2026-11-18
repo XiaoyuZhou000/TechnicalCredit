@@ -26,6 +26,9 @@ export function startFileEventMonitor(
     vscode.window.onDidChangeActiveTextEditor((editor) =>
       handler.activated(editor?.document),
     ),
+    vscode.workspace.onDidChangeTextDocument((e) =>
+      handler.changed(e.document, e.contentChanges.length),
+    ),
   ];
 
   return vscode.Disposable.from(...listeners, {

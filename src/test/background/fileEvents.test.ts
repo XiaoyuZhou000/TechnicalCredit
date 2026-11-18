@@ -160,3 +160,44 @@ describe('US1', () => {
     expect(delivered.map((s) => s.fileUri)).toEqual(['file:///w/B.java']);
   });
 });
+
+describe('US2', () => {
+  it('forwards each real edit with a higher version and the full new text', () => {
+    const { handler, sink } = makeHandler();
+    const doc = fakeDoc({ version: 1, text: 'class A {}' });
+
+    for (const [version, text] of [
+      [2, 'class A {x}'],
+      [3, 'class A {xy}'],
+      [4, 'class A {xyz}'],
+    ] as const) {
+      doc.version = version;
+      doc.text = text;
+      handler.changed(doc, 1);
+    }
+
+    expect(sink.snapshots.map((s) => [s.trigger, s.version])).toEqual([
+      ['edit', 2],
+      ['edit', 3],
+      ['edit', 4],
+    ]);
+    expect(sink.snapshots.at(-1)?.content).toBe('class A {xyz}');
+  });
+
+  it('ignores change events that carry no content changes', () => {
+    const { handler, sink } = makeHandler();
+    handler.changed(fakeDoc(), 0);
+
+    expect(sink.snapshots).toEqual([]);
+  });
+
+  it('ignores edits to unsupported files', () => {
+    const { handler, sink } = makeHandler();
+    handler.changed(
+      fakeDoc({ uri: 'file:///w/notes.txt', languageId: 'plaintext' }),
+      1,
+    );
+
+    expect(sink.snapshots).toEqual([]);
+  });
+});
