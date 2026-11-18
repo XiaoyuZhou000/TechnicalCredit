@@ -102,7 +102,7 @@ The five areas named on card 01, as they stand on `tc-bg-task01-repo-setup`. "At
 
 - **Location**: `src/registry.ts`
 - **Owns**: creates the single `PendingAnnotation` controller, registers it as a CodeLens provider for `file:` documents, and registers the `technicalcredit.analyseForTC`, `technicalcredit.acceptTCComment` and `technicalcredit.dismissTCComment` commands. Every disposable goes into `context.subscriptions`.
-- **Attachment**: add one call, `startBackgroundAgent(context)`, from `src/background/backgroundAgent.ts`. That function registers its own listeners, timers and storage adapter as disposables, so deactivation cleans them up the same way as the existing commands. The existing registrations are left as they are.
+- **Attachment**: one call, `startBackgroundAgent(context)`, from `src/background/backgroundAgent.ts`, **added on card 02** as the last statement of `register`. That function registers its own listeners, timers and storage adapter as disposables, so deactivation cleans them up the same way as the existing commands. The existing registrations are left as they are.
 - **Constraints**: C1, C7
 - **Serves cards**: 02, 04, 10
 
@@ -186,19 +186,21 @@ Every rule below applies to all Background Agent work. The integration points an
 
 ## Proposed modules
 
-**This is a proposal. Card 01 created none of these files; card 10 created `background/detector/detector.ts` and its offline test.** All new Background Agent code goes under `src/background/`, split by responsibility. Paths are relative to `src/`.
+**This is a proposal. Card 01 created none of these files. Card 10 created `background/detector/detector.ts`; card 02 created `background/events/*` and `background/backgroundAgent.ts`. Each comes with offline tests.** All new Background Agent code goes under `src/background/`, split by responsibility. Paths are relative to `src/`.
 
-| path                                    | responsibility                                                                                                                                  | cards          | dependsOn                                                            | vscodeFree            |
-| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | -------------------------------------------------------------------- | --------------------- |
-| `background/detector/detector.ts`       | **Created on card 10.** The detector contract: input, output, result/failure types, the `Detector` interface, `isCacheable`, `failureFromAbort` | 10             | `comment/tcResult.ts`                                                | yes                   |
-| `background/detector/mockDetector.ts`   | Deterministic async mock with configurable delay and an inspectable call counter                                                                | 03             | `detector/detector.ts`, `scheduler/clock.ts`                         | yes                   |
-| `background/events/fileEventMonitor.ts` | Turns VS Code open, active-editor and change events for supported Java files into `FileSnapshot`s                                               | 02             | `vscode`, scheduler's `SnapshotSink`                                 | no (adapter)          |
-| `background/scheduler/scheduler.ts`     | Per-file state: pending snapshot, coalescing, debounce, cooldown, in-flight dedup, cache check, detector call                                   | 05, 06, 07, 08 | `detector/detector.ts`, `cache/resultCache.ts`, `scheduler/clock.ts` | yes                   |
-| `background/scheduler/clock.ts`         | `Clock` interface (`now`, `setTimeout`, `clearTimeout`), plus real and fake implementations                                                     | 06, 07, 09     | none                                                                 | yes                   |
-| `background/cache/resultCache.ts`       | SHA-256 content hashing and cache identity (workspace + file URI + content hash + detector version) over a `CacheStore`                         | 04             | `detector/detector.ts`, Node `crypto`                                | yes                   |
-| `background/cache/vscodeCacheStore.ts`  | `CacheStore` backed by VS Code extension storage, so results survive Extension Host restarts                                                    | 04             | `vscode`, `cache/resultCache.ts`                                     | no (adapter)          |
-| `background/backgroundAgent.ts`         | Composition root: `startBackgroundAgent(context)` wires the monitor, scheduler, cache and detector, and registers disposables                   | 02–08, 10      | everything above                                                     | no (composition root) |
-| `test/background/*.test.ts`             | Offline unit tests with a fake clock and an in-memory `CacheStore`; never imports `@/utils/claude`                                              | 09             | the vscode-free modules above                                        | yes                   |
+| path                                    | responsibility                                                                                                                                                                          | cards          | dependsOn                                                            | vscodeFree            |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | -------------------------------------------------------------------- | --------------------- |
+| `background/detector/detector.ts`       | **Created on card 10.** The detector contract: input, output, result/failure types, the `Detector` interface, `isCacheable`, `failureFromAbort`                                         | 10             | `comment/tcResult.ts`                                                | yes                   |
+| `background/detector/mockDetector.ts`   | Deterministic async mock with configurable delay and an inspectable call counter                                                                                                        | 03             | `detector/detector.ts`, `scheduler/clock.ts`                         | yes                   |
+| `background/events/fileEvents.ts`       | **Created on card 02.** The file-event contract (`FileSnapshot`, `FileClosedNotice`, `SnapshotSink`), `isSupported`, and the `FileEventHandler` core                                    | 02             | none                                                                 | yes                   |
+| `background/events/fileEventMonitor.ts` | **Created on card 02.** Thin adapter: subscribes open, active-editor, change, save and close events, plus the startup scan, and calls the core                                          | 02             | `vscode`, `events/fileEvents.ts`                                     | no (adapter)          |
+| `background/events/loggingSink.ts`      | **Created on card 02.** Placeholder `SnapshotSink` that logs one line per event (never file text); replaced by the scheduler on card 05                                                 | 02 (temporary) | `events/fileEvents.ts`                                               | yes                   |
+| `background/scheduler/scheduler.ts`     | Per-file state: pending snapshot, coalescing, debounce, cooldown, in-flight dedup, cache check, detector call                                                                           | 05, 06, 07, 08 | `detector/detector.ts`, `cache/resultCache.ts`, `scheduler/clock.ts` | yes                   |
+| `background/scheduler/clock.ts`         | `Clock` interface (`now`, `setTimeout`, `clearTimeout`), plus real and fake implementations                                                                                             | 06, 07, 09     | none                                                                 | yes                   |
+| `background/cache/resultCache.ts`       | SHA-256 content hashing and cache identity (workspace + file URI + content hash + detector version) over a `CacheStore`                                                                 | 04             | `detector/detector.ts`, Node `crypto`                                | yes                   |
+| `background/cache/vscodeCacheStore.ts`  | `CacheStore` backed by VS Code extension storage, so results survive Extension Host restarts                                                                                            | 04             | `vscode`, `cache/resultCache.ts`                                     | no (adapter)          |
+| `background/backgroundAgent.ts`         | **Created on card 02** (monitor and logging sink so far). Composition root: `startBackgroundAgent(context)` wires the monitor, scheduler, cache and detector, and registers disposables | 02–08, 10      | everything above                                                     | no (composition root) |
+| `test/background/*.test.ts`             | Offline unit tests with a fake clock and an in-memory `CacheStore`; never imports `@/utils/claude`                                                                                      | 09             | the vscode-free modules above                                        | yes                   |
 
 Design notes:
 
@@ -209,7 +211,7 @@ Design notes:
 
 ## Proposed contracts
 
-The detector contract is agreed on card 10 (pending review). The file-event hand-off is still a proposal, which cards 02 and 05 finalise.
+The detector contract is agreed on card 10 (pending review). The file-event hand-off is agreed on card 02.
 
 ### Detector (card 10)
 
@@ -279,41 +281,70 @@ The mock detector (card 03) adds a configurable delay, an inspectable call count
 
 ### File events → scheduler (cards 02 and 05)
 
-The event monitor is the only background module that touches VS Code document events. It turns them into plain snapshots for the vscode-free scheduler.
+**Agreed (card 02).** Source: `src/background/events/fileEvents.ts`.
 
-| VS Code event                        | Emits a snapshot when                                       |
-| ------------------------------------ | ----------------------------------------------------------- |
-| `workspace.onDidOpenTextDocument`    | the document is supported                                   |
-| `window.onDidChangeActiveTextEditor` | the newly active document is supported                      |
-| `workspace.onDidChangeTextDocument`  | the document is supported and `contentChanges` is non-empty |
-| Already-open documents at activation | each supported document, once                               |
+The event monitor is the only background module that touches VS Code document events. It turns them into plain notifications for the vscode-free scheduler. **The monitor reports; the scheduler decides.**
+
+| VS Code event                        | Forwards                     | When                                                        |
+| ------------------------------------ | ---------------------------- | ----------------------------------------------------------- |
+| Already-open documents at activation | `'startup'` snapshot         | each supported document, once                               |
+| `workspace.onDidOpenTextDocument`    | `'open'` snapshot            | the document is supported                                   |
+| `window.onDidChangeActiveTextEditor` | `'activate'` snapshot        | the newly active document is supported                      |
+| `workspace.onDidChangeTextDocument`  | `'edit'` snapshot            | the document is supported and `contentChanges` is non-empty |
+| `workspace.onDidSaveTextDocument`    | `'save'` snapshot            | the document is supported (manual save or any Auto Save)    |
+| `workspace.onDidCloseTextDocument`   | `FileClosedNotice` (no text) | the document is supported                                   |
 
 **Supported** means `languageId === 'java'` and `uri.scheme === 'file'`. Everything else (`untitled`, `git`, output channels, non-Java files) is ignored without an error.
 
 ```ts
-export type TriggerKind = 'open' | 'activate' | 'edit' | 'startup';
+export type TriggerKind = 'open' | 'activate' | 'edit' | 'startup' | 'save';
+
+export const NO_WORKSPACE_ID = 'no-workspace'; // files outside every workspace folder
 
 export interface FileSnapshot {
-  workspaceId: string;
-  fileUri: string;
-  languageId: 'java';
-  version: number;
-  content: string;
-  trigger: TriggerKind;
-  observedAt: number; // from the injected Clock, not Date.now()
+  readonly workspaceId: string; // workspace folder URI string, or NO_WORKSPACE_ID
+  readonly fileUri: string;
+  readonly languageId: 'java';
+  readonly version: number;
+  readonly content: string; // full text, read together with version
+  readonly trigger: TriggerKind;
+  readonly observedAt: number; // ms, from an injected `now` (Date.now in production)
+}
+
+export interface FileClosedNotice {
+  readonly workspaceId: string;
+  readonly fileUri: string;
+  readonly observedAt: number;
 }
 
 export interface SnapshotSink {
-  submit(snapshot: FileSnapshot): void; // synchronous, never throws, never calls a detector
+  submit(snapshot: FileSnapshot): void; // synchronous; records state only
+  closed(notice: FileClosedNotice): void; // synchronous; records state only
 }
 ```
 
-Rules:
+`FileSnapshot` uses the same field names as `DetectorInput`, so the scheduler builds a detector input by adding `contentHash` only.
 
-1. `submit` only records state. Hashing, coalescing, debounce, cooldown and dedup all happen in the scheduler.
-2. Two snapshots with the same `fileUri` and `version` count as duplicates and are coalesced into one pending entry (card 05).
-3. All listeners are registered through `context.subscriptions`, via `registry.ts`.
-4. Text inserted by the manual **Analyse for TC** preview also fires `onDidChangeTextDocument`. It is treated as a normal edit and absorbed by the debounce, so no special case is needed in Sprint 1.
+**Producer guarantees (card 02):**
+
+1. Only supported documents reach the sink.
+2. Every event that passes the filter is forwarded once, immediately and in order. The monitor never merges, delays, drops or hashes, and never calls a detector.
+3. `'edit'` is only sent when the change carries at least one content change.
+4. `content` and `version` are read together, synchronously, so they always match.
+5. Duplicates are expected: opening a file usually gives `'open'` then `'activate'` with the same version, and a `'save'` repeats the latest edit's version and text.
+6. `closed` arrives when VS Code disposes the document, which may be some time after the tab closes, or not at all (#20).
+7. If the sink throws, the error is logged to the **Technical Credit (Background)** output channel and later events are still delivered.
+8. After deactivation, nothing more is forwarded. All listeners are registered through `context.subscriptions` via `registry.ts`.
+
+**Consumer obligations (card 05 onwards; agreed 2026-11-17):**
+
+1. **Unchanged saves**: a `'save'` with the same `fileUri` and `version` as the last snapshot received for that file means no new content. It must not start an analysis or reset the debounce timer (card 06).
+2. **Duplicates**: snapshots with the same `fileUri` and `version` are coalesced into one pending entry (card 05).
+3. **Closes**: the scheduler decides what happens to pending or in-flight work for a closed file, for example cancelling through the detector's `AbortSignal`. The monitor only reports.
+4. `submit` and `closed` stay synchronous and never throw, because they run inside editor event listeners.
+5. Text inserted by the manual **Analyse for TC** preview arrives as a normal `'edit'` and is absorbed by the debounce. No special case is needed in Sprint 1.
+
+Until card 05 lands, `backgroundAgent.ts` plugs in `loggingSink.ts`, which writes one line per event (never file text) to the **Technical Credit (Background)** output channel.
 
 ## Live integration outline
 
@@ -374,24 +405,26 @@ Every Sprint 1 card from 02 to 10 maps to at least one integration point and at 
 
 Found during the card 01 review. Only item 1 was fixed on this card; the rest are recorded for follow-up tickets.
 
-| #   | Issue                                                                                                                                                                                                                                                              | Status / proposed follow-up                                                                                                               |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `compile` and `package` called `npm run lint`, which doesn't exist (the script is `lint:check`), so `npm run compile` failed after the type check.                                                                                                                 | **Fixed on this card**: both now call `lint:check`.                                                                                       |
-| 2   | F5 fails on a clean machine with `Invalid problemMatcher reference: $esbuild-watch`, because the recommended esbuild Problem Matchers extension isn't installed. After that failed attempt, the `watch` task keeps running, so the next F5 silently waits on it.   | Documented under [Build & launch](#build--launch). Optionally, have the README setup steps mention installing the recommended extensions. |
-| 17  | dotenv 17 prints `injected env (N) from …\.env` to the debug console on every activation (from `src/utils/claude.ts`).                                                                                                                                             | Not fixed. Pass `quiet: true` to `dotenv.config` if the noise matters.                                                                    |
-| 18  | `package.json` has no `publisher` field, so the extension id is `undefined_publisher.technicalcredit`. F5 works, but `vsce package` requires a publisher.                                                                                                          | Not fixed. Add a `publisher` before packaging.                                                                                            |
-| 19  | 43 of the 45 Java fixtures under `src/test/{behavioral,creational,structural}/{positive,negative}/` are empty placeholders (0 bytes, added in "TC-8 new test files created"). Only `src/test/creational/prototype/Positive.java` and `Negative.java` have content. | Not fixed. Fill them in as heuristic tests are written; until then, use the prototype fixtures for manual checks.                         |
-| 3   | The only offline test, `src/test/buildContextCore.test.ts`, reads `src/test/mockCode/MockTest.java`, which isn't tracked in git, so it fails.                                                                                                                      | Not fixed. Restore the fixture or point the test at an existing one.                                                                      |
-| 4   | The README Testing section refers to `src/test/mockCode/` and `priorityHeuristicTests/h1…h5`, neither of which exists. The live tests now live under `src/test/creational/prototype/`.                                                                             | Not fixed. Update the README.                                                                                                             |
-| 5   | There is no way to run only offline tests: `npm test` runs everything, including billed live tests.                                                                                                                                                                | Not fixed. Propose a `test:offline` script (e.g. `jest src/test/background`) and/or move live tests behind an opt-in flag.                |
-| 6   | The README says Node 18+, but ESLint 10 needs Node `^20.19.0 \|\| ^22.13.0 \|\| >=24`.                                                                                                                                                                             | Not fixed. Update the README prerequisites.                                                                                               |
-| 7   | `@types/vscode` is `^1.138.0` while `engines.vscode` is `^1.120.0`. F5 works, but `vsce package` refuses a types version newer than the engine.                                                                                                                    | Not fixed. Align the two before packaging.                                                                                                |
-| 8   | `package.json` depends on `anthropic-ai@0.0.10`, an unofficial package from a different publisher than the official `@anthropic-ai/sdk`. Nothing in `src/` or `scripts/` imports it.                                                                               | Not fixed. Propose removing it; it is a needless supply-chain exposure (C8: ask the team first).                                          |
-| 9   | `npm install` reports 31 vulnerabilities (27 moderate, 2 high, 2 critical).                                                                                                                                                                                        | Not fixed. Review `npm audit` output; Dependabot PRs cover part of this.                                                                  |
-| 10  | `package-lock.json` was written by a newer npm. Running `npm install` with npm 10.7 strips its `libc` fields, which shows up as a spurious diff.                                                                                                                   | Don't commit that drift (`git checkout -- package-lock.json`). Using a current npm avoids it.                                             |
-| 11  | On Windows with `core.autocrlf=true`, `npm run format:check` flags every file (CRLF vs. Prettier's LF), and `npm run format` would rewrite every file.                                                                                                             | Not fixed. Use `git config core.autocrlf input` locally, or add a `.gitattributes` with `* text=auto eol=lf`.                             |
-| 12  | The README clone URL points at `cielbellerose/TechnicalCredit`, while this checkout's `origin` is the fork `XiaoyuZhou000/TechnicalCredit`.                                                                                                                        | Not fixed. Confirm which repository the team treats as canonical.                                                                         |
-| 13  | `resolveInsertLine` in `src/context/buildContext.ts` uses a non-null assertion (`enclosingClassStartRow!`), which goes against the repository's no-`!` convention.                                                                                                 | Not fixed. Model the type so the assertion isn't needed.                                                                                  |
-| 14  | Live detection is construct-level (it needs a cursor anchor), but the agent is per-file.                                                                                                                                                                           | Outlined on card 10, not built: see [Construct selection](#construct-selection).                                                          |
-| 15  | Before showing a background result, check it still matches the document's current `contentHash` (US-09).                                                                                                                                                           | Outlined on card 10, not built; a prerequisite for live integration: see [Stale-result guard (US-09)](#stale-result-guard-us-09).         |
-| 16  | `PendingAnnotation` can't show unsolicited background results (see [Pending-annotation display](#pending-annotation-display)).                                                                                                                                     | Outlined on card 10, not built: see [Delivery through the labeling UI](#delivery-through-the-labeling-ui).                                |
+| #   | Issue                                                                                                                                                                                                                                                              | Status / proposed follow-up                                                                                                                             |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `compile` and `package` called `npm run lint`, which doesn't exist (the script is `lint:check`), so `npm run compile` failed after the type check.                                                                                                                 | **Fixed on this card**: both now call `lint:check`.                                                                                                     |
+| 2   | F5 fails on a clean machine with `Invalid problemMatcher reference: $esbuild-watch`, because the recommended esbuild Problem Matchers extension isn't installed. After that failed attempt, the `watch` task keeps running, so the next F5 silently waits on it.   | Documented under [Build & launch](#build--launch). Optionally, have the README setup steps mention installing the recommended extensions.               |
+| 17  | dotenv 17 prints `injected env (N) from …\.env` to the debug console on every activation (from `src/utils/claude.ts`).                                                                                                                                             | Not fixed. Pass `quiet: true` to `dotenv.config` if the noise matters.                                                                                  |
+| 18  | `package.json` has no `publisher` field, so the extension id is `undefined_publisher.technicalcredit`. F5 works, but `vsce package` requires a publisher.                                                                                                          | Not fixed. Add a `publisher` before packaging.                                                                                                          |
+| 19  | 43 of the 45 Java fixtures under `src/test/{behavioral,creational,structural}/{positive,negative}/` are empty placeholders (0 bytes, added in "TC-8 new test files created"). Only `src/test/creational/prototype/Positive.java` and `Negative.java` have content. | Not fixed. Fill them in as heuristic tests are written; until then, use the prototype fixtures for manual checks.                                       |
+| 3   | The only offline test, `src/test/buildContextCore.test.ts`, reads `src/test/mockCode/MockTest.java`, which isn't tracked in git, so it fails.                                                                                                                      | Not fixed. Restore the fixture or point the test at an existing one.                                                                                    |
+| 4   | The README Testing section refers to `src/test/mockCode/` and `priorityHeuristicTests/h1…h5`, neither of which exists. The live tests now live under `src/test/creational/prototype/`.                                                                             | Not fixed. Update the README.                                                                                                                           |
+| 5   | There is no way to run only offline tests: `npm test` runs everything, including billed live tests.                                                                                                                                                                | Not fixed. Propose a `test:offline` script (e.g. `jest src/test/background`) and/or move live tests behind an opt-in flag.                              |
+| 6   | The README says Node 18+, but ESLint 10 needs Node `^20.19.0 \|\| ^22.13.0 \|\| >=24`.                                                                                                                                                                             | Not fixed. Update the README prerequisites.                                                                                                             |
+| 7   | `@types/vscode` is `^1.138.0` while `engines.vscode` is `^1.120.0`. F5 works, but `vsce package` refuses a types version newer than the engine.                                                                                                                    | Not fixed. Align the two before packaging.                                                                                                              |
+| 8   | `package.json` depends on `anthropic-ai@0.0.10`, an unofficial package from a different publisher than the official `@anthropic-ai/sdk`. Nothing in `src/` or `scripts/` imports it.                                                                               | Not fixed. Propose removing it; it is a needless supply-chain exposure (C8: ask the team first).                                                        |
+| 9   | `npm install` reports 31 vulnerabilities (27 moderate, 2 high, 2 critical).                                                                                                                                                                                        | Not fixed. Review `npm audit` output; Dependabot PRs cover part of this.                                                                                |
+| 10  | `package-lock.json` was written by a newer npm. Running `npm install` with npm 10.7 strips its `libc` fields, which shows up as a spurious diff.                                                                                                                   | Don't commit that drift (`git checkout -- package-lock.json`). Using a current npm avoids it.                                                           |
+| 11  | On Windows with `core.autocrlf=true`, `npm run format:check` flags every file (CRLF vs. Prettier's LF), and `npm run format` would rewrite every file.                                                                                                             | Not fixed. Use `git config core.autocrlf input` locally, or add a `.gitattributes` with `* text=auto eol=lf`.                                           |
+| 12  | The README clone URL points at `cielbellerose/TechnicalCredit`, while this checkout's `origin` is the fork `XiaoyuZhou000/TechnicalCredit`.                                                                                                                        | Not fixed. Confirm which repository the team treats as canonical.                                                                                       |
+| 13  | `resolveInsertLine` in `src/context/buildContext.ts` uses a non-null assertion (`enclosingClassStartRow!`), which goes against the repository's no-`!` convention.                                                                                                 | Not fixed. Model the type so the assertion isn't needed.                                                                                                |
+| 14  | Live detection is construct-level (it needs a cursor anchor), but the agent is per-file.                                                                                                                                                                           | Outlined on card 10, not built: see [Construct selection](#construct-selection).                                                                        |
+| 15  | Before showing a background result, check it still matches the document's current `contentHash` (US-09).                                                                                                                                                           | Outlined on card 10, not built; a prerequisite for live integration: see [Stale-result guard (US-09)](#stale-result-guard-us-09).                       |
+| 16  | `PendingAnnotation` can't show unsolicited background results (see [Pending-annotation display](#pending-annotation-display)).                                                                                                                                     | Outlined on card 10, not built: see [Delivery through the labeling UI](#delivery-through-the-labeling-ui).                                              |
+| 20  | `workspace.onDidCloseTextDocument` fires when VS Code disposes the document, which can lag behind the tab closing, and isn't guaranteed for every tab close (found on card 02).                                                                                    | Not fixed. Card 02 reports closes whenever they arrive. If card 05 or 08 needs immediate closes, add `window.tabGroups.onDidChangeTabs` to the monitor. |
+| 21  | After a window reload, VS Code may restore tabs lazily, so a restored Java file can be reported as `'open'` (when first shown) instead of `'startup'` (found on card 02).                                                                                          | Not a bug. Card 09's restart test and demo should accept either trigger.                                                                                |
