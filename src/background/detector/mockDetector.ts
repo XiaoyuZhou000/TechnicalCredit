@@ -100,6 +100,12 @@ const realTimers: MockTimers = {
     clearTimeout(handle as Parameters<typeof clearTimeout>[0]),
 };
 
+function outcomeOf(result: DetectorResult): MockOutcome {
+  return result.ok
+    ? { status: 'ok', findingCount: result.output.findings.length }
+    : { status: 'failed', failure: result.failure.kind };
+}
+
 /**
  * Deterministic stand-in for the live detector (card 03). Never contacts Claude. Callers that
  * only need a detector must depend on `Detector`, not on this class (contract rule 7).
@@ -109,6 +115,7 @@ export class MockDetector implements Detector {
   readonly version: string;
   readonly delayMs: number;
   private readonly timers: MockTimers;
+  private readonly records: MockCallRecord[] = [];
 
   constructor(options: MockDetectorOptions = {}) {
     const delayMs = options.delayMs ?? DEFAULT_MOCK_DELAY_MS;
@@ -124,7 +131,33 @@ export class MockDetector implements Detector {
     this.timers = options.timers ?? realTimers;
   }
 
+  /** Every call, counted on entry, so cancelled and failed calls count too. */
+  get callCount(): number {
+    return this.records.length;
+  }
+
+  /** A frozen copy in call order; records are replaced, never mutated, so old copies stay valid. */
+  calls(): readonly MockCallRecord[] {
+    return Object.freeze([...this.records]);
+  }
+
   async analyse(
+    input: DetectorInput,
+    signal: AbortSignal,
+  ): Promise<DetectorResult> {
+    const record: MockCallRecord = {
+      fileUri: input.fileUri,
+      version: input.version,
+      contentHash: input.contentHash,
+      outcome: { status: 'pending' },
+    };
+    const index = this.records.push(record) - 1;
+    const result = await this.respond(input, signal);
+    this.records[index] = { ...record, outcome: outcomeOf(result) };
+    return result;
+  }
+
+  private async respond(
     input: DetectorInput,
     signal: AbortSignal,
   ): Promise<DetectorResult> {
