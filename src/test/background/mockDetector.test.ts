@@ -300,3 +300,99 @@ describe('sample findings', () => {
     }
   });
 });
+
+describe('US3 the mock can be configured per scenario', () => {
+  it('reports the configured version with otherwise identical results', async () => {
+    const v1 = await new MockDetector({ version: 'v1', delayMs: 0 }).analyse(
+      INPUT,
+      new AbortController().signal,
+    );
+    const v2 = await new MockDetector({ version: 'v2', delayMs: 0 }).analyse(
+      INPUT,
+      new AbortController().signal,
+    );
+
+    expect(v1.ok && v1.output.detectorVersion).toBe('v1');
+    expect(v2.ok && v2.output.detectorVersion).toBe('v2');
+    expect(v1.ok && v1.output.findings).toEqual(v2.ok && v2.output.findings);
+  });
+
+  it('keeps the default version when only the delay changes', () => {
+    expect(new MockDetector().version).toBe(DEFAULT_MOCK_VERSION);
+    expect(new MockDetector({ delayMs: 5 }).version).toBe(DEFAULT_MOCK_VERSION);
+  });
+
+  it('returns configured findings under their own version', async () => {
+    const custom = sampleFindings('class Custom {}');
+    const mock = new MockDetector({
+      behaviour: { kind: 'findings', findings: () => custom },
+      version: 'custom-1',
+      delayMs: 0,
+    });
+
+    const result = await mock.analyse(INPUT, new AbortController().signal);
+
+    expect(mock.version).not.toBe(DEFAULT_MOCK_VERSION);
+    expect(result).toEqual({
+      ok: true,
+      output: {
+        detectorId: MOCK_DETECTOR_ID,
+        detectorVersion: 'custom-1',
+        findings: custom,
+      },
+    });
+  });
+
+  it('fails after the delay when configured to, and the failure is not cacheable', async () => {
+    const timers = createFakeTimers();
+    const mock = new MockDetector({
+      behaviour: { kind: 'fail', message: 'boom' },
+      version: 'fail-1',
+      timers,
+    });
+    const call = track(mock.analyse(INPUT, new AbortController().signal));
+
+    await flush();
+    expect(call.settled).toBe(false);
+
+    timers.advance(DEFAULT_MOCK_DELAY_MS);
+    await flush();
+
+    expect(call.value).toEqual({
+      ok: false,
+      failure: { kind: 'failed', message: 'boom' },
+    });
+    expect(call.value !== undefined && isCacheable(call.value)).toBe(false);
+    expect(mock.callCount).toBe(1);
+    expect(mock.calls()[0].outcome).toEqual({
+      status: 'failed',
+      failure: 'failed',
+    });
+  });
+
+  it('reports a cancelled failing mock as cancelled, not failed', async () => {
+    const timers = createFakeTimers();
+    const mock = new MockDetector({
+      behaviour: { kind: 'fail', message: 'boom' },
+      version: 'fail-1',
+      timers,
+    });
+    const controller = new AbortController();
+    const call = track(mock.analyse(INPUT, controller.signal));
+
+    controller.abort();
+    await flush();
+
+    expect(call.value).toEqual({ ok: false, failure: { kind: 'cancelled' } });
+  });
+
+  it('refuses to change results under the default version', () => {
+    expect(
+      () =>
+        new MockDetector({
+          behaviour: { kind: 'fail', message: 'x' },
+          version: DEFAULT_MOCK_VERSION,
+        }),
+    ).toThrow(Error);
+  });
+});

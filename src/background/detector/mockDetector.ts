@@ -114,6 +114,7 @@ export class MockDetector implements Detector {
   readonly id = MOCK_DETECTOR_ID;
   readonly version: string;
   readonly delayMs: number;
+  private readonly behaviour: MockBehaviour;
   private readonly timers: MockTimers;
   private readonly records: MockCallRecord[] = [];
 
@@ -126,8 +127,15 @@ export class MockDetector implements Detector {
     if (version === '') {
       throw new Error('version must not be empty');
     }
+    const behaviour = options.behaviour ?? { kind: 'sample' };
+    if (behaviour.kind !== 'sample' && version === DEFAULT_MOCK_VERSION) {
+      throw new Error(
+        `a '${behaviour.kind}' mock changes results, so it needs a version other than ${DEFAULT_MOCK_VERSION}`,
+      );
+    }
     this.delayMs = delayMs;
     this.version = version;
+    this.behaviour = behaviour;
     this.timers = options.timers ?? realTimers;
   }
 
@@ -174,12 +182,26 @@ export class MockDetector implements Detector {
     if (signal.aborted) {
       return failureFromAbort(signal);
     }
+    switch (this.behaviour.kind) {
+      case 'sample':
+        return this.success(sampleFindings(input.content));
+      case 'findings':
+        return this.success(this.behaviour.findings(input.content));
+      case 'fail':
+        return {
+          ok: false,
+          failure: { kind: 'failed', message: this.behaviour.message },
+        };
+    }
+  }
+
+  private success(findings: readonly DetectorFinding[]): DetectorResult {
     return {
       ok: true,
       output: {
         detectorId: this.id,
         detectorVersion: this.version,
-        findings: sampleFindings(input.content),
+        findings,
       },
     };
   }
