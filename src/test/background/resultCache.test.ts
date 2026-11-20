@@ -380,3 +380,50 @@ describe('ResultCache across detector versions', () => {
     }
   });
 });
+
+describe('ResultCache stats', () => {
+  it('counts every lookup and store outcome (FR-014)', async () => {
+    const base = createMemoryCacheStore();
+    let failWrites = false;
+    const cache = new ResultCache({
+      store: {
+        get: (key) => base.get(key),
+        update: (key, value) =>
+          failWrites
+            ? Promise.reject(new Error('quota'))
+            : base.update(key, value),
+      },
+      now: () => 0,
+    });
+    const b = identity({ fileUri: 'file:///w/B.java' });
+    const c = identity({ fileUri: 'file:///w/C.java' });
+    base.rawSet(
+      `${CACHE_KEY_PREFIX}${JSON.stringify(['file:///w', c.fileUri, 'mock', 'mock-1'])}`,
+      { format: 1 },
+    );
+
+    cache.lookup(identity());
+    await cache.store(identity(), ok());
+    cache.lookup(identity());
+    cache.lookup(identity());
+    cache.lookup(identity());
+    cache.lookup(identity({ contentHash: sha256Hex('other') }));
+    cache.lookup(b);
+    cache.lookup(c);
+    await cache.store(b, ok([]));
+    await cache.store(b, { ok: false, failure: { kind: 'cancelled' } });
+    await cache.store(b, ok([], 'mock-2'));
+    failWrites = true;
+    await cache.store(c, ok());
+
+    const stats = cache.stats();
+    expect(stats).toEqual({
+      hits: 3,
+      misses: 4,
+      stored: 2,
+      skipped: 2,
+      storeFailures: 1,
+    });
+    expect(Object.isFrozen(stats)).toBe(true);
+  });
+});

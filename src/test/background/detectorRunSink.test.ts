@@ -446,4 +446,73 @@ describe('detector run sink with cache (temporary, until card 05)', () => {
     ]);
     expect(mock.callCount).toBe(1);
   });
+
+  it('writes every cache line in one of the four agreed formats (S17)', async () => {
+    const timers = createFakeTimers();
+    const lines: string[] = [];
+    for (const store of [
+      createMemoryCacheStore(),
+      rejectingUpdateStore('quota'),
+    ]) {
+      const run = cached(new MockDetector({ timers }), store);
+      run.sink.submit(positive());
+      timers.advance(2000);
+      await settle();
+      run.sink.submit(positive({ version: 2 }));
+      await settle();
+      lines.push(...run.lines);
+    }
+
+    const tail = `v[12] sha ${P8} mock@mock-1 file:///w/Positive\\.java$`;
+    const time = '^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z';
+    const formats = [
+      new RegExp(`${time} cache hit 6 findings ${tail}`),
+      new RegExp(`${time} cache miss \\(absent\\) ${tail}`),
+      new RegExp(`${time} cache stored 6 findings ${tail}`),
+      new RegExp(`${time} cache store failed: quota ${tail}`),
+    ];
+    const cacheLines = lines.filter((l) => l.includes(' cache '));
+    for (const line of cacheLines) {
+      expect(formats.some((f) => f.test(line))).toBe(true);
+    }
+    for (const format of formats) {
+      expect(cacheLines.some((l) => format.test(l))).toBe(true);
+    }
+  });
+
+  it('never logs file text or findings (SC-008)', async () => {
+    const timers = createFakeTimers();
+    const { sink, lines } = cached(new MockDetector({ timers }));
+    const content =
+      'interface Shape {}\nclass Circle implements Shape { String s = "SECRET_BODY_04"; }\n';
+
+    sink.submit(positive({ content }));
+    timers.advance(2000);
+    await settle();
+    sink.submit(positive({ content, version: 2 }));
+    await settle();
+
+    expect(lines.some((l) => l.includes('cache hit 2 findings'))).toBe(true);
+    const all = lines.join('\n');
+    expect(all).not.toContain('SECRET_BODY_04');
+    expect(all).not.toContain('mock: interface Shape');
+    expect(all).not.toContain('Mock sample finding');
+  });
+
+  it('stores and logs nothing once disposed mid-call (S16)', async () => {
+    const timers = createFakeTimers();
+    const store = createMemoryCacheStore();
+    const { sink, lines } = cached(new MockDetector({ timers }), store);
+    sink.submit(positive());
+    timers.advance(1000);
+    const before = lines.length;
+
+    sink.dispose();
+    timers.advance(2000);
+    sink.submit(positive({ version: 2 }));
+    await settle();
+
+    expect(lines).toHaveLength(before);
+    expect(store.keys()).toEqual([]);
+  });
 });
