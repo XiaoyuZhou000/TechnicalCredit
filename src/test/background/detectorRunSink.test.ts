@@ -418,4 +418,32 @@ describe('detector run sink with cache (temporary, until card 05)', () => {
     );
     expect(mock.callCount).toBe(2);
   });
+
+  it('runs the new version once instead of reusing the old one (FR-008, FR-009)', async () => {
+    const store = createMemoryCacheStore();
+    const timers = createFakeTimers();
+    const first = cached(new MockDetector({ timers }), store);
+    first.sink.submit(positive());
+    timers.advance(2000);
+    await settle();
+    first.sink.dispose();
+
+    const mock = new MockDetector({ version: 'mock-2', timers });
+    const second = cached(mock, store);
+    await settle();
+    expect(mock.callCount).toBe(0);
+
+    second.sink.submit(positive());
+    timers.advance(2000);
+    await settle();
+
+    expect(second.lines).toEqual([
+      `inner submit ${URI}`,
+      `${T0} cache miss (absent) v1 sha ${P8} mock@mock-2 ${URI}`,
+      `${T0} mock start #1 v1 ${URI}`,
+      `${T0} mock done 6 findings #1 v1 ${URI}`,
+      `${T0} cache stored 6 findings v1 sha ${P8} mock@mock-2 ${URI}`,
+    ]);
+    expect(mock.callCount).toBe(1);
+  });
 });

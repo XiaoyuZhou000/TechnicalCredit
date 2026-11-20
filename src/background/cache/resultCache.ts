@@ -307,6 +307,14 @@ export class ResultCache {
     if (!isCacheable(result) || !result.ok) {
       return { status: 'skipped', reason: 'not-cacheable' };
     }
+    // Filing an output under another detector's key would let a lookup for that version hit
+    // results it never produced.
+    if (
+      result.output.detectorId !== identity.detectorId ||
+      result.output.detectorVersion !== identity.detectorVersion
+    ) {
+      return { status: 'skipped', reason: 'mismatch' };
+    }
     const entry: CachedEntry = {
       format: 1,
       contentHash: identity.contentHash,

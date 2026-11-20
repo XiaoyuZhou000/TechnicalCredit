@@ -315,3 +315,68 @@ describe('ResultCache across restarts and bad storage', () => {
     expect(cache.stats().storeFailures).toBe(1);
   });
 });
+
+describe('ResultCache across detector versions', () => {
+  const V2 = identity({ detectorVersion: 'mock-2' });
+
+  it('misses for a new version even with identical content (SC-004)', async () => {
+    const { cache } = memory();
+    await cache.store(identity(), ok());
+
+    expect(cache.lookup(V2)).toEqual({ hit: false, reason: 'absent' });
+  });
+
+  it('keeps the old version for rollback once the new one is stored', async () => {
+    const { cache, store } = memory();
+    await cache.store(identity(), ok());
+    await cache.store(V2, ok([], 'mock-2'));
+
+    expect(store.keys()).toHaveLength(2);
+    const v2 = cache.lookup(V2);
+    const v1 = cache.lookup(identity());
+    expect(v2.hit && v2.entry.output).toEqual({
+      detectorId: 'mock',
+      detectorVersion: 'mock-2',
+      findings: [],
+    });
+    expect(v1.hit && v1.entry.output.findings).toHaveLength(6);
+  });
+
+  it('keeps detectors apart that share a version string', async () => {
+    const { cache } = memory();
+    await cache.store(identity(), ok());
+
+    expect(cache.lookup(identity({ detectorId: 'live' }))).toEqual({
+      hit: false,
+      reason: 'absent',
+    });
+  });
+
+  it.each([
+    ['version', ok(undefined, 'mock-2')],
+    ['id', ok(undefined, 'mock-1', 'live')],
+  ])(
+    'refuses to store an output whose detector %s differs from the identity',
+    async (_, result) => {
+      const { cache, store } = memory();
+
+      expect(await cache.store(identity(), result)).toEqual({
+        status: 'skipped',
+        reason: 'mismatch',
+      });
+      expect(store.keys()).toEqual([]);
+    },
+  );
+
+  it('only ever returns results of the version looked up (SC-004)', async () => {
+    const { cache } = memory();
+    await cache.store(identity(), ok());
+    await cache.store(V2, ok([], 'mock-2'));
+
+    for (let i = 0; i < 100; i++) {
+      const version = i % 2 === 0 ? 'mock-1' : 'mock-2';
+      const lookup = cache.lookup(identity({ detectorVersion: version }));
+      expect(lookup.hit && lookup.entry.output.detectorVersion).toBe(version);
+    }
+  });
+});
