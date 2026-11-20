@@ -14,6 +14,9 @@ import type {
 import { sampleFindings } from '@/background/detector/mockDetector';
 import {
   createMemoryCacheStore,
+  rejectingUpdateStore,
+  throwingGetStore,
+  throwingUpdateStore,
   type MemoryCacheStore,
 } from '@/test/background/memoryCacheStore';
 
@@ -161,5 +164,154 @@ describe('ResultCache', () => {
     expect(
       cache.lookup(identity({ contentHash: sha256Hex(versions[18]) })),
     ).toEqual({ hit: false, reason: 'content-changed' });
+  });
+});
+
+describe('ResultCache across restarts and bad storage', () => {
+  const KEY = `${CACHE_KEY_PREFIX}${JSON.stringify(['file:///w', 'file:///w/Positive.java', 'mock', 'mock-1'])}`;
+
+  function result(overrides: Record<string, unknown> = {}) {
+    return {
+      is_tc_candidate: true,
+      category: 'modularity',
+      benefit: 'b',
+      conditions: 'c',
+      signals: ['s'],
+      not_tc_reason: null,
+      adr: 'kept',
+      ...overrides,
+    };
+  }
+
+  /** A valid stored value, shaped as `store` writes it, for corrupting one field at a time. */
+  function stored(
+    overrides: Record<string, unknown> = {},
+    findings: unknown = [{ line: 1, result: result() }],
+  ): Record<string, unknown> {
+    return {
+      format: 1,
+      contentHash: sha256Hex(POSITIVE),
+      storedAt: 1234,
+      output: { detectorId: 'mock', detectorVersion: 'mock-1', findings },
+      ...overrides,
+    };
+  }
+
+  it('returns identical entries from a new cache over the same store (SC-002)', async () => {
+    const store = createMemoryCacheStore();
+    const before = new ResultCache({ store, now: () => 1234 });
+    await before.store(identity(), ok());
+    const first = before.lookup(identity());
+
+    const after = new ResultCache({ store, now: () => 9999 });
+
+    expect(after.stats()).toEqual({
+      hits: 0,
+      misses: 0,
+      stored: 0,
+      skipped: 0,
+      storeFailures: 0,
+    });
+    const lookup = after.lookup(identity());
+    expect(lookup.hit).toBe(true);
+    expect(lookup).toEqual(first);
+    expect(lookup.hit && lookup.entry.storedAt).toBe(1234);
+  });
+
+  it('reads back a value shaped exactly as the cache writes it', () => {
+    const { cache, store } = memory();
+    store.rawSet(KEY, stored());
+
+    expect(cache.lookup(identity())).toEqual({ hit: true, entry: stored() });
+  });
+
+  it.each<[string, unknown]>([
+    ['null', null],
+    ['a string', 'text'],
+    ['an array', [stored()]],
+    ['an empty object', {}],
+    ['another format', stored({ format: 2 })],
+    [
+      'an uppercase hash',
+      stored({ contentHash: sha256Hex(POSITIVE).toUpperCase() }),
+    ],
+    [
+      'a 63-character hash',
+      stored({ contentHash: sha256Hex(POSITIVE).slice(1) }),
+    ],
+    ['a non-finite time', stored({ storedAt: Infinity })],
+    ['a string time', stored({ storedAt: '1234' })],
+    ['no output', stored({ output: undefined })],
+    [
+      'another detector version inside',
+      stored({
+        output: { detectorId: 'mock', detectorVersion: 'mock-2', findings: [] },
+      }),
+    ],
+    ['findings that are not an array', stored({}, {})],
+    ['a negative line', stored({}, [{ line: -1, result: result() }])],
+    ['a fractional line', stored({}, [{ line: 1.5, result: result() }])],
+    [
+      'a non-candidate finding',
+      stored({}, [{ line: 1, result: result({ is_tc_candidate: false }) }]),
+    ],
+    [
+      'an unknown category',
+      stored({}, [{ line: 1, result: result({ category: 'prototype' }) }]),
+    ],
+    [
+      'a numeric signal',
+      stored({}, [{ line: 1, result: result({ signals: [1] }) }]),
+    ],
+    [
+      'a missing benefit',
+      stored({}, [{ line: 1, result: result({ benefit: undefined }) }]),
+    ],
+    [
+      'a numeric not_tc_reason',
+      stored({}, [{ line: 1, result: result({ not_tc_reason: 0 }) }]),
+    ],
+    ['a numeric adr', stored({}, [{ line: 1, result: result({ adr: 5 }) }])],
+  ])('treats %s as unreadable, without throwing (FR-011)', (_, value) => {
+    const { cache, store } = memory();
+    store.rawSet(KEY, value);
+
+    expect(cache.lookup(identity())).toEqual({
+      hit: false,
+      reason: 'unreadable',
+    });
+  });
+
+  it('never reads entries written under another format prefix', () => {
+    const { cache, store } = memory();
+    store.rawSet(KEY.replace('.v1:', '.v0:'), stored());
+
+    expect(cache.lookup(identity())).toEqual({ hit: false, reason: 'absent' });
+  });
+
+  it('reports a throwing read as a miss with the message (FR-012)', () => {
+    const cache = new ResultCache({
+      store: throwingGetStore('disk gone'),
+      now: () => 0,
+    });
+
+    expect(cache.lookup(identity())).toEqual({
+      hit: false,
+      reason: 'error',
+      message: 'disk gone',
+    });
+  });
+
+  it.each([
+    ['rejects', rejectingUpdateStore('quota')],
+    ['throws', throwingUpdateStore('quota')],
+  ])('resolves failed when the write %s (FR-012)', async (_, store) => {
+    const cache = new ResultCache({ store, now: () => 0 });
+
+    await expect(cache.store(identity(), ok())).resolves.toEqual({
+      status: 'failed',
+      message: 'quota',
+    });
+    expect(cache.stats().storeFailures).toBe(1);
   });
 });

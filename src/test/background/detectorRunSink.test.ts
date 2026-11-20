@@ -20,7 +20,10 @@ import type {
   SnapshotSink,
 } from '@/background/events/fileEvents';
 import { createFakeTimers } from '@/test/background/fakeTimers';
-import { createMemoryCacheStore } from '@/test/background/memoryCacheStore';
+import {
+  createMemoryCacheStore,
+  rejectingUpdateStore,
+} from '@/test/background/memoryCacheStore';
 
 /** Offline tests for card 03's temporary hookup: no `vscode`, no live client. */
 
@@ -372,5 +375,47 @@ describe('detector run sink with cache (temporary, until card 05)', () => {
     );
     expect(mock.callCount).toBe(2);
     expect(store.keys()).toEqual([]);
+  });
+
+  it('hits after a restart without calling the new detector (SC-002)', async () => {
+    const store = createMemoryCacheStore();
+    const timers = createFakeTimers();
+    const first = cached(new MockDetector({ timers }), store);
+    first.sink.submit(positive());
+    timers.advance(2000);
+    await settle();
+    first.sink.dispose();
+
+    const mock = new MockDetector({ timers });
+    const second = cached(mock, store);
+    second.sink.submit(positive({ trigger: 'startup' }));
+    await settle();
+
+    expect(second.lines.at(-1)).toBe(
+      `${T0} cache hit 6 findings v1 sha ${P8} mock@mock-1 ${URI}`,
+    );
+    expect(mock.callCount).toBe(0);
+    expect(second.cache.stats()).toMatchObject({ hits: 1, misses: 0 });
+  });
+
+  it('logs a failed write and keeps working (FR-012)', async () => {
+    const timers = createFakeTimers();
+    const mock = new MockDetector({ timers });
+    const { sink, lines } = cached(mock, rejectingUpdateStore('quota'));
+
+    sink.submit(positive());
+    timers.advance(2000);
+    await settle();
+    sink.submit(positive({ fileUri: 'file:///w/B.java' }));
+    timers.advance(2000);
+    await settle();
+
+    expect(lines).toContain(
+      `${T0} cache store failed: quota v1 sha ${P8} mock@mock-1 ${URI}`,
+    );
+    expect(lines).toContain(
+      `${T0} mock done 6 findings #2 v1 file:///w/B.java`,
+    );
+    expect(mock.callCount).toBe(2);
   });
 });

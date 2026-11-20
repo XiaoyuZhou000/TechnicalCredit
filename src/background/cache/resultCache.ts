@@ -105,6 +105,10 @@ const CATEGORIES = {
   reusability: true,
 } satisfies Record<TCCategory, true>;
 
+function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -241,7 +245,7 @@ export class ResultCache {
     this.now = options.now;
   }
 
-  /** Synchronous, so the caller can decide before starting any work. */
+  /** Synchronous, so the caller can decide before starting any work. Never throws. */
   lookup(identity: CacheIdentity): CacheLookup {
     const result = this.read(identity);
     if (result.hit) {
@@ -252,6 +256,7 @@ export class ResultCache {
     return result;
   }
 
+  /** Never rejects: a storage failure is an outcome, and the caller just analyses again later. */
   async store(
     identity: CacheIdentity,
     result: DetectorResult,
@@ -276,7 +281,12 @@ export class ResultCache {
   }
 
   private read(identity: CacheIdentity): CacheLookup {
-    const value = this.storage.get(keyFor(identity));
+    let value: unknown;
+    try {
+      value = this.storage.get(keyFor(identity));
+    } catch (error) {
+      return { hit: false, reason: 'error', message: messageOf(error) };
+    }
     if (value === undefined) {
       return { hit: false, reason: 'absent' };
     }
@@ -303,7 +313,12 @@ export class ResultCache {
       storedAt: this.now(),
       output: result.output,
     };
-    await this.storage.update(keyFor(identity), entry);
+    try {
+      // Inside the `try`, so an `update` that throws instead of rejecting is caught too.
+      await Promise.resolve(this.storage.update(keyFor(identity), entry));
+    } catch (error) {
+      return { status: 'failed', message: messageOf(error) };
+    }
     return { status: 'stored' };
   }
 }
