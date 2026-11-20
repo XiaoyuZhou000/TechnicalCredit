@@ -1,15 +1,26 @@
+import * as fs from 'fs';
+import * as path from 'path';
+
+import {
+  ResultCache,
+  sha256Hex,
+  type CacheStore,
+} from '@/background/cache/resultCache';
 import {
   failureFromAbort,
   type Detector,
   type DetectorInput,
   type DetectorResult,
 } from '@/background/detector/detector';
+import { MockDetector } from '@/background/detector/mockDetector';
 import { createDetectorRunSink } from '@/background/events/detectorRunSink';
 import type {
   FileClosedNotice,
   FileSnapshot,
   SnapshotSink,
 } from '@/background/events/fileEvents';
+import { createFakeTimers } from '@/test/background/fakeTimers';
+import { createMemoryCacheStore } from '@/test/background/memoryCacheStore';
 
 /** Offline tests for card 03's temporary hookup: no `vscode`, no live client. */
 
@@ -232,5 +243,134 @@ describe('detector run sink (temporary, until card 05)', () => {
     });
 
     expect(() => sink.submit(snapshot())).toThrow('inner broke');
+  });
+});
+
+describe('detector run sink with cache (temporary, until card 05)', () => {
+  const POSITIVE = fs.readFileSync(
+    path.join(__dirname, '../creational/prototype/Positive.java'),
+    'utf8',
+  );
+  const URI = 'file:///w/Positive.java';
+  const P8 = sha256Hex(POSITIVE).slice(0, 8);
+
+  function positive(overrides: Partial<FileSnapshot> = {}): FileSnapshot {
+    return snapshot({
+      fileUri: URI,
+      version: 1,
+      content: POSITIVE,
+      ...overrides,
+    });
+  }
+
+  /** Lets every pending promise chain run, however many turns it takes. */
+  function settle(): Promise<void> {
+    return new Promise((resolve) => setImmediate(resolve));
+  }
+
+  function cached(
+    detector: Detector,
+    store: CacheStore = createMemoryCacheStore(),
+  ) {
+    const lines: string[] = [];
+    const cache = new ResultCache({ store, now: () => 0 });
+    const sink = createDetectorRunSink({
+      inner: {
+        submit: (s) => lines.push(`inner submit ${s.fileUri}`),
+        closed: () => undefined,
+      },
+      detector,
+      hash: sha256Hex,
+      log: (line) => lines.push(line),
+      now: () => 0,
+      cache,
+    });
+    return { sink, lines, cache, store };
+  }
+
+  it('logs a miss, runs the mock, then stores its result (S13, S14)', async () => {
+    const timers = createFakeTimers();
+    const { sink, lines } = cached(new MockDetector({ timers }));
+
+    sink.submit(positive());
+    timers.advance(2000);
+    await settle();
+
+    expect(lines).toEqual([
+      `inner submit ${URI}`,
+      `${T0} cache miss (absent) v1 sha ${P8} mock@mock-1 ${URI}`,
+      `${T0} mock start #1 v1 ${URI}`,
+      `${T0} mock done 6 findings #1 v1 ${URI}`,
+      `${T0} cache stored 6 findings v1 sha ${P8} mock@mock-1 ${URI}`,
+    ]);
+  });
+
+  it('reuses the stored result for the same content without a call (S12, SC-001)', async () => {
+    const timers = createFakeTimers();
+    const mock = new MockDetector({ timers });
+    const { sink, lines } = cached(mock);
+    sink.submit(positive());
+    timers.advance(2000);
+    await settle();
+    lines.length = 0;
+
+    sink.submit(positive({ version: 2, trigger: 'activate' }));
+    await settle();
+
+    expect(lines).toEqual([
+      `inner submit ${URI}`,
+      `${T0} cache hit 6 findings v2 sha ${P8} mock@mock-1 ${URI}`,
+    ]);
+    expect(mock.callCount).toBe(1);
+    expect(timers.pendingCount).toBe(0);
+  });
+
+  it('cancels the running call on a hit and starts no new one (S11)', async () => {
+    const timers = createFakeTimers();
+    const mock = new MockDetector({ timers });
+    const { sink, lines } = cached(mock);
+    sink.submit(positive());
+    timers.advance(2000);
+    await settle();
+
+    sink.submit(positive({ version: 2, content: `${POSITIVE}// edit` }));
+    sink.submit(positive({ version: 3 }));
+    await settle();
+
+    expect(mock.callCount).toBe(2);
+    expect(mock.calls()[1].outcome).toEqual({
+      status: 'failed',
+      failure: 'cancelled',
+    });
+    expect(lines).toContain(`${T0} mock cancelled #2 v2 ${URI}`);
+    expect(lines.at(-2)).toBe(
+      `${T0} cache hit 6 findings v3 sha ${P8} mock@mock-1 ${URI}`,
+    );
+    expect(lines.filter((l) => l.includes('cache stored'))).toHaveLength(1);
+  });
+
+  it('never stores a failed call, so the next submit misses again (S14, SC-005)', async () => {
+    const timers = createFakeTimers();
+    const mock = new MockDetector({
+      timers,
+      version: 'mock-fail',
+      behaviour: { kind: 'fail', message: 'nope' },
+    });
+    const store = createMemoryCacheStore();
+    const { sink, lines } = cached(mock, store);
+
+    sink.submit(positive());
+    timers.advance(2000);
+    await settle();
+    sink.submit(positive({ version: 2 }));
+    await settle();
+
+    expect(lines).toContain(`${T0} mock failed: nope #1 v1 ${URI}`);
+    expect(lines.filter((l) => l.includes('cache stored'))).toEqual([]);
+    expect(lines).toContain(
+      `${T0} cache miss (absent) v2 sha ${P8} mock@mock-fail ${URI}`,
+    );
+    expect(mock.callCount).toBe(2);
+    expect(store.keys()).toEqual([]);
   });
 });

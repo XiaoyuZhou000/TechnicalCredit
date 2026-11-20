@@ -1,6 +1,6 @@
-import { createHash } from 'crypto';
 import * as vscode from 'vscode';
 
+import { ResultCache, sha256Hex } from '@/background/cache/resultCache';
 import { MockDetector } from '@/background/detector/mockDetector';
 import { createDetectorRunSink } from '@/background/events/detectorRunSink';
 import { startFileEventMonitor } from '@/background/events/fileEventMonitor';
@@ -15,14 +15,20 @@ export function startBackgroundAgent(context: vscode.ExtensionContext): void {
     'Technical Credit (Background)',
   );
   const log = (line: string): void => channel.appendLine(line);
-  // Card 05 replaces the run sink with the scheduler and keeps the mock as its detector.
+  // `globalState` persists across restarts; no `setKeysForSync`, so results stay on this machine.
+  const cache = new ResultCache({
+    store: context.globalState,
+    now: () => Date.now(),
+  });
+  // Card 05 replaces the run sink with the scheduler, which takes over the cache check and
+  // keeps the mock as its detector.
   const runSink = createDetectorRunSink({
     inner: createLoggingSink(log),
     detector: new MockDetector(),
-    hash: (content) =>
-      createHash('sha256').update(content, 'utf8').digest('hex'),
+    hash: sha256Hex,
     log,
     now: () => Date.now(),
+    cache,
   });
   const monitor = startFileEventMonitor(runSink, (error) =>
     log(describeSinkError(error)),
