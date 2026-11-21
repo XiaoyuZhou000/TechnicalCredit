@@ -186,33 +186,33 @@ Every rule below applies to all Background Agent work. The integration points an
 
 ## Proposed modules
 
-**This is a proposal. Card 01 created none of these files. Card 10 created `background/detector/detector.ts`; card 02 created `background/events/*` and `background/backgroundAgent.ts`; card 03 created `background/detector/mockDetector.ts` and the temporary `background/events/detectorRunSink.ts`. Each comes with offline tests.** All new Background Agent code goes under `src/background/`, split by responsibility. Paths are relative to `src/`.
+**This is a proposal. Card 01 created none of these files. Card 10 created `background/detector/detector.ts`; card 02 created `background/events/*` and `background/backgroundAgent.ts`; card 03 created `background/detector/mockDetector.ts` and the temporary `background/events/detectorRunSink.ts`; card 04 created `background/cache/resultCache.ts`. Each comes with offline tests.** All new Background Agent code goes under `src/background/`, split by responsibility. Paths are relative to `src/`.
 
-| path                                    | responsibility                                                                                                                                                                                                   | cards          | dependsOn                                                            | vscodeFree            |
-| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | -------------------------------------------------------------------- | --------------------- |
-| `background/detector/detector.ts`       | **Created on card 10.** The detector contract: input, output, result/failure types, the `Detector` interface, `isCacheable`, `failureFromAbort`                                                                  | 10             | `comment/tcResult.ts`                                                | yes                   |
-| `background/detector/mockDetector.ts`   | **Created on card 03.** Deterministic async mock with configurable delay and an inspectable call counter. Reads time through `MockTimers`, a subset of the planned `Clock`                                       | 03             | `detector/detector.ts`                                               | yes                   |
-| `background/events/fileEvents.ts`       | **Created on card 02.** The file-event contract (`FileSnapshot`, `FileClosedNotice`, `SnapshotSink`), `isSupported`, and the `FileEventHandler` core                                                             | 02             | none                                                                 | yes                   |
-| `background/events/fileEventMonitor.ts` | **Created on card 02.** Thin adapter: subscribes open, active-editor, change, save and close events, plus the startup scan, and calls the core                                                                   | 02             | `vscode`, `events/fileEvents.ts`                                     | no (adapter)          |
-| `background/events/loggingSink.ts`      | **Created on card 02.** Placeholder `SnapshotSink` that logs one line per event (never file text); replaced by the scheduler on card 05                                                                          | 02 (temporary) | `events/fileEvents.ts`                                               | yes                   |
-| `background/events/detectorRunSink.ts`  | **Created on card 03.** Temporary `SnapshotSink` that runs the detector for each notification, cancels that file's previous call and logs start/end lines; replaced by the scheduler on card 05                  | 03 (temporary) | `detector/detector.ts`, `events/fileEvents.ts`                       | yes                   |
-| `background/scheduler/scheduler.ts`     | Per-file state: pending snapshot, coalescing, debounce, cooldown, in-flight dedup, cache check, detector call                                                                                                    | 05, 06, 07, 08 | `detector/detector.ts`, `cache/resultCache.ts`, `scheduler/clock.ts` | yes                   |
-| `background/scheduler/clock.ts`         | `Clock` interface (`now`, `setTimeout`, `clearTimeout`), plus real and fake implementations                                                                                                                      | 06, 07, 09     | none                                                                 | yes                   |
-| `background/cache/resultCache.ts`       | SHA-256 content hashing and cache identity (workspace + file URI + content hash + detector version) over a `CacheStore`                                                                                          | 04             | `detector/detector.ts`, Node `crypto`                                | yes                   |
-| `background/cache/vscodeCacheStore.ts`  | `CacheStore` backed by VS Code extension storage, so results survive Extension Host restarts                                                                                                                     | 04             | `vscode`, `cache/resultCache.ts`                                     | no (adapter)          |
-| `background/backgroundAgent.ts`         | **Created on card 02** (monitor, logging sink, mock detector and run sink so far). Composition root: `startBackgroundAgent(context)` wires the monitor, scheduler, cache and detector, and registers disposables | 02–08, 10      | everything above                                                     | no (composition root) |
-| `test/background/*.test.ts`             | Offline unit tests with a fake clock and an in-memory `CacheStore`; never imports `@/utils/claude`                                                                                                               | 09             | the vscode-free modules above                                        | yes                   |
+| path                                    | responsibility                                                                                                                                                                                                                                                | cards              | dependsOn                                                              | vscodeFree            |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ---------------------------------------------------------------------- | --------------------- |
+| `background/detector/detector.ts`       | **Created on card 10.** The detector contract: input, output, result/failure types, the `Detector` interface, `isCacheable`, `failureFromAbort`                                                                                                               | 10                 | `comment/tcResult.ts`                                                  | yes                   |
+| `background/detector/mockDetector.ts`   | **Created on card 03.** Deterministic async mock with configurable delay and an inspectable call counter. Reads time through `MockTimers`, a subset of the planned `Clock`                                                                                    | 03                 | `detector/detector.ts`                                                 | yes                   |
+| `background/events/fileEvents.ts`       | **Created on card 02.** The file-event contract (`FileSnapshot`, `FileClosedNotice`, `SnapshotSink`), `isSupported`, and the `FileEventHandler` core                                                                                                          | 02                 | none                                                                   | yes                   |
+| `background/events/fileEventMonitor.ts` | **Created on card 02.** Thin adapter: subscribes open, active-editor, change, save and close events, plus the startup scan, and calls the core                                                                                                                | 02                 | `vscode`, `events/fileEvents.ts`                                       | no (adapter)          |
+| `background/events/loggingSink.ts`      | **Created on card 02.** Placeholder `SnapshotSink` that logs one line per event (never file text); replaced by the scheduler on card 05                                                                                                                       | 02 (temporary)     | `events/fileEvents.ts`                                                 | yes                   |
+| `background/events/detectorRunSink.ts`  | **Created on card 03.** Temporary `SnapshotSink` that checks the result cache (card 04), runs the detector on a miss, cancels that file's previous call, stores successful results and logs one line per step; replaced by the scheduler on card 05           | 03, 04 (temporary) | `detector/detector.ts`, `events/fileEvents.ts`, `cache/resultCache.ts` | yes                   |
+| `background/scheduler/scheduler.ts`     | Per-file state: pending snapshot, coalescing, debounce, cooldown, in-flight dedup, cache check, detector call                                                                                                                                                 | 05, 06, 07, 08     | `detector/detector.ts`, `cache/resultCache.ts`, `scheduler/clock.ts`   | yes                   |
+| `background/scheduler/clock.ts`         | `Clock` interface (`now`, `setTimeout`, `clearTimeout`), plus real and fake implementations                                                                                                                                                                   | 06, 07, 09         | none                                                                   | yes                   |
+| `background/cache/resultCache.ts`       | **Created on card 04.** `sha256Hex`, the `CacheStore` interface, `ResultCache` (`lookup`, `store`, `stats`) keyed by workspace + file URI + detector id + detector version, with the content hash compared on lookup; every stored value is validated on read | 04                 | `detector/detector.ts`, `comment/tcResult.ts`, Node `crypto`           | yes                   |
+| `background/backgroundAgent.ts`         | **Created on card 02** (monitor, logging sink, mock detector, run sink and result cache over `context.globalState` so far). Composition root: `startBackgroundAgent(context)` wires the monitor, scheduler, cache and detector, and registers disposables     | 02–08, 10          | everything above                                                       | no (composition root) |
+| `test/background/*.test.ts`             | Offline unit tests with a fake clock and an in-memory `CacheStore`; never imports `@/utils/claude`                                                                                                                                                            | 09                 | the vscode-free modules above                                          | yes                   |
 
 Design notes:
 
 - **The scheduler owns all per-file state.** Card 07 defines the earliest start as `max(lastChange + debounce, lastCompletion + cooldown)`, which needs debounce, cooldown, coalescing and in-flight state together. Separate wrappers would each repeat the same bookkeeping.
 - **Time is injected.** The scheduler and mock detector read time only through `Clock`, so card 09's fake-clock tests and the scripted 0 → 1 → 2 → 2 demo are deterministic without patching globals. Until card 06 creates `Clock`, the mock takes a `MockTimers` (`setTimeout`, `clearTimeout`); keep those signatures in `Clock` so one fake drives both.
 - **No new dependencies.** Hashing uses `crypto.createHash('sha256')`, and storage goes through a small `CacheStore` interface, so tests use an in-memory store (C8).
-- **The dependency direction is one way**: adapters → core. Only the three "no" rows import `vscode` (C1), and nothing under `background/` imports `@/utils/claude` (C7).
+- **No storage adapter.** `vscode.Memento` (`context.globalState`) already satisfies `CacheStore` structurally, as `TextDocument` satisfies card 02's `MonitoredDocument`, so the proposed `cache/vscodeCacheStore.ts` was not needed (card 04). The composition root passes `context.globalState` directly and never calls `setKeysForSync`, so results stay on the machine that produced them.
+- **The dependency direction is one way**: adapters → core. Only the "no" rows import `vscode` (C1), and nothing under `background/` imports `@/utils/claude` (C7).
 
 ## Proposed contracts
 
-The detector contract is agreed on card 10 (pending review). The file-event hand-off is agreed on card 02.
+The detector contract is agreed on card 10 (pending review). The file-event hand-off is agreed on card 02, and the result cache on card 04.
 
 ### Detector (card 10)
 
@@ -287,6 +287,18 @@ export function failureFromAbort(signal: AbortSignal): DetectorResult; // Timeou
 
 These are extras on the concrete class. The scheduler must still depend only on `Detector`.
 
+### Result cache (card 04)
+
+**Agreed (card 04).** Source: `src/background/cache/resultCache.ts`.
+
+1. **Identity**: a lookup hits only if workspace id, file URI, detector id, detector version **and** content hash all match. The hash is `sha256Hex(content)`, the same value the detector receives as `contentHash`; line endings are not normalised.
+2. **One entry per file and version**: the key is `technicalCredit.resultCache.v1:` + `JSON.stringify([workspaceId, fileUri, detectorId, detectorVersion])`, and the content hash lives in the value. A new store replaces that file and version's previous entry, so storage doesn't grow with edits.
+3. **Only successes are stored**: `store` skips anything `isCacheable` rejects (contract rule 9) and any output whose detector id or version differs from the identity's. Empty findings are stored.
+4. **Versions never cross**: a result stored under one detector id or version is never returned under another. Older versions keep their entries, so rolling back hits again.
+5. **Unreadable means miss**: every stored value is validated on read. Another format, a corrupt value or a throwing `get` is a miss; a failing `update` is a `failed` outcome. `lookup` and `store` never throw or reject.
+6. **No reaction to a version change**: the cache never starts an analysis. A new version simply misses on the next lookup; proactive re-analysis is card 11.
+7. **No logging**: callers log from the returned outcomes, with counts, the first 8 hash characters, `detectorId@detectorVersion` and the URI, never file text or findings. `stats()` counts hits, misses and store outcomes since activation.
+
 ### File events → scheduler (cards 02 and 05)
 
 **Agreed (card 02).** Source: `src/background/events/fileEvents.ts`.
@@ -352,7 +364,7 @@ export interface SnapshotSink {
 4. `submit` and `closed` stay synchronous and never throw, because they run inside editor event listeners.
 5. Text inserted by the manual **Analyse for TC** preview arrives as a normal `'edit'` and is absorbed by the debounce. No special case is needed in Sprint 1.
 
-Until card 05 lands, `backgroundAgent.ts` plugs in `detectorRunSink.ts` (card 03), which wraps `loggingSink.ts`. The logging sink writes one line per event (never file text) to the **Technical Credit (Background)** output channel. The run sink then starts a mock call for each snapshot, cancels that file's previous call, and logs `mock start #n` and `mock <outcome> #n` lines.
+Until card 05 lands, `backgroundAgent.ts` plugs in `detectorRunSink.ts` (card 03), which wraps `loggingSink.ts`. The logging sink writes one line per event (never file text) to the **Technical Credit (Background)** output channel. The run sink then cancels that file's previous call and looks the snapshot up in the result cache (card 04). A hit logs `cache hit` and starts no call. A miss logs `cache miss (<reason>)`, starts a mock call, and logs `mock start #n` and `mock <outcome> #n` lines; a successful result is then stored and logged as `cache stored` (or `cache store failed`). Card 05's scheduler takes over the cache check.
 
 ## Live integration outline
 
@@ -397,17 +409,17 @@ With the mock this is harmless. With a live detector taking seconds per call, it
 
 Every Sprint 1 card from 02 to 10 maps to at least one integration point and at least one proposed module.
 
-| Card                                  | Integration points                                                    | Proposed modules                                    |
-| ------------------------------------- | --------------------------------------------------------------------- | --------------------------------------------------- |
-| 02 · Java File Event Monitoring       | Command registry (listeners registered as disposables)                | `events/fileEventMonitor.ts`, `backgroundAgent.ts`  |
-| 03 · Asynchronous Mock Detector       | Context building (shape it must stay compatible with)                 | `detector/mockDetector.ts`                          |
-| 04 · SHA-256 Persistent Result Cache  | Command registry (extension storage from `context`)                   | `cache/resultCache.ts`, `cache/vscodeCacheStore.ts` |
-| 05 · Event Coalescing                 | Command registry (via the composition root)                           | `scheduler/scheduler.ts`                            |
-| 06 · Per-file Debounce                | Command registry (timers disposed on deactivation)                    | `scheduler/scheduler.ts`, `scheduler/clock.ts`      |
-| 07 · Per-file Cooldown                | Command registry (timers disposed on deactivation)                    | `scheduler/scheduler.ts`, `scheduler/clock.ts`      |
-| 08 · In-flight Deduplication          | Command registry (via the composition root)                           | `scheduler/scheduler.ts`                            |
-| 09 · Auto Save / Restart Tests & Demo | Command registry (agent is re-created on each Extension Host restart) | `test/background/*.test.ts`, `scheduler/clock.ts`   |
-| 10 · Shared Detector Interface        | Analysis flow; Context building; Pending-annotation display           | `detector/detector.ts`, `backgroundAgent.ts`        |
+| Card                                  | Integration points                                                    | Proposed modules                                   |
+| ------------------------------------- | --------------------------------------------------------------------- | -------------------------------------------------- |
+| 02 · Java File Event Monitoring       | Command registry (listeners registered as disposables)                | `events/fileEventMonitor.ts`, `backgroundAgent.ts` |
+| 03 · Asynchronous Mock Detector       | Context building (shape it must stay compatible with)                 | `detector/mockDetector.ts`                         |
+| 04 · SHA-256 Persistent Result Cache  | Command registry (extension storage from `context`)                   | `cache/resultCache.ts`, `backgroundAgent.ts`       |
+| 05 · Event Coalescing                 | Command registry (via the composition root)                           | `scheduler/scheduler.ts`                           |
+| 06 · Per-file Debounce                | Command registry (timers disposed on deactivation)                    | `scheduler/scheduler.ts`, `scheduler/clock.ts`     |
+| 07 · Per-file Cooldown                | Command registry (timers disposed on deactivation)                    | `scheduler/scheduler.ts`, `scheduler/clock.ts`     |
+| 08 · In-flight Deduplication          | Command registry (via the composition root)                           | `scheduler/scheduler.ts`                           |
+| 09 · Auto Save / Restart Tests & Demo | Command registry (agent is re-created on each Extension Host restart) | `test/background/*.test.ts`, `scheduler/clock.ts`  |
+| 10 · Shared Detector Interface        | Analysis flow; Context building; Pending-annotation display           | `detector/detector.ts`, `backgroundAgent.ts`       |
 
 ## Known issues & follow-ups
 
@@ -437,3 +449,4 @@ Found during the card 01 review. Only item 1 was fixed on this card; the rest ar
 | 20  | `workspace.onDidCloseTextDocument` fires when VS Code disposes the document, which can lag behind the tab closing, and isn't guaranteed for every tab close (found on card 02).                                                                                    | Not fixed. Card 02 reports closes whenever they arrive. If card 05 or 08 needs immediate closes, add `window.tabGroups.onDidChangeTabs` to the monitor. |
 | 21  | After a window reload, VS Code may restore tabs lazily, so a restored Java file can be reported as `'open'` (when first shown) instead of `'startup'` (found on card 02).                                                                                          | Not a bug. Card 09's restart test and demo should accept either trigger.                                                                                |
 | 22  | Card 03's temporary run sink starts a mock call on every edit, so the call count while typing is not card 09's demo count (found on card 03).                                                                                                                      | Expected until card 05 replaces the run sink with the scheduler.                                                                                        |
+| 23  | Cached results are never pruned: entries for deleted or renamed files, closed workspaces and retired detector versions stay in `globalState` (found on card 04).                                                                                                   | Bounded by files × detector versions, one entry each. Prune on activation by age once a policy is agreed.                                               |
