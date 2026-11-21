@@ -8,8 +8,13 @@ import {
 } from '@/background/detector/detector';
 import type { TCCategory, TCResult } from '@/comment/tcResult';
 
-/** The `v1` must change together with `CachedEntry.format`, so entries in an old shape are never read. */
-export const CACHE_KEY_PREFIX = 'technicalCredit.resultCache.v1:';
+/**
+ * Bump whenever the stored shape changes. The key prefix, the stored `format` field and the
+ * read check all derive from it, so entries in an old shape are never read.
+ */
+export const CACHE_FORMAT = 1;
+
+export const CACHE_KEY_PREFIX = `technicalCredit.resultCache.v${CACHE_FORMAT}:`;
 
 /**
  * SHA-256 of the exact text as UTF-8, as 64 lowercase hex characters. Line endings are not
@@ -39,7 +44,7 @@ export interface CacheIdentity {
 
 /** The stored value. Never represents a failure: failures are never written. */
 export interface CachedEntry {
-  readonly format: 1;
+  readonly format: typeof CACHE_FORMAT;
   readonly contentHash: string;
   readonly storedAt: number;
   readonly output: DetectorOutput;
@@ -187,7 +192,7 @@ function parseEntry(
   value: unknown,
   identity: CacheIdentity,
 ): CachedEntry | undefined {
-  if (!isRecord(value) || value.format !== 1) {
+  if (!isRecord(value) || value.format !== CACHE_FORMAT) {
     return undefined;
   }
   const contentHash = value.contentHash;
@@ -214,7 +219,7 @@ function parseEntry(
     findings.push(finding);
   }
   return {
-    format: 1,
+    format: CACHE_FORMAT,
     contentHash,
     storedAt,
     output: {
@@ -316,7 +321,7 @@ export class ResultCache {
       return { status: 'skipped', reason: 'mismatch' };
     }
     const entry: CachedEntry = {
-      format: 1,
+      format: CACHE_FORMAT,
       contentHash: identity.contentHash,
       storedAt: this.now(),
       output: result.output,

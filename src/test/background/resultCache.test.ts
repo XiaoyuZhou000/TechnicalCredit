@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import {
+  CACHE_FORMAT,
   CACHE_KEY_PREFIX,
   ResultCache,
   sha256Hex,
@@ -68,6 +69,13 @@ describe('sha256Hex', () => {
     for (const text of ['', 'x', POSITIVE, 'é漢字\u0000']) {
       expect(sha256Hex(text)).toMatch(/^[0-9a-f]{64}$/);
     }
+  });
+});
+
+describe('cache format', () => {
+  it('keeps the key prefix existing entries were stored under', () => {
+    expect(CACHE_FORMAT).toBe(1);
+    expect(CACHE_KEY_PREFIX).toBe('technicalCredit.resultCache.v1:');
   });
 });
 
