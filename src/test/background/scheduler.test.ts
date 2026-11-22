@@ -17,7 +17,10 @@ import {
   Scheduler,
   type SettledRequest,
 } from '@/background/scheduler/scheduler';
-import { createMemoryCacheStore } from '@/test/background/memoryCacheStore';
+import {
+  createMemoryCacheStore,
+  rejectingUpdateStore,
+} from '@/test/background/memoryCacheStore';
 
 /** Offline tests for card 08's scheduler: no `vscode`, no live client. */
 
@@ -334,4 +337,237 @@ describe('one active request per file (US1)', () => {
       expect(detector.callCount).toBe(2);
     },
   );
+});
+
+/** A store whose writes finish only when the test calls `release`. */
+function gatedStore() {
+  const inner = createMemoryCacheStore();
+  const gates: (() => void)[] = [];
+  const store: CacheStore = {
+    get: (key) => inner.get(key),
+    update: (key, value) =>
+      new Promise<void>((resolve) => {
+        gates.push(() => {
+          void inner.update(key, value).then(resolve);
+        });
+      }),
+  };
+  return {
+    store,
+    release(): void {
+      gates.splice(0).forEach((open) => open());
+    },
+  };
+}
+
+describe('latest pending snapshot (US2)', () => {
+  it('keeps only the newest different content, and runs it once after A is stored (US2-1, US2-4, US2-6)', async () => {
+    const { scheduler, detector, lines } = scripted();
+    const [a, b, c] = [rev('a', 1), rev('b', 2), rev('c', 3)];
+
+    scheduler.submit(a);
+    scheduler.submit(b);
+    scheduler.submit(c);
+
+    expect(lines.slice(2)).toEqual([
+      `${T0} pending v2 sha ${sha8(b)} scripted@1 ${A_URI}`,
+      `${T0} pending replaced v3 sha ${sha8(c)} scripted@1 ${A_URI}`,
+    ]);
+    expect(scheduler.fileState(W, A_URI)?.pending).toEqual({
+      version: 3,
+      contentHash: sha256Hex(c.content),
+    });
+
+    detector.calls[0].resolve(ok(1));
+    await settle();
+
+    const stored = lines.indexOf(
+      `${T0} cache stored 1 findings v1 sha ${sha8(a)} scripted@1 ${A_URI}`,
+    );
+    const missC = lines.indexOf(
+      `${T0} cache miss (content changed) v3 sha ${sha8(c)} scripted@1 ${A_URI}`,
+    );
+    expect(stored).toBeGreaterThan(-1);
+    expect(missC).toBeGreaterThan(stored);
+    expect(detector.outstanding).toBe(2);
+    expect(detector.calls[1].input.contentHash).toBe(sha256Hex(c.content));
+    expect(scheduler.fileState(W, A_URI)?.pending).toBeUndefined();
+    expect(scheduler.stats()).toMatchObject({
+      started: 2,
+      followUps: 1,
+      pendingHeld: 1,
+      pendingReplaced: 1,
+    });
+  });
+
+  it('makes no call for pending content that is already cached (US2-5)', async () => {
+    const { scheduler, detector, cache, lines } = scripted();
+    const [a, c] = [rev('a', 1), rev('c', 2)];
+    await cache.store(
+      {
+        workspaceId: W,
+        fileUri: A_URI,
+        contentHash: sha256Hex(c.content),
+        detectorId: 'scripted',
+        detectorVersion: '1',
+      },
+      ok(3),
+    );
+    // C misses on submit only because A arrived first; A's failure stores nothing, so C's entry
+    // is still the file's latest one when C is rechecked.
+    scheduler.submit(a);
+    scheduler.submit(c);
+    detector.calls[0].resolve(fail('cancelled'));
+    await settle();
+
+    expect(lines.at(-1)).toBe(
+      `${T0} cache hit 3 findings v2 sha ${sha8(c)} scripted@1 ${A_URI}`,
+    );
+    expect(detector.outstanding).toBe(1);
+    expect(scheduler.stats().followUps).toBe(0);
+  });
+
+  it('rechecks pending content after a successful store replaced its entry', async () => {
+    const { scheduler, detector, cache, lines } = scripted();
+    const [a, c] = [rev('a', 1), rev('c', 2)];
+    await cache.store(
+      {
+        workspaceId: W,
+        fileUri: A_URI,
+        contentHash: sha256Hex(c.content),
+        detectorId: 'scripted',
+        detectorVersion: '1',
+      },
+      ok(3),
+    );
+
+    scheduler.submit(a);
+    scheduler.submit(c);
+    detector.calls[0].resolve(ok(1));
+    await settle();
+
+    // Card 04 keeps one entry per file and version, so A's store replaced C's.
+    expect(lines.at(-1)).toBe(`${T0} scripted start #2 v2 ${A_URI}`);
+    expect(detector.outstanding).toBe(2);
+  });
+
+  it('ignores repeated events for the running content (US2-2, SC-003)', async () => {
+    const { scheduler, detector, lines } = scripted();
+    const a = rev('a', 1);
+
+    scheduler.submit(a);
+    for (const trigger of [
+      'open',
+      'activate',
+      'save',
+      'edit',
+      'startup',
+    ] as const) {
+      scheduler.submit({ ...a, trigger });
+      scheduler.submit({ ...a, trigger, version: 2 });
+    }
+
+    expect(
+      lines.filter((l) => l.includes('duplicate of running')),
+    ).toHaveLength(10);
+    detector.calls[0].resolve(ok(1));
+    await settle();
+
+    expect(detector.outstanding).toBe(1);
+    expect(scheduler.stats().duplicates).toBe(10);
+  });
+
+  it('ignores a repeat of the pending content', () => {
+    const { scheduler, lines } = scripted();
+    const b = rev('b', 2);
+
+    scheduler.submit(rev('a', 1));
+    scheduler.submit(b);
+    scheduler.submit({ ...b, trigger: 'save' });
+
+    expect(lines.at(-1)).toBe(
+      `${T0} duplicate of pending v2 sha ${sha8(b)} scripted@1 ${A_URI}`,
+    );
+  });
+
+  it('clears pending when the file changes back to the running content (US2-3, SC-004)', async () => {
+    const { scheduler, detector, lines } = scripted();
+    const a = rev('a', 1);
+
+    scheduler.submit(a);
+    scheduler.submit(rev('b', 2));
+    scheduler.submit({ ...a, version: 3 });
+
+    expect(lines.at(-1)).toBe(
+      `${T0} pending cleared v3 sha ${sha8(a)} scripted@1 ${A_URI}`,
+    );
+    expect(scheduler.fileState(W, A_URI)?.pending).toBeUndefined();
+
+    detector.calls[0].resolve(ok(1));
+    await settle();
+
+    expect(detector.outstanding).toBe(1);
+    expect(scheduler.stats().pendingCleared).toBe(1);
+  });
+
+  it('holds a snapshot that arrives while the result is being stored', async () => {
+    const gated = gatedStore();
+    const detector = new ScriptedDetector();
+    const { scheduler, lines } = setup({ detector, store: gated.store });
+    const b = rev('b', 2);
+
+    scheduler.submit(rev('a', 1));
+    detector.calls[0].resolve(ok(1));
+    await settle();
+    scheduler.submit(b);
+
+    expect(lines.at(-1)).toBe(
+      `${T0} pending v2 sha ${sha8(b)} scripted@1 ${A_URI}`,
+    );
+    expect(detector.outstanding).toBe(1);
+
+    gated.release();
+    await settle();
+
+    expect(detector.outstanding).toBe(2);
+    expect(detector.calls[1].input.version).toBe(2);
+  });
+
+  it('runs the pending snapshot after a failure, but never retries the failure (US2-7, US2-8)', async () => {
+    const { scheduler, detector, cache } = scripted();
+
+    scheduler.submit(rev('a', 1));
+    scheduler.submit(rev('c', 2));
+    detector.calls[0].resolve(fail('failed'));
+    await settle();
+
+    expect(cache.stats().stored).toBe(0);
+    expect(detector.outstanding).toBe(2);
+    expect(detector.calls[1].input.version).toBe(2);
+
+    detector.calls[1].resolve(fail('failed'));
+    await settle();
+
+    expect(detector.outstanding).toBe(2);
+    expect(scheduler.fileState(W, A_URI)?.active).toBeUndefined();
+  });
+
+  it('releases the slot and runs pending work when the store fails', async () => {
+    const detector = new ScriptedDetector();
+    const { scheduler, lines } = setup({
+      detector,
+      store: rejectingUpdateStore('disk full'),
+    });
+    const a = rev('a', 1);
+
+    scheduler.submit(a);
+    scheduler.submit(rev('c', 2));
+    detector.calls[0].resolve(ok(1));
+    await settle();
+
+    expect(lines).toContain(
+      `${T0} cache store failed: disk full v1 sha ${sha8(a)} scripted@1 ${A_URI}`,
+    );
+    expect(detector.outstanding).toBe(2);
+  });
 });

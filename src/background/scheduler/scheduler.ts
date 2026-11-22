@@ -168,10 +168,12 @@ export class Scheduler implements SnapshotSink {
     }
     state.latestHash = contentHash;
     state.open = true;
-    if (state.active !== undefined) {
-      return;
+    const item: PendingSnapshot = { snapshot, contentHash };
+    if (state.active === undefined) {
+      this.dispatch(state, item);
+    } else {
+      this.hold(state, state.active, item);
     }
-    this.dispatch(state, { snapshot, contentHash });
   }
 
   closed(notice: FileClosedNotice): void {
@@ -242,6 +244,42 @@ export class Scheduler implements SnapshotSink {
 
   private line(text: string): void {
     this.log(`${iso(this.now())} ${text}`);
+  }
+
+  /**
+   * A request is running for this file: never start or abort one. Content compares by hash,
+   * so `open` + `activate`, unchanged saves and an edit followed by its undo are all duplicates.
+   */
+  private hold(
+    state: FileState,
+    active: ActiveRequest,
+    item: PendingSnapshot,
+  ): void {
+    if (item.contentHash === active.contentHash) {
+      if (state.pending === undefined) {
+        this.counts.duplicates++;
+        this.line(`duplicate of running ${this.suffix(item)}`);
+      } else {
+        // Back to the running content, which the active request already covers.
+        state.pending = undefined;
+        this.counts.pendingCleared++;
+        this.line(`pending cleared ${this.suffix(item)}`);
+      }
+      return;
+    }
+    if (item.contentHash === state.pending?.contentHash) {
+      this.counts.duplicates++;
+      this.line(`duplicate of pending ${this.suffix(item)}`);
+      return;
+    }
+    if (state.pending === undefined) {
+      this.counts.pendingHeld++;
+      this.line(`pending ${this.suffix(item)}`);
+    } else {
+      this.counts.pendingReplaced++;
+      this.line(`pending replaced ${this.suffix(item)}`);
+    }
+    state.pending = item;
   }
 
   /** Only for a file with no active request: the cache decides whether a request starts. */
@@ -346,5 +384,15 @@ export class Scheduler implements SnapshotSink {
 
     state.active = undefined;
     state.lastSettledAt = this.now();
+
+    // Only the latest pending snapshot goes on, through the cache; the settled request itself
+    // is never retried here, even if it failed.
+    const next = state.pending;
+    if (next !== undefined) {
+      state.pending = undefined;
+      if (this.dispatch(state, next)) {
+        this.counts.followUps++;
+      }
+    }
   }
 }
