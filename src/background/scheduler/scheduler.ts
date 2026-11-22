@@ -183,6 +183,20 @@ export class Scheduler implements SnapshotSink {
       return;
     }
     this.inner.closed(notice);
+    const state = this.files.get(keyOf(notice.workspaceId, notice.fileUri));
+    if (state === undefined) {
+      return;
+    }
+    if (state.pending !== undefined) {
+      this.counts.pendingDropped++;
+      this.line(`pending dropped (closed) ${this.suffix(state.pending)}`);
+      state.pending = undefined;
+    }
+    state.open = false;
+    // An active request is left to finish: a success is still worth caching for a reopen.
+    if (state.active === undefined) {
+      this.files.delete(state.key);
+    }
   }
 
   dispose(): void {
@@ -431,6 +445,8 @@ export class Scheduler implements SnapshotSink {
       if (this.dispatch(state, next)) {
         this.counts.followUps++;
       }
+    } else if (!state.open) {
+      this.files.delete(state.key);
     }
   }
 }

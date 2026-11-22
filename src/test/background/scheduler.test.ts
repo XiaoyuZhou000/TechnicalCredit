@@ -799,3 +799,132 @@ describe('current or stale results (US3)', () => {
     expect(detector.outstanding).toBe(2);
   });
 });
+
+describe('close and dispose (US4)', () => {
+  const closeA = { workspaceId: W, fileUri: A_URI, observedAt: 0 };
+
+  it('drops pending work on close and lets the active request finish (US4-1, US4-2, SC-008)', async () => {
+    const { scheduler, detector, lines, events, cache, order } = scripted();
+    const c = rev('c', 2);
+
+    scheduler.submit(rev('a', 1));
+    scheduler.submit(c);
+    scheduler.closed(closeA);
+
+    expect(order.slice(-2)).toEqual([
+      `inner closed ${A_URI}`,
+      `${T0} pending dropped (closed) v2 sha ${sha8(c)} scripted@1 ${A_URI}`,
+    ]);
+    expect(detector.calls[0].signal.aborted).toBe(false);
+
+    detector.calls[0].resolve(ok(1));
+    await settle();
+
+    expect(cache.stats().stored).toBe(1);
+    expect(lines).toContain(`${T0} result stale #1 v1 ${A_URI}`);
+    expect(events[0]).toMatchObject({ stored: true, eligible: false });
+    expect(detector.outstanding).toBe(1);
+    expect(scheduler.fileState(W, A_URI)).toBeUndefined();
+    expect(scheduler.stats().pendingDropped).toBe(1);
+  });
+
+  it('holds new content from a reopen until the closed request settles (US4-3)', async () => {
+    const { scheduler, detector } = scripted();
+    const d = rev('d', 5);
+
+    scheduler.submit(rev('a', 1));
+    scheduler.closed(closeA);
+    scheduler.submit({ ...d, trigger: 'open' });
+
+    expect(detector.outstanding).toBe(1);
+    expect(scheduler.fileState(W, A_URI)?.pending?.version).toBe(5);
+
+    detector.calls[0].resolve(ok(1));
+    await settle();
+
+    expect(detector.outstanding).toBe(2);
+    expect(detector.calls[1].input.contentHash).toBe(sha256Hex(d.content));
+  });
+
+  it('marks the result current when the file is reopened with the same content', async () => {
+    const { scheduler, detector, lines, events } = scripted();
+    const a = rev('a', 1);
+
+    scheduler.submit(a);
+    scheduler.closed(closeA);
+    scheduler.submit({ ...a, trigger: 'open' });
+
+    expect(lines.at(-1)).toContain('duplicate of running v1');
+
+    detector.calls[0].resolve(ok(1));
+    await settle();
+
+    expect(events[0].eligible).toBe(true);
+    expect(scheduler.fileState(W, A_URI)?.open).toBe(true);
+  });
+
+  it('forgets an idle file on close, and ignores unknown files', async () => {
+    const { scheduler, detector, order } = scripted();
+    scheduler.submit(rev('a', 1));
+    detector.calls[0].resolve(ok(1));
+    await settle();
+
+    scheduler.closed(closeA);
+    expect(scheduler.fileState(W, A_URI)).toBeUndefined();
+
+    const before = order.length;
+    expect(() =>
+      scheduler.closed({ ...closeA, fileUri: 'file:///w/Unknown.java' }),
+    ).not.toThrow();
+    expect(order.slice(before)).toEqual([
+      'inner closed file:///w/Unknown.java',
+    ]);
+  });
+
+  it('aborts everything on dispose and starts nothing afterwards (US4-4, US4-5, SC-008)', async () => {
+    const { scheduler, detector, order, cache, events } = scripted();
+    scheduler.submit(rev('a', 1));
+    scheduler.submit(rev('b', 2));
+    scheduler.submit(snapshot({ fileUri: 'file:///w/B.java' }));
+    scheduler.submit(
+      snapshot({ fileUri: 'file:///w/B.java', version: 2, content: 'x' }),
+    );
+    const before = order.length;
+
+    scheduler.dispose();
+
+    expect(detector.calls.map((c) => c.signal.aborted)).toEqual([true, true]);
+    scheduler.submit(rev('c', 3));
+    scheduler.closed(closeA);
+    detector.calls[0].resolve(ok(1));
+    await settle();
+
+    expect(detector.outstanding).toBe(2);
+    expect(order).toHaveLength(before);
+    expect(cache.stats().stored).toBe(0);
+    expect(events).toEqual([]);
+    expect(scheduler.fileState(W, A_URI)).toBeUndefined();
+  });
+
+  it('stores and logs nothing when disposed during the store', async () => {
+    const gated = gatedStore();
+    const detector = new ScriptedDetector();
+    const { scheduler, lines, events } = setup({
+      detector,
+      store: gated.store,
+    });
+    scheduler.submit(rev('a', 1));
+    scheduler.submit(rev('c', 2));
+    detector.calls[0].resolve(ok(1));
+    await settle();
+    const before = lines.length;
+
+    scheduler.dispose();
+    gated.release();
+    await settle();
+
+    expect(lines).toHaveLength(before);
+    expect(events).toEqual([]);
+    expect(detector.outstanding).toBe(1);
+  });
+});
