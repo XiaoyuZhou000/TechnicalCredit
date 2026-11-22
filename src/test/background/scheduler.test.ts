@@ -610,6 +610,7 @@ describe('scheduler with the mock detector', () => {
       `${T0} mock start #1 v1 ${URI}`,
       `${T0} mock done 6 findings #1 v1 ${URI}`,
       `${T0} cache stored 6 findings v1 sha ${P8} mock@mock-1 ${URI}`,
+      `${T0} result current #1 v1 ${URI}`,
       `inner submit ${URI}`,
       `${T0} cache hit 6 findings v2 sha ${P8} mock@mock-1 ${URI}`,
     ]);
@@ -713,7 +714,88 @@ describe('scheduler with the mock detector', () => {
       `${T0} mock start #1 v1 ${URI}`,
       `${T0} mock done 6 findings #1 v1 ${URI}`,
       `${T0} cache stored 6 findings v1 sha ${P8} mock@mock-2 ${URI}`,
+      `${T0} result current #1 v1 ${URI}`,
     ]);
     expect(mock.callCount).toBe(1);
+  });
+});
+
+describe('current or stale results (US3)', () => {
+  it('stores a result that settles after the file changed, but marks it stale (US3-1, SC-007)', async () => {
+    const { scheduler, detector, lines, events, cache } = scripted();
+    const a = rev('a', 1);
+
+    scheduler.submit(a);
+    scheduler.submit(rev('c', 2));
+    detector.calls[0].resolve(ok(1));
+    await settle();
+
+    expect(lines).toContain(`${T0} result stale #1 v1 ${A_URI}`);
+    expect(events[0]).toMatchObject({
+      n: 1,
+      version: 1,
+      contentHash: sha256Hex(a.content),
+      detectorId: 'scripted',
+      detectorVersion: '1',
+      stored: true,
+      eligible: false,
+    });
+    expect(cache.stats().stored).toBe(1);
+    expect(JSON.stringify(events)).not.toContain(SECRET);
+  });
+
+  it('marks a result current when nothing newer arrived (US3-2)', async () => {
+    const { scheduler, detector, lines, events } = scripted();
+
+    scheduler.submit(rev('a', 1));
+    detector.calls[0].resolve(ok(1));
+    await settle();
+
+    expect(lines.at(-1)).toBe(`${T0} result current #1 v1 ${A_URI}`);
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ stored: true, eligible: true });
+  });
+
+  it('marks it current again when the file changes back before it settles (US3-4)', async () => {
+    const { scheduler, detector, events } = scripted();
+    const a = rev('a', 1);
+
+    scheduler.submit(a);
+    scheduler.submit(rev('c', 2));
+    scheduler.submit({ ...a, version: 3 });
+    detector.calls[0].resolve(ok(1));
+    await settle();
+
+    expect(events[0].eligible).toBe(true);
+    expect(detector.outstanding).toBe(1);
+  });
+
+  it('never stores or marks a failure as eligible (US3-3)', async () => {
+    const { scheduler, detector, lines, events } = scripted();
+
+    scheduler.submit(rev('a', 1));
+    detector.calls[0].resolve(fail('timeout'));
+    await settle();
+
+    expect(events[0]).toMatchObject({ stored: false, eligible: false });
+    expect(lines.some((l) => l.includes(' result '))).toBe(false);
+  });
+
+  it('keeps going when the settle listener throws', async () => {
+    const detector = new ScriptedDetector();
+    const { scheduler, lines } = setup({
+      detector,
+      onSettled: () => {
+        throw new Error('listener broke');
+      },
+    });
+
+    scheduler.submit(rev('a', 1));
+    scheduler.submit(rev('c', 2));
+    detector.calls[0].resolve(ok(1));
+    await settle();
+
+    expect(lines).toContain(`${T0} settle listener error: listener broke`);
+    expect(detector.outstanding).toBe(2);
   });
 });

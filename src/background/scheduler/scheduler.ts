@@ -132,6 +132,7 @@ export class Scheduler implements SnapshotSink {
   private readonly hash: (content: string) => string;
   private readonly log: (line: string) => void;
   private readonly now: () => number;
+  private readonly onSettled?: (event: SettledRequest) => void;
   private readonly files = new Map<string, FileState>();
   private readonly counts: Record<keyof SchedulerStats, number> = {
     started: 0,
@@ -152,6 +153,7 @@ export class Scheduler implements SnapshotSink {
     this.hash = options.hash;
     this.log = options.log;
     this.now = options.now;
+    this.onSettled = options.onSettled;
   }
 
   submit(snapshot: FileSnapshot): void {
@@ -338,6 +340,18 @@ export class Scheduler implements SnapshotSink {
     void this.settle(state, active, settled);
   }
 
+  /** A throwing listener must not leave the file's pending work stranded. */
+  private report(event: SettledRequest): void {
+    if (this.onSettled === undefined) {
+      return;
+    }
+    try {
+      this.onSettled(event);
+    } catch (error) {
+      this.line(`settle listener error: ${messageOf(error)}`);
+    }
+  }
+
   /** A settlement only acts while its request is still the file's active one. */
   private isCurrent(state: FileState, active: ActiveRequest): boolean {
     return (
@@ -361,9 +375,11 @@ export class Scheduler implements SnapshotSink {
       `${this.detector.id} ${describeOutcome(result)} #${active.n} v${snapshot.version} ${snapshot.fileUri}`,
     );
 
+    let stored = false;
+    let eligible = false;
     if (result.ok) {
       // Stored under the content actually analysed, and before release, so the next lookup
-      // for this file already sees it.
+      // for this file already sees it. A stale result is still correct for its own content.
       const outcome = await this.cache.store(
         this.identityOf(active, active.detectorVersion),
         result,
@@ -371,6 +387,7 @@ export class Scheduler implements SnapshotSink {
       if (!this.isCurrent(state, active)) {
         return;
       }
+      stored = outcome.status === 'stored';
       if (outcome.status === 'stored') {
         this.line(
           `cache stored ${result.output.findings.length} findings ${this.suffix(active)}`,
@@ -380,10 +397,31 @@ export class Scheduler implements SnapshotSink {
           `cache store failed: ${outcome.message} ${this.suffix(active)}`,
         );
       }
+      // Decided after the store, so snapshots that arrived while storing count too. Caching and
+      // showing are separate: only a current result may ever be shown (stale-result guard).
+      eligible =
+        active.contentHash === state.latestHash &&
+        active.detectorVersion === this.detector.version &&
+        state.open;
+      this.line(
+        `result ${eligible ? 'current' : 'stale'} #${active.n} v${snapshot.version} ${snapshot.fileUri}`,
+      );
     }
 
     state.active = undefined;
     state.lastSettledAt = this.now();
+    this.report({
+      workspaceId: snapshot.workspaceId,
+      fileUri: snapshot.fileUri,
+      version: snapshot.version,
+      n: active.n,
+      contentHash: active.contentHash,
+      detectorId: this.detector.id,
+      detectorVersion: active.detectorVersion,
+      result,
+      stored,
+      eligible,
+    });
 
     // Only the latest pending snapshot goes on, through the cache; the settled request itself
     // is never retried here, even if it failed.
