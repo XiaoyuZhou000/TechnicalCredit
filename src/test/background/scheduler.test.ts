@@ -928,3 +928,142 @@ describe('close and dispose (US4)', () => {
     expect(detector.outstanding).toBe(1);
   });
 });
+
+describe('inspection (US5)', () => {
+  const B_URI = 'file:///w/B.java';
+  const closeOf = (fileUri: string) => ({
+    workspaceId: W,
+    fileUri,
+    observedAt: 0,
+  });
+
+  /** Every kind of decision line, across two files. */
+  async function everyDecision() {
+    const run = scripted();
+    const { scheduler, detector } = run;
+    const a = rev('a', 1);
+    scheduler.submit(a); // miss, start #1
+    scheduler.submit({ ...a, trigger: 'activate' }); // duplicate of running
+    scheduler.submit(rev('b', 2)); // pending
+    scheduler.submit(rev('b', 3)); // duplicate of pending
+    scheduler.submit(rev('c', 4)); // pending replaced
+    scheduler.submit({ ...a, version: 5 }); // pending cleared
+    scheduler.submit(rev('d', 6)); // pending
+    detector.calls[0].resolve(ok(1)); // stored, stale; follow-up for d (#2)
+    await settle();
+    scheduler.submit(snapshot({ fileUri: B_URI })); // miss, start #3
+    scheduler.submit(snapshot({ fileUri: B_URI, version: 2, content: 'x' })); // pending
+    scheduler.closed(closeOf(B_URI)); // pending dropped
+    detector.calls[2].resolve(fail('failed')); // B failed
+    detector.calls[1].resolve(ok(2)); // d stored, current
+    await settle();
+    scheduler.submit(rev('d', 7)); // cache hit
+    return run;
+  }
+
+  it('counts every decision exactly (US5-3)', async () => {
+    const { scheduler, detector } = await everyDecision();
+
+    expect(scheduler.stats()).toEqual({
+      started: 3,
+      followUps: 1,
+      duplicates: 2,
+      pendingHeld: 3,
+      pendingReplaced: 1,
+      pendingCleared: 1,
+      pendingDropped: 1,
+    });
+    expect(Object.isFrozen(scheduler.stats())).toBe(true);
+    expect(detector.outstanding).toBe(3);
+    expect(scheduler.fileState(W, B_URI)).toBeUndefined();
+    expect(scheduler.fileState(W, A_URI)).toEqual({
+      latestHash: sha256Hex(rev('d', 7).content),
+      open: true,
+      lastSettledAt: 0,
+    });
+  });
+
+  it('writes every line in an agreed format (US5-1, US5-2)', async () => {
+    const { lines } = await everyDecision();
+    const time = String.raw`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z`;
+    const uri = String.raw`file:///w/[AB]\.java`;
+    const sfx = String.raw`v\d+ sha [0-9a-f]{8} scripted@1 ${uri}`;
+    const req = String.raw`#\d+ v\d+ ${uri}`;
+    const formats = [
+      String.raw`cache hit \d+ findings ${sfx}`,
+      String.raw`cache miss \((absent|unreadable|content changed|error: .+)\) ${sfx}`,
+      String.raw`scripted start ${req}`,
+      String.raw`scripted (done \d+ findings|failed: .+|cancelled|timeout) ${req}`,
+      String.raw`cache stored \d+ findings ${sfx}`,
+      String.raw`result (current|stale) ${req}`,
+      String.raw`pending ${sfx}`,
+      String.raw`pending replaced ${sfx}`,
+      String.raw`duplicate of (running|pending) ${sfx}`,
+      String.raw`pending cleared ${sfx}`,
+      String.raw`pending dropped \(closed\) ${sfx}`,
+    ].map((f) => new RegExp(`^${time} ${f}$`));
+
+    expect(lines.filter((l) => !formats.some((f) => f.test(l)))).toEqual([]);
+    expect(
+      formats.filter((f) => !lines.some((l) => f.test(l))).map(String),
+    ).toEqual([]);
+  });
+
+  it('never logs file text or findings (SC-010)', async () => {
+    const { lines } = await everyDecision();
+    const all = lines.join('\n');
+
+    expect(all).not.toContain(SECRET);
+    expect(all).not.toContain('finding-signal');
+  });
+
+  it('keeps its invariants through a long seeded sequence (SC-001)', async () => {
+    const { scheduler, detector } = scripted();
+    const uris = [A_URI, B_URI, 'file:///w/C.java'];
+    const resolved = new Set<number>();
+    let seed = 8;
+    const random = (n: number): number => {
+      seed = (seed * 1103515245 + 12345) % 2147483648;
+      return seed % n;
+    };
+    let version = 0;
+
+    for (let step = 0; step < 200; step++) {
+      const fileUri = uris[random(uris.length)];
+      const action = random(10);
+      if (action < 6) {
+        scheduler.submit(
+          snapshot({ fileUri, version: ++version, content: `v${random(3)}` }),
+        );
+      } else if (action < 9) {
+        const index = detector.calls.findIndex(
+          (c, i) => c.input.fileUri === fileUri && !resolved.has(i),
+        );
+        if (index >= 0) {
+          resolved.add(index);
+          detector.calls[index].resolve(
+            random(4) === 0 ? fail('failed') : ok(1),
+          );
+        }
+      } else {
+        scheduler.closed(closeOf(fileUri));
+      }
+      if (random(2) === 0) {
+        await settle();
+      }
+
+      for (const uri of uris) {
+        const unresolved = detector.calls.filter(
+          (c, i) => c.input.fileUri === uri && !resolved.has(i),
+        );
+        expect(unresolved.length).toBeLessThanOrEqual(1);
+        const state = scheduler.fileState(W, uri);
+        if (state?.pending !== undefined) {
+          expect(state.active).toBeDefined();
+          expect(state.pending.contentHash).not.toBe(state.active?.contentHash);
+        }
+      }
+    }
+    expect(scheduler.stats().started).toBeGreaterThan(10);
+  });
+});
