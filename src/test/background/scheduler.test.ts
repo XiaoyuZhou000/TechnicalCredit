@@ -1,3 +1,6 @@
+import * as fs from 'fs';
+import * as path from 'path';
+
 import {
   ResultCache,
   sha256Hex,
@@ -13,10 +16,12 @@ import type {
   FileSnapshot,
   SnapshotSink,
 } from '@/background/events/fileEvents';
+import { MockDetector } from '@/background/detector/mockDetector';
 import {
   Scheduler,
   type SettledRequest,
 } from '@/background/scheduler/scheduler';
+import { createFakeTimers } from '@/test/background/fakeTimers';
 import {
   createMemoryCacheStore,
   rejectingUpdateStore,
@@ -569,5 +574,146 @@ describe('latest pending snapshot (US2)', () => {
       `${T0} cache store failed: disk full v1 sha ${sha8(a)} scripted@1 ${A_URI}`,
     );
     expect(detector.outstanding).toBe(2);
+  });
+});
+
+describe('scheduler with the mock detector', () => {
+  const POSITIVE = fs.readFileSync(
+    path.join(__dirname, '../creational/prototype/Positive.java'),
+    'utf8',
+  );
+  const URI = 'file:///w/Positive.java';
+  const P8 = sha256Hex(POSITIVE).slice(0, 8);
+
+  function positive(overrides: Partial<FileSnapshot> = {}): FileSnapshot {
+    return snapshot({
+      fileUri: URI,
+      version: 1,
+      content: POSITIVE,
+      ...overrides,
+    });
+  }
+
+  it('logs a miss, runs the mock, stores, then hits (SC-001)', async () => {
+    const timers = createFakeTimers();
+    const mock = new MockDetector({ timers });
+    const { scheduler, order } = setup({ detector: mock });
+
+    scheduler.submit(positive());
+    timers.advance(2000);
+    await settle();
+    scheduler.submit(positive({ version: 2, trigger: 'activate' }));
+
+    expect(order).toEqual([
+      `inner submit ${URI}`,
+      `${T0} cache miss (absent) v1 sha ${P8} mock@mock-1 ${URI}`,
+      `${T0} mock start #1 v1 ${URI}`,
+      `${T0} mock done 6 findings #1 v1 ${URI}`,
+      `${T0} cache stored 6 findings v1 sha ${P8} mock@mock-1 ${URI}`,
+      `inner submit ${URI}`,
+      `${T0} cache hit 6 findings v2 sha ${P8} mock@mock-1 ${URI}`,
+    ]);
+    expect(mock.callCount).toBe(1);
+  });
+
+  it('makes one call when open and activate arrive together (SC-011)', async () => {
+    const timers = createFakeTimers();
+    const mock = new MockDetector({ timers });
+    const { scheduler, lines } = setup({ detector: mock });
+
+    scheduler.submit(positive({ trigger: 'open' }));
+    scheduler.submit(positive({ trigger: 'activate' }));
+    timers.advance(2000);
+    await settle();
+
+    expect(mock.callCount).toBe(1);
+    expect(mock.calls()[0].outcome).toEqual({ status: 'ok', findingCount: 6 });
+    expect(lines).toContain(
+      `${T0} duplicate of running v1 sha ${P8} mock@mock-1 ${URI}`,
+    );
+  });
+
+  it('runs the latest edit once after the running call, never cancelling it', async () => {
+    const timers = createFakeTimers();
+    const mock = new MockDetector({ timers });
+    const { scheduler } = setup({ detector: mock });
+
+    scheduler.submit(positive());
+    for (let v = 2; v <= 6; v++) {
+      scheduler.submit(positive({ version: v, content: `${POSITIVE}//${v}` }));
+    }
+    timers.advance(2000);
+    await settle();
+    timers.advance(2000);
+    await settle();
+
+    expect(mock.calls().map((c) => [c.version, c.outcome.status])).toEqual([
+      [1, 'ok'],
+      [6, 'ok'],
+    ]);
+  });
+
+  it('never stores a failed call, so the next submit misses again (SC-005)', async () => {
+    const timers = createFakeTimers();
+    const mock = new MockDetector({
+      timers,
+      version: 'mock-fail',
+      behaviour: { kind: 'fail', message: 'nope' },
+    });
+    const store = createMemoryCacheStore();
+    const { scheduler, lines } = setup({ detector: mock, store });
+
+    scheduler.submit(positive());
+    timers.advance(2000);
+    await settle();
+    scheduler.submit(positive({ version: 2 }));
+
+    expect(lines).toContain(`${T0} mock failed: nope #1 v1 ${URI}`);
+    expect(lines.filter((l) => l.includes('cache stored'))).toEqual([]);
+    expect(mock.callCount).toBe(2);
+    expect(store.keys()).toEqual([]);
+  });
+
+  it('hits after a restart without calling the new detector (card 04 SC-002)', async () => {
+    const store = createMemoryCacheStore();
+    const timers = createFakeTimers();
+    const first = setup({ detector: new MockDetector({ timers }), store });
+    first.scheduler.submit(positive());
+    timers.advance(2000);
+    await settle();
+    first.scheduler.dispose();
+
+    const mock = new MockDetector({ timers });
+    const second = setup({ detector: mock, store });
+    second.scheduler.submit(positive({ trigger: 'startup' }));
+
+    expect(second.lines).toEqual([
+      `${T0} cache hit 6 findings v1 sha ${P8} mock@mock-1 ${URI}`,
+    ]);
+    expect(mock.callCount).toBe(0);
+  });
+
+  it('runs a new detector version once instead of reusing the old one (card 04 SC-004)', async () => {
+    const store = createMemoryCacheStore();
+    const timers = createFakeTimers();
+    const first = setup({ detector: new MockDetector({ timers }), store });
+    first.scheduler.submit(positive());
+    timers.advance(2000);
+    await settle();
+    first.scheduler.dispose();
+
+    const mock = new MockDetector({ version: 'mock-2', timers });
+    const second = setup({ detector: mock, store });
+    second.scheduler.submit(positive());
+    timers.advance(2000);
+    await settle();
+
+    expect(second.lines).toEqual([
+      `${T0} cache miss (absent) v1 sha ${P8} mock@mock-2 ${URI}`,
+      `${T0} mock start #1 v1 ${URI}`,
+      `${T0} mock done 6 findings #1 v1 ${URI}`,
+      `${T0} cache stored 6 findings v1 sha ${P8} mock@mock-2 ${URI}`,
+    ]);
+    expect(mock.callCount).toBe(1);
   });
 });
