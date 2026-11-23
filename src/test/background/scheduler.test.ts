@@ -4,6 +4,7 @@ import * as path from 'path';
 import {
   ResultCache,
   sha256Hex,
+  type CacheIdentity,
   type CacheStore,
 } from '@/background/cache/resultCache';
 import {
@@ -1443,6 +1444,7 @@ describe('event coalescing: inspection (card 05 US4)', () => {
       pending: { version: 3, contentHash: sha256Hex(c.content) },
       latestHash: sha256Hex(c.content),
       lastChangeAt: 30,
+      eligibleAt: 30, // no quiet period in this suite (card 06)
       open: true,
     });
 
@@ -1469,5 +1471,106 @@ describe('event coalescing: inspection (card 05 US4)', () => {
       open: false,
     });
     expect(scheduler.pendingCount()).toBe(0);
+  });
+});
+
+describe('debounce (card 06)', () => {
+  const QUIET = 3000;
+  const B_URI = 'file:///w/B.java';
+
+  /** A scripted scheduler with the 3 s quiet period and one fake clock for every timestamp. */
+  function debounced(store?: CacheStore) {
+    const clock = createFakeTimers();
+    const detector = new ScriptedDetector();
+    const run = setup({ detector, store, clock, quietMs: QUIET });
+    const at = (s: FileSnapshot): FileSnapshot => ({
+      ...s,
+      observedAt: clock.now(),
+    });
+    return { ...run, detector, clock, at };
+  }
+
+  function identity(s: FileSnapshot): CacheIdentity {
+    return {
+      workspaceId: s.workspaceId,
+      fileUri: s.fileUri,
+      contentHash: sha256Hex(s.content),
+      detectorId: 'scripted',
+      detectorVersion: '1',
+    };
+  }
+
+  it('starts nothing while edits arrive every second, then one call 3 s after the last (SC-001, US1-1, US1-2, US1-3)', () => {
+    const { scheduler, detector, clock, at } = debounced();
+    let last = rev('e1', 1);
+    scheduler.submit(at(last));
+    for (let v = 2; v <= 10; v++) {
+      clock.advance(1000);
+      last = rev(`e${v}`, v);
+      scheduler.submit(at(last));
+    }
+
+    expect(detector.outstanding).toBe(0);
+    clock.advance(QUIET - 1);
+    expect(detector.outstanding).toBe(0);
+    clock.advance(1);
+
+    expect(detector.outstanding).toBe(1);
+    expect(detector.calls[0].input.contentHash).toBe(sha256Hex(last.content));
+  });
+
+  it('makes a first report wait too, then checks the cache (US1-4, SC-005)', async () => {
+    const { scheduler, detector, clock, at, cache, lines } = debounced();
+    const cached = rev('cached', 1);
+    await cache.store(identity(cached), ok(1));
+
+    scheduler.submit(at({ ...cached, trigger: 'open' }));
+    scheduler.submit(at(snapshot({ fileUri: B_URI, trigger: 'startup' })));
+    clock.advance(QUIET - 1);
+
+    expect(lines.filter((l) => l.includes(' cache '))).toEqual([]);
+    expect(detector.outstanding).toBe(0);
+
+    clock.advance(1);
+
+    expect(lines).toContain(
+      `1970-01-01T00:00:03.000Z cache hit 1 findings v1 sha ${sha8(cached)} scripted@1 ${A_URI}`,
+    );
+    expect(detector.calls.map((c) => c.input.fileUri)).toEqual([B_URI]);
+  });
+
+  it('holds one wake-up per waiting file and none once dispatched or cached (SC-003)', async () => {
+    const { scheduler, detector, clock, at, cache } = debounced();
+    const b = snapshot({ fileUri: B_URI, content: 'class B {}' });
+    await cache.store(identity(b), ok(1));
+
+    scheduler.submit(at(rev('a1', 1)));
+    clock.advance(500);
+    scheduler.submit(at(rev('a2', 2)));
+    scheduler.submit(at(b));
+
+    expect(clock.pendingCount).toBe(2);
+    expect(scheduler.pendingCount()).toBe(2);
+
+    clock.advance(QUIET);
+
+    expect(clock.pendingCount).toBe(0);
+    expect(scheduler.pendingCount()).toBe(0);
+    expect(detector.outstanding).toBe(1);
+  });
+
+  it('exposes when waiting work becomes eligible, and drops it once dispatched (FileStateView.eligibleAt)', () => {
+    const { scheduler, clock, at } = debounced();
+
+    scheduler.submit(at(rev('a1', 1)));
+    expect(scheduler.fileState(W, A_URI)?.eligibleAt).toBe(QUIET);
+
+    clock.advance(1000);
+    scheduler.submit(at(rev('a2', 2)));
+    expect(scheduler.fileState(W, A_URI)?.eligibleAt).toBe(1000 + QUIET);
+
+    clock.advance(QUIET);
+    expect(scheduler.fileState(W, A_URI)?.eligibleAt).toBeUndefined();
+    expect(scheduler.fileState(W, A_URI)?.active).toBeDefined();
   });
 });
