@@ -282,6 +282,10 @@ export class Scheduler implements SnapshotSink {
       return;
     }
     this.inner.closed(notice);
+    // Closes are rare, so they also clear out closed files whose cooldown has since expired.
+    for (const other of this.files.values()) {
+      this.forgetIfClosed(other);
+    }
     const state = this.files.get(keyOf(notice.workspaceId, notice.fileUri));
     if (state === undefined) {
       return;
@@ -294,9 +298,7 @@ export class Scheduler implements SnapshotSink {
     this.cancelWakeup(state);
     state.open = false;
     // An active request is left to finish: a success is still worth caching for a reopen.
-    if (state.active === undefined) {
-      this.files.delete(state.key);
-    }
+    this.forgetIfClosed(state);
   }
 
   dispose(): void {
@@ -422,6 +424,29 @@ export class Scheduler implements SnapshotSink {
       cooldown > this.quietDeadline(state)
       ? 'cooldown'
       : 'quiet';
+  }
+
+  /**
+   * A closed file with nothing running or waiting is forgotten, except while its cooldown runs:
+   * closing and reopening a tab must not bypass the limit on calls (card 07 FR-016). The kept
+   * state holds no timer, so an expired one goes on the next close or report.
+   */
+  private forgetIfClosed(state: FileState): void {
+    if (
+      state.open ||
+      state.active !== undefined ||
+      state.pending !== undefined
+    ) {
+      return;
+    }
+    const cooldown = this.cooldownDeadline(state);
+    const coolingDown =
+      this.cooldownMs > 0 &&
+      cooldown !== undefined &&
+      cooldown > this.clock.now();
+    if (!coolingDown) {
+      this.files.delete(state.key);
+    }
   }
 
   /** At most one wake-up per file: a new deadline replaces the old timer rather than adding one. */
@@ -685,8 +710,8 @@ export class Scheduler implements SnapshotSink {
       if (state.wakeup?.due !== this.eligibleAt(state)) {
         this.schedule(state, next);
       }
-    } else if (!state.open) {
-      this.files.delete(state.key);
+    } else {
+      this.forgetIfClosed(state);
     }
   }
 }

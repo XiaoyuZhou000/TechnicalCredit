@@ -2092,4 +2092,126 @@ describe('cooldown (card 07)', () => {
     until(run, c + COOL);
     expect(detector.outstanding).toBe(2);
   });
+
+  const B_URI = 'file:///w/B.java';
+  const closeOf = (fileUri: string) => ({
+    workspaceId: W,
+    fileUri,
+    observedAt: 0,
+  });
+
+  it('holds no wake-up for an idle file that just finished (US4-1, SC-005)', async () => {
+    const run = cooled();
+    await completeFirst(run);
+
+    expect(run.clock.pendingCount).toBe(0);
+    expect(run.scheduler.fileState(W, A_URI)?.lastSettledAt).toBeDefined();
+  });
+
+  it("never lets one file's cooldown delay another file (US4-2)", async () => {
+    const run = cooled();
+    const { scheduler, detector, at } = run;
+    const c = await completeFirst(run);
+    until(run, c + 5000);
+    scheduler.submit(at(rev('a2', 2))); // A waits until c + 30 s
+    scheduler.submit(at(snapshot({ fileUri: B_URI, content: 'class B {}' })));
+
+    until(run, c + 8000);
+    expect(detector.calls.map((x) => x.input.fileUri)).toEqual([A_URI, B_URI]);
+    until(run, c + COOL);
+    expect(detector.calls.map((x) => x.input.fileUri)).toEqual([
+      A_URI,
+      B_URI,
+      A_URI,
+    ]);
+  });
+
+  it('leaves no timer or call behind on close or dispose during a cooldown (US4-3, US4-4)', async () => {
+    const run = cooled();
+    const { scheduler, detector, at, clock } = run;
+    const c = await completeFirst(run);
+    until(run, c + 5000);
+    scheduler.submit(at(rev('a2', 2)));
+    scheduler.submit(at(snapshot({ fileUri: B_URI, content: 'class B {}' })));
+    expect(clock.pendingCount).toBe(2);
+
+    scheduler.closed(closeOf(A_URI));
+    expect(clock.pendingCount).toBe(1);
+    scheduler.dispose();
+    expect(clock.pendingCount).toBe(0);
+    clock.advance(60_000);
+
+    expect(detector.outstanding).toBe(1);
+  });
+
+  it('keeps the cooldown across a close and reopen (US4-5, FR-016)', async () => {
+    const run = cooled();
+    const { scheduler, detector, at, lines } = run;
+    const c = await completeFirst(run);
+    until(run, c + 5000);
+    scheduler.closed(closeOf(A_URI));
+    until(run, c + 10_000);
+    scheduler.submit(at({ ...rev('b', 2), trigger: 'open' }));
+
+    expect(lines.some((l) => l.includes(' unchanged '))).toBe(false);
+    until(run, c + COOL - 1);
+    expect(detector.outstanding).toBe(1);
+    until(run, c + COOL);
+    expect(detector.outstanding).toBe(2);
+  });
+
+  it('only waits the quiet period on a reopen after the cooldown expired (US4-6)', async () => {
+    const run = cooled();
+    const { scheduler, detector, at } = run;
+    const c = await completeFirst(run);
+    scheduler.closed(closeOf(A_URI));
+    until(run, c + 45_000);
+    scheduler.submit(at({ ...rev('b', 2), trigger: 'open' }));
+
+    until(run, c + 48_000 - 1);
+    expect(detector.outstanding).toBe(1);
+    until(run, c + 48_000);
+    expect(detector.outstanding).toBe(2);
+  });
+
+  it('retains a file closed while its request ran, from the moment it settles (spec edge case)', async () => {
+    const run = cooled();
+    const { scheduler, detector, at, clock } = run;
+    scheduler.submit(at(rev('a', 1)));
+    clock.advance(QUIET); // A starts
+    scheduler.closed(closeOf(A_URI));
+    clock.advance(1000);
+    detector.calls[0].resolve(ok(1));
+    await settle();
+    const c = clock.now();
+
+    expect(scheduler.fileState(W, A_URI)).toMatchObject({
+      open: false,
+      lastSettledAt: c,
+    });
+    expect(scheduler.fileState(W, A_URI)?.pending).toBeUndefined();
+    expect(clock.pendingCount).toBe(0);
+
+    until(run, c + 10_000);
+    scheduler.submit(at({ ...rev('b', 2), trigger: 'open' }));
+    until(run, c + COOL - 1);
+    expect(detector.outstanding).toBe(1);
+    until(run, c + COOL);
+    expect(detector.outstanding).toBe(2);
+  });
+
+  it('sweeps an expired retained record when any file closes (research R4)', async () => {
+    const run = cooled();
+    const { scheduler, at } = run;
+    const c = await completeFirst(run);
+    scheduler.closed(closeOf(A_URI));
+    expect(scheduler.fileState(W, A_URI)?.open).toBe(false);
+
+    until(run, c + COOL);
+    scheduler.submit(at(snapshot({ fileUri: B_URI, content: 'class B {}' })));
+    scheduler.closed(closeOf(B_URI));
+
+    expect(scheduler.fileState(W, A_URI)).toBeUndefined();
+    expect(scheduler.fileState(W, B_URI)).toBeUndefined();
+  });
 });
