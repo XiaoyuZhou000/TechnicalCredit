@@ -61,25 +61,39 @@ From the repository root, the same on Windows, macOS and Linux:
 
   The remaining debug-console noise comes from other extensions, not this one: VS Code's built-in Copilot "Sign in to GitHub to use the Cloud Agent" rejections, and Node deprecation warnings for `url.parse`, `punycode` and `Buffer()`.
 
+### Sprint 1 demo smoke check (card 09)
+
+This manual check covers visibility only. The offline suite (`npx jest src/test/background`) proves the timing, call counts and restart behaviour (constitution IV); don't use the page to prove those.
+
+1. Press **F5**. In the **[Extension Development Host]** window, the extension activates as above.
+2. Open a Java file, for example `src/test/creational/prototype/Positive.java`. Run **Technical Credit: Show Background Status** from the command palette. One tab titled **Technical Credit: Background Status** opens beside the editor. Inside the page, a badge reads "Sprint 1 mock detector".
+3. Run the command again. The same tab is revealed, and no second tab appears.
+4. Type in the Java file, then stop. The row shows waiting work, `quiet until …`. About 3 s later it shows running, then `current · analysed` with a finding count, and **Analyses** goes up.
+5. Type again straight away, then stop. The row shows `cooldown until …` at once, about 30 s after the first analysis finished, with no `quiet until …` first: the cooldown ends later than the quiet period, so it sets the time. While the first analysis is still running, the row can show `after running request` instead. The next analysis starts at the cooldown time.
+6. Close the tab. Background analysis continues: the **Technical Credit (Background)** output channel keeps logging.
+
+For the presentation, capture a screenshot or short recording of steps 4 and 5 beside the Java file. Also save the output of `npx jest src/test/background --verbose`. It shows the functional suite's call-sequence, waiting-hash, timer-state and restart cache-hit tests.
+
 ## Command reference
 
 Run every command from the repository root. **Billed** commands make live Claude calls, cost money, and need `ANTHROPIC_API_KEY` in `.env`. Run them only when asked (C3).
 
-| command                | purpose                                                                                            | when                                                      | cost       |
-| ---------------------- | -------------------------------------------------------------------------------------------------- | --------------------------------------------------------- | ---------- |
-| `npm install`          | Install dependencies from `package-lock.json`                                                      | First setup, or after the lockfile changes                | free       |
-| `npm run compile`      | Type-check, lint (zero warnings), then bundle to `dist/`                                           | Before a manual launch or a PR                            | free       |
-| `npm run watch`        | `watch:tsc` and `watch:esbuild` in parallel                                                        | While developing; F5 starts it automatically              | free       |
-| F5 "Run Extension"     | Run the `watch` task and open an Extension Development Host                                        | To try the extension by hand                              | free¹      |
-| `npm run tsc:check`    | Type-check only (`tsc --noEmit`)                                                                   | Any time; CI job `tsc-check`                              | free       |
-| `npm run lint:check`   | `eslint src --max-warnings=0`                                                                      | Any time; CI job `lint-check`                             | free       |
-| `npm run lint:fix`     | Auto-fix lint issues                                                                               | When `lint:check` fails on fixable rules                  | free       |
-| `npm run format`       | `prettier --write .`                                                                               | Before pushing (see the Windows line-ending note above)   | free       |
-| `npm run format:check` | `prettier --check .`                                                                               | Any time; CI job `format-check`                           | free       |
-| `npx jest <path>`      | Run only the Jest tests under `<path>`, e.g. `npx jest src/test/background`                        | Offline unit tests for the Background Agent               | free²      |
-| `npm test`             | Run **every** `src/**/*.test.ts`, including the live heuristic tests; `dotenv/config` loads `.env` | Only when explicitly asked                                | **billed** |
-| `npm run package`      | Production build (minified, no sourcemaps)                                                         | Release builds                                            | free       |
-| `npm run opro`         | Bundle and run `scripts/opro.ts`, which regenerates the heuristic prompts using Claude             | Only when explicitly asked; it rewrites the tuned prompts | **billed** |
+| command                                      | purpose                                                                                            | when                                                              | cost       |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ---------- |
+| `npm install`                                | Install dependencies from `package-lock.json`                                                      | First setup, or after the lockfile changes                        | free       |
+| `npm run compile`                            | Type-check, lint (zero warnings), then bundle to `dist/`                                           | Before a manual launch or a PR                                    | free       |
+| `npm run watch`                              | `watch:tsc` and `watch:esbuild` in parallel                                                        | While developing; F5 starts it automatically                      | free       |
+| F5 "Run Extension"                           | Run the `watch` task and open an Extension Development Host                                        | To try the extension by hand                                      | free¹      |
+| `npm run tsc:check`                          | Type-check only (`tsc --noEmit`)                                                                   | Any time; CI job `tsc-check`                                      | free       |
+| `npm run lint:check`                         | `eslint src --max-warnings=0`                                                                      | Any time; CI job `lint-check`                                     | free       |
+| `npm run lint:fix`                           | Auto-fix lint issues                                                                               | When `lint:check` fails on fixable rules                          | free       |
+| `npm run format`                             | `prettier --write .`                                                                               | Before pushing (see the Windows line-ending note above)           | free       |
+| `npm run format:check`                       | `prettier --check .`                                                                               | Any time; CI job `format-check`                                   | free       |
+| `npx jest <path>`                            | Run only the Jest tests under `<path>`, e.g. `npx jest src/test/background`                        | Offline unit tests for the Background Agent                       | free²      |
+| `npm test`                                   | Run **every** `src/**/*.test.ts`, including the live heuristic tests; `dotenv/config` loads `.env` | Only when explicitly asked                                        | **billed** |
+| `npm run package`                            | Production build (minified, no sourcemaps)                                                         | Release builds                                                    | free       |
+| **Technical Credit: Show Background Status** | Open or reveal the read-only Background Agent status page (card 09)                                | During a demo or a manual check in the Extension Development Host | free       |
+| `npm run opro`                               | Bundle and run `scripts/opro.ts`, which regenerates the heuristic prompts using Claude             | Only when explicitly asked; it rewrites the tuned prompts         | **billed** |
 
 ¹ Launching is free. Clicking **Analyse for TC** in the host makes 8 or more live calls, which are billed.
 ² Free only when `<path>` holds offline tests alone. `src/test/creational/prototype/*.test.ts` are live tests, so never point `npx jest` at `src/test` as a whole.
@@ -102,7 +116,7 @@ The five areas named on card 01, as they stand on `tc-bg-task01-repo-setup`. "At
 
 - **Location**: `src/registry.ts`
 - **Owns**: creates the single `PendingAnnotation` controller, registers it as a CodeLens provider for `file:` documents, and registers the `technicalcredit.analyseForTC`, `technicalcredit.acceptTCComment` and `technicalcredit.dismissTCComment` commands. Every disposable goes into `context.subscriptions`.
-- **Attachment**: one call, `startBackgroundAgent(context)`, from `src/background/backgroundAgent.ts`, **added on card 02** as the last statement of `register`. That function registers its own listeners, timers and storage adapter as disposables, so deactivation cleans them up the same way as the existing commands. The existing registrations are left as they are.
+- **Attachment**: one call, `startBackgroundAgent(context)`, from `src/background/backgroundAgent.ts`, **added on card 02** as the last statement of `register`. That function registers its own listeners, timers, storage adapter and, since card 09, the `technicalcredit.showBackgroundStatus` command and its status panel as disposables, so deactivation cleans them up the same way as the existing commands. The existing registrations are left as they are.
 - **Constraints**: C1, C7
 - **Serves cards**: 02, 04, 10
 
@@ -186,7 +200,7 @@ Every rule below applies to all Background Agent work. The integration points an
 
 ## Proposed modules
 
-**This is a proposal. Card 01 created none of these files. Card 10 created `background/detector/detector.ts`; card 02 created `background/events/*` and `background/backgroundAgent.ts`; card 03 created `background/detector/mockDetector.ts` and the temporary `background/events/detectorRunSink.ts`; card 04 created `background/cache/resultCache.ts`; card 08 created `background/scheduler/scheduler.ts` and retired the run sink. Each comes with offline tests.** All new Background Agent code goes under `src/background/`, split by responsibility. Paths are relative to `src/`.
+**This is a proposal. Card 01 created none of these files. Card 10 created `background/detector/detector.ts`; card 02 created `background/events/*` and `background/backgroundAgent.ts`; card 03 created `background/detector/mockDetector.ts` and the temporary `background/events/detectorRunSink.ts`; card 04 created `background/cache/resultCache.ts`; card 08 created `background/scheduler/scheduler.ts` and retired the run sink; card 06 created `background/scheduler/clock.ts`; card 09 created `background/status/*`. Each comes with offline tests.** All new Background Agent code goes under `src/background/`, split by responsibility. Paths are relative to `src/`.
 
 | path                                    | responsibility                                                                                                                                                                                                                                                                                                                       | cards          | dependsOn                                                                                                 | vscodeFree            |
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------- | --------------------------------------------------------------------------------------------------------- | --------------------- |
@@ -199,6 +213,10 @@ Every rule below applies to all Background Agent work. The integration points an
 | `background/scheduler/clock.ts`         | **Created on card 06.** `Clock` interface only (`now`, plus `MockTimers`' `setTimeout`, `clearTimeout`). The real clock is bound in `backgroundAgent.ts`; the fake is `test/background/fakeTimers.ts`                                                                                                                                | 06, 07, 09     | none                                                                                                      | yes                   |
 | `background/cache/resultCache.ts`       | **Created on card 04.** `sha256Hex`, the `CacheStore` interface, `ResultCache` (`lookup`, `store`, `stats`) keyed by workspace + file URI + detector id + detector version, with the content hash compared on lookup; every stored value is validated on read                                                                        | 04             | `detector/detector.ts`, `comment/tcResult.ts`, Node `crypto`                                              | yes                   |
 | `background/backgroundAgent.ts`         | **Created on card 02** (monitor, logging sink, mock detector, result cache over `context.globalState` and the scheduler so far). Composition root: `startBackgroundAgent(context)` wires the monitor, scheduler, cache and detector, and registers disposables                                                                       | 02–08, 10      | everything above                                                                                          | no (composition root) |
+| `background/status/backgroundStatus.ts` | **Created on card 09.** `BackgroundStatus`: read-only `snapshot()` (label, detector, session counts, `scheduler.files()`, `nextChangeAt`) and `subscribe()` over the scheduler and cache                                                                                                                                             | 09             | `scheduler/scheduler.ts`, `cache/resultCache.ts`                                                          | yes                   |
+| `background/status/statusView.ts`       | **Created on card 09.** Pure `renderStatusHtml(snapshot, { nonce })` and `escapeHtml`: strict CSP, no scripts, forms or inputs                                                                                                                                                                                                       | 09             | `status/backgroundStatus.ts`                                                                              | yes                   |
+| `background/status/statusFeed.ts`       | **Created on card 09.** `StatusFeed`: renders on open, throttled to one per 200 ms after changes, and again at `nextChangeAt`; isolates render errors; all timers on the injected clock                                                                                                                                              | 09             | `status/backgroundStatus.ts`, `status/statusView.ts`, `scheduler/clock.ts`                                | yes                   |
+| `background/status/statusPanel.ts`      | **Created on card 09.** Thin adapter: one `WebviewPanel` beside the editor (revealed if open), `enableScripts: false`, a CSP nonce per render, the feed disposed with the panel                                                                                                                                                      | 09             | `vscode`, `status/statusFeed.ts`                                                                          | no (adapter)          |
 | `test/background/*.test.ts`             | Offline unit tests with a fake clock and an in-memory `CacheStore`; never imports `@/utils/claude`                                                                                                                                                                                                                                   | 09             | the vscode-free modules above                                                                             | yes                   |
 
 Design notes:
@@ -387,6 +405,19 @@ Since card 08, `backgroundAgent.ts` plugs in the `Scheduler`, which wraps `loggi
     - A closed file with nothing running or waiting is kept while its cooldown runs, with `open: false`, no pending work and no timer, so closing and reopening a tab cannot bypass the limit. Its `fileState()` stays visible until then, and no longer: `fileState()` treats an expired record as absent. Expired records are also swept on every `closed()` and replaced by the next report.
     - Cooldowns are in memory only; a restart forgets them, and the result cache still stops unchanged content from being re-analysed.
 
+### Status interface (card 09)
+
+**Proposed (card 09), until PR #12 is approved.** Sources: `src/background/status/*` and `Scheduler.files()` / `onChange()`. These are additions only; no scheduler rule changes.
+
+1. **Read-only**: nothing on the status surface can trigger analysis, change scheduler or cache state, or edit a document. The page has no scripts, forms, inputs or message channel. It is separate from the Accept/Dismiss annotation UI.
+2. **`Scheduler.files()`** lists every tracked file, sorted by workspace and URI, as `FileStateView` plus `workspaceId`, `fileUri`, `latest` and `keptUntil`. Expired kept records are dropped first.
+   - `latest` is the file's last detector result or cache answer, with its finding count.
+   - `latest.current` is decided when read (content and detector version match, and the file is open), so a stale result can never show as current.
+3. **`Scheduler.onChange()`** notifies once after each burst of changes, through a microtask, never during one. A change is any logged decision, any close (even with nothing pending), or the removal of an expired kept record, including a removal made while reading `files()` or `fileState()`. A throwing listener is logged as `status listener error: …` and skipped. `dispose()` drops every listener.
+4. **Snapshot**: `BackgroundStatus.snapshot()` is deep-frozen metadata. It holds the label ("Sprint 1 mock detector"), `detector`, `takenAt`, the session counts (`analyses`, `followUps`, `repeats` and the cache's hits, misses and stores) and the rows. Counts reset with each session; cached results persist.
+   - `nextChangeAt` is the earliest future eligible time or kept-record expiry, so a page refreshes then without polling.
+5. **Page**: `renderStatusHtml` escapes every value. Its CSP is `default-src 'none'; style-src 'nonce-…'`. The feed renders at most once per 200 ms after changes, and its timers are cleared when the panel or the extension closes. A failed render is reported and skipped.
+
 ## Live integration outline
 
 Written on card 10. **None of this is built in Sprint 1.** It records how background findings will reach users, and what must be true before a live detector replaces the mock.
@@ -430,17 +461,17 @@ With the mock this is harmless. With a live detector taking seconds per call, it
 
 Every Sprint 1 card from 02 to 10 maps to at least one integration point and at least one proposed module.
 
-| Card                                  | Integration points                                                    | Proposed modules                                       |
-| ------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------ |
-| 02 · Java File Event Monitoring       | Command registry (listeners registered as disposables)                | `events/fileEventMonitor.ts`, `backgroundAgent.ts`     |
-| 03 · Asynchronous Mock Detector       | Context building (shape it must stay compatible with)                 | `detector/mockDetector.ts`                             |
-| 04 · SHA-256 Persistent Result Cache  | Command registry (extension storage from `context`)                   | `cache/resultCache.ts`, `backgroundAgent.ts`           |
-| 05 · Event Coalescing                 | Command registry (via the composition root)                           | `scheduler/scheduler.ts` (extends card 08's scheduler) |
-| 06 · Per-file Debounce                | Command registry (timers disposed on deactivation)                    | `scheduler/scheduler.ts`, `scheduler/clock.ts`         |
-| 07 · Per-file Cooldown                | Command registry (timers disposed on deactivation)                    | `scheduler/scheduler.ts`, `scheduler/clock.ts`         |
-| 08 · In-flight Deduplication          | Command registry (via the composition root)                           | `scheduler/scheduler.ts`, `backgroundAgent.ts`         |
-| 09 · Auto Save / Restart Tests & Demo | Command registry (agent is re-created on each Extension Host restart) | `test/background/*.test.ts`, `scheduler/clock.ts`      |
-| 10 · Shared Detector Interface        | Analysis flow; Context building; Pending-annotation display           | `detector/detector.ts`, `backgroundAgent.ts`           |
+| Card                                  | Integration points                                                                        | Proposed modules                                                                   |
+| ------------------------------------- | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| 02 · Java File Event Monitoring       | Command registry (listeners registered as disposables)                                    | `events/fileEventMonitor.ts`, `backgroundAgent.ts`                                 |
+| 03 · Asynchronous Mock Detector       | Context building (shape it must stay compatible with)                                     | `detector/mockDetector.ts`                                                         |
+| 04 · SHA-256 Persistent Result Cache  | Command registry (extension storage from `context`)                                       | `cache/resultCache.ts`, `backgroundAgent.ts`                                       |
+| 05 · Event Coalescing                 | Command registry (via the composition root)                                               | `scheduler/scheduler.ts` (extends card 08's scheduler)                             |
+| 06 · Per-file Debounce                | Command registry (timers disposed on deactivation)                                        | `scheduler/scheduler.ts`, `scheduler/clock.ts`                                     |
+| 07 · Per-file Cooldown                | Command registry (timers disposed on deactivation)                                        | `scheduler/scheduler.ts`, `scheduler/clock.ts`                                     |
+| 08 · In-flight Deduplication          | Command registry (via the composition root)                                               | `scheduler/scheduler.ts`, `backgroundAgent.ts`                                     |
+| 09 · Auto Save / Restart Tests & Demo | Command registry (the status command; agent is re-created on each Extension Host restart) | `status/*`, `test/background/functional.test.ts`, `test/background/status.test.ts` |
+| 10 · Shared Detector Interface        | Analysis flow; Context building; Pending-annotation display                               | `detector/detector.ts`, `backgroundAgent.ts`                                       |
 
 ## Known issues & follow-ups
 
