@@ -1966,4 +1966,34 @@ describe('cooldown (card 07)', () => {
     run.clock.advance(60_000);
     expect(detector.outstanding).toBe(2);
   });
+
+  it('never retries a failure on repeats, however long they go on (SC-002, US2-1)', async () => {
+    const run = cooled();
+    const { scheduler, detector, at } = run;
+    await completeFirst(run, fail('failed'));
+    for (let i = 0; i < 12; i++) {
+      run.clock.advance(5000);
+      scheduler.submit(
+        at({ ...rev('a', 1), trigger: i % 2 ? 'save' : 'activate' }),
+      );
+    }
+
+    expect(detector.outstanding).toBe(1);
+  });
+
+  it.each(['failed', 'timeout', 'cancelled'] as const)(
+    'cools down after a %s request like after a success (US2-2)',
+    async (kind) => {
+      const run = cooled();
+      const { scheduler, detector, at } = run;
+      const c = await completeFirst(run, fail(kind));
+      until(run, c + 2000);
+      scheduler.submit(at(rev('b', 2)));
+
+      until(run, c + COOL - 1);
+      expect(detector.outstanding).toBe(1);
+      until(run, c + COOL);
+      expect(detector.outstanding).toBe(2);
+    },
+  );
 });
