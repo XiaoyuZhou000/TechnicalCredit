@@ -22,7 +22,10 @@ import {
   Scheduler,
   type SettledRequest,
 } from '@/background/scheduler/scheduler';
-import { createFakeTimers } from '@/test/background/fakeTimers';
+import {
+  createFakeTimers,
+  type FakeTimers,
+} from '@/test/background/fakeTimers';
 import {
   createMemoryCacheStore,
   rejectingUpdateStore,
@@ -156,11 +159,15 @@ interface SetupOptions {
   readonly detector?: Detector;
   readonly store?: CacheStore;
   readonly onSettled?: (event: SettledRequest) => void;
+  readonly clock?: FakeTimers;
+  /** Defaults to 0, so card 08 and 05 tests keep their immediate starts (card 06 FR-010). */
+  readonly quietMs?: number;
 }
 
 function setup(options: SetupOptions = {}) {
   const detector = options.detector ?? new ScriptedDetector();
   const store = options.store ?? createMemoryCacheStore();
+  const clock = options.clock ?? createFakeTimers();
   const order: string[] = [];
   const lines: string[] = [];
   const events: SettledRequest[] = [];
@@ -178,14 +185,15 @@ function setup(options: SetupOptions = {}) {
       lines.push(line);
       order.push(line);
     },
-    now: () => 0,
+    clock,
+    quietMs: options.quietMs ?? 0,
     onSettled:
       options.onSettled ??
       ((event) => {
         events.push(event);
       }),
   });
-  return { scheduler, detector, store, cache, lines, order, events };
+  return { scheduler, detector, store, cache, lines, order, events, clock };
 }
 
 function scripted() {

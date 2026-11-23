@@ -1,6 +1,8 @@
 import type { MockTimers } from '@/background/detector/mockDetector';
 
 export interface FakeTimers extends MockTimers {
+  /** Virtual time in ms, so a `FakeTimers` is also a scheduler `Clock`. */
+  now(): number;
   /** Moves virtual time forward, running due callbacks in due-time order. */
   advance(ms: number): void;
   readonly pendingCount: number;
@@ -19,6 +21,9 @@ export function createFakeTimers(): FakeTimers {
   let scheduled: Scheduled[] = [];
 
   return {
+    now() {
+      return now;
+    },
     setTimeout(callback, ms) {
       const id = nextId++;
       scheduled.push({ id, due: now + ms, callback });

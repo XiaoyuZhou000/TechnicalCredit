@@ -9,6 +9,10 @@ import type {
   FileSnapshot,
   SnapshotSink,
 } from '@/background/events/fileEvents';
+import type { Clock } from '@/background/scheduler/clock';
+
+/** Card 06's initial quiet period; tunable in code for Sprint 1. */
+export const DEFAULT_QUIET_MS = 3000;
 
 export interface SchedulerOptions {
   /** Card 02's logging sink; always called first, so its lines stay unchanged. */
@@ -18,7 +22,10 @@ export interface SchedulerOptions {
   /** SHA-256 hex of the content; the composition root passes card 04's `sha256Hex`. */
   readonly hash: (content: string) => string;
   readonly log: (line: string) => void;
-  readonly now: () => number;
+  /** The only source of time; the composition root binds the real one. */
+  readonly clock: Clock;
+  /** Quiet period after a file's last meaningful change (card 06); 0 starts work at once. */
+  readonly quietMs?: number;
   /** Called once per released request, after its store; tests and the later display use it. */
   readonly onSettled?: (event: SettledRequest) => void;
 }
@@ -138,7 +145,8 @@ export class Scheduler implements SnapshotSink {
   private readonly cache: ResultCache;
   private readonly hash: (content: string) => string;
   private readonly log: (line: string) => void;
-  private readonly now: () => number;
+  private readonly clock: Clock;
+  private readonly quietMs: number;
   private readonly onSettled?: (event: SettledRequest) => void;
   private readonly files = new Map<string, FileState>();
   private readonly counts: Record<keyof SchedulerStats, number> = {
@@ -159,7 +167,11 @@ export class Scheduler implements SnapshotSink {
     this.cache = options.cache;
     this.hash = options.hash;
     this.log = options.log;
-    this.now = options.now;
+    this.clock = options.clock;
+    this.quietMs = options.quietMs ?? DEFAULT_QUIET_MS;
+    if (!(this.quietMs >= 0)) {
+      throw new RangeError(`quietMs must be >= 0, got ${this.quietMs}`);
+    }
     this.onSettled = options.onSettled;
   }
 
@@ -298,7 +310,7 @@ export class Scheduler implements SnapshotSink {
   }
 
   private line(text: string): void {
-    this.log(`${iso(this.now())} ${text}`);
+    this.log(`${iso(this.clock.now())} ${text}`);
   }
 
   /**
@@ -477,7 +489,7 @@ export class Scheduler implements SnapshotSink {
     }
 
     state.active = undefined;
-    state.lastSettledAt = this.now();
+    state.lastSettledAt = this.clock.now();
     this.report({
       workspaceId: snapshot.workspaceId,
       fileUri: snapshot.fileUri,
