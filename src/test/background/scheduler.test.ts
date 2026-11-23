@@ -1081,9 +1081,20 @@ describe('inspection (US5)', () => {
       const fileUri = uris[random(uris.length)];
       const action = random(10);
       if (action < 6) {
-        scheduler.submit(
-          snapshot({ fileUri, version: ++version, content: `v${random(3)}` }),
-        );
+        const s = snapshot({
+          fileUri,
+          version: ++version,
+          content: `v${random(3)}`,
+        });
+        scheduler.submit(s);
+        // A save straight after is always a repeat: only the counter may change (card 05).
+        const state = scheduler.fileState(W, fileUri);
+        const calls = detector.calls.length;
+        const duplicates = scheduler.stats().duplicates;
+        scheduler.submit({ ...s, trigger: 'save', observedAt: 1 });
+        expect(scheduler.fileState(W, fileUri)).toEqual(state);
+        expect(detector.calls).toHaveLength(calls);
+        expect(scheduler.stats().duplicates).toBe(duplicates + 1);
       } else if (action < 9) {
         const index = detector.calls.findIndex(
           (c, i) => c.input.fileUri === fileUri && !resolved.has(i),
@@ -1396,5 +1407,59 @@ describe('event coalescing: close and reopen (card 05 US3)', () => {
     scheduler.submit({ ...a, trigger: 'open' });
 
     expect(detector.outstanding).toBe(2);
+  });
+});
+
+describe('event coalescing: inspection (card 05 US4)', () => {
+  it('reports coalescing state and counts every decision exactly (US4-1, US4-2)', async () => {
+    const { scheduler, detector } = scripted();
+    const at = (s: FileSnapshot, observedAt: number): FileSnapshot => ({
+      ...s,
+      observedAt,
+    });
+    const [a, b, c] = [rev('a', 1), rev('b', 2), rev('c', 3)];
+
+    scheduler.submit(at(a, 10)); // start #1
+    scheduler.submit(at({ ...a, trigger: 'activate' }, 11)); // repeat (running)
+    scheduler.submit(at(b, 20)); // held
+    scheduler.submit(at(c, 30)); // replaced
+    scheduler.submit(at({ ...c, trigger: 'save' }, 31)); // repeat (pending)
+
+    expect(scheduler.fileState(W, A_URI)).toEqual({
+      active: {
+        n: 1,
+        version: 1,
+        contentHash: sha256Hex(a.content),
+        detectorVersion: '1',
+      },
+      pending: { version: 3, contentHash: sha256Hex(c.content) },
+      latestHash: sha256Hex(c.content),
+      lastChangeAt: 30,
+      open: true,
+    });
+
+    scheduler.submit(at({ ...a, version: 4 }, 40)); // cleared
+    detector.calls[0].resolve(ok(1));
+    await settle();
+    scheduler.submit(at({ ...a, version: 4, trigger: 'save' }, 41)); // repeat (idle)
+    scheduler.submit(at(b, 50)); // start #2
+    scheduler.submit(at(c, 60)); // held
+    scheduler.closed({ workspaceId: W, fileUri: A_URI, observedAt: 70 }); // dropped
+
+    expect(scheduler.stats()).toEqual({
+      started: 2,
+      followUps: 0,
+      duplicates: 3,
+      pendingHeld: 2,
+      pendingReplaced: 1,
+      pendingCleared: 1,
+      pendingDropped: 1,
+    });
+    expect(scheduler.fileState(W, A_URI)).toMatchObject({
+      latestHash: sha256Hex(c.content),
+      lastChangeAt: 60,
+      open: false,
+    });
+    expect(scheduler.pendingCount()).toBe(0);
   });
 });
