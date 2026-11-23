@@ -1329,3 +1329,72 @@ describe('event coalescing: newest unstarted content (card 05 US2)', () => {
     expect(detector.outstanding).toBe(3);
   });
 });
+
+describe('event coalescing: close and reopen (card 05 US3)', () => {
+  const closeA = { workspaceId: W, fileUri: A_URI, observedAt: 0 };
+
+  it('drops pending work on close so it never runs (SC-005, US3-1)', async () => {
+    const { scheduler, detector, lines } = scripted();
+    const c = rev('c', 2);
+    scheduler.submit(rev('a', 1));
+    scheduler.submit(c);
+
+    scheduler.closed(closeA);
+
+    expect(lines.at(-1)).toBe(
+      `${T0} pending dropped (closed) v2 sha ${sha8(c)} scripted@1 ${A_URI}`,
+    );
+    expect(scheduler.pendingCount()).toBe(0);
+
+    detector.calls[0].resolve(ok(1));
+    await settle();
+
+    expect(detector.outstanding).toBe(1);
+  });
+
+  it('lets a request running at close finish, stores it, and marks it stale (US3-2)', async () => {
+    const { scheduler, detector, cache, events } = scripted();
+    scheduler.submit(rev('a', 1));
+
+    scheduler.closed(closeA);
+    detector.calls[0].resolve(ok(1));
+    await settle();
+
+    expect(detector.calls[0].signal.aborted).toBe(false);
+    expect(cache.stats().stored).toBe(1);
+    expect(events[0]).toMatchObject({ stored: true, eligible: false });
+  });
+
+  it('treats a reopen of an idle file as a first report, not a repeat (US3-3)', async () => {
+    const { scheduler, detector, lines } = scripted();
+    const a = rev('a', 1);
+    scheduler.submit(a);
+    detector.calls[0].resolve(ok(1));
+    await settle();
+
+    scheduler.closed(closeA);
+    const before = lines.length;
+    scheduler.submit({ ...a, trigger: 'open' });
+
+    expect(lines.slice(before)).toEqual([
+      `${T0} cache hit 1 findings v1 sha ${sha8(a)} scripted@1 ${A_URI}`,
+    ]);
+    expect(detector.outstanding).toBe(1);
+  });
+
+  it('retries a failed analysis on reopen, the trigger a repeat never is (US3-3, research R4)', async () => {
+    const { scheduler, detector } = scripted();
+    const a = rev('a', 1);
+    scheduler.submit(a);
+    detector.calls[0].resolve(fail('failed'));
+    await settle();
+    scheduler.submit({ ...a, trigger: 'save' });
+
+    expect(detector.outstanding).toBe(1);
+
+    scheduler.closed(closeA);
+    scheduler.submit({ ...a, trigger: 'open' });
+
+    expect(detector.outstanding).toBe(2);
+  });
+});
