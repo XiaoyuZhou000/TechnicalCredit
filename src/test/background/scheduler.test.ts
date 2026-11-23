@@ -1448,6 +1448,7 @@ describe('event coalescing: inspection (card 05 US4)', () => {
       latestHash: sha256Hex(c.content),
       lastChangeAt: 30,
       eligibleAt: 30, // no quiet period in this suite (card 06)
+      waitingFor: 'quiet', // no cooldown either (card 07)
       open: true,
     });
 
@@ -1996,4 +1997,99 @@ describe('cooldown (card 07)', () => {
       expect(detector.outstanding).toBe(2);
     },
   );
+
+  it('waits for the quiet period when it ends after the cooldown (US3-1, SC-003)', async () => {
+    const run = cooled();
+    const { scheduler, detector, at } = run;
+    const c = await completeFirst(run);
+    until(run, c + 28_000);
+    scheduler.submit(at(rev('b', 2)));
+
+    expect(scheduler.fileState(W, A_URI)).toMatchObject({
+      eligibleAt: c + 31_000,
+      waitingFor: 'quiet',
+    });
+    until(run, c + 31_000 - 1);
+    expect(detector.outstanding).toBe(1);
+    until(run, c + 31_000);
+    expect(detector.outstanding).toBe(2);
+  });
+
+  it('waits for the cooldown when it ends after the quiet period (US3-2)', async () => {
+    const run = cooled();
+    const { scheduler, at } = run;
+    const c = await completeFirst(run);
+    until(run, c + 5000);
+    scheduler.submit(at(rev('b', 2)));
+
+    expect(scheduler.fileState(W, A_URI)).toMatchObject({
+      eligibleAt: c + COOL,
+      waitingFor: 'cooldown',
+    });
+  });
+
+  it('moves neither deadline on repeats during the cooldown (US3-3, SC-004)', async () => {
+    const run = cooled();
+    const { scheduler, at } = run;
+    const c = await completeFirst(run);
+    until(run, c + 5000);
+    const b = at(rev('b', 2));
+    scheduler.submit(b);
+    const before = scheduler.fileState(W, A_URI);
+
+    until(run, c + 10_000);
+    repeatBurst(scheduler, at(b), 5);
+
+    expect(scheduler.fileState(W, A_URI)).toEqual(before);
+  });
+
+  it('clears cached waiting work at eligibility without a call or a new cooldown (US3-4)', async () => {
+    const run = cooled();
+    const { scheduler, detector, at, cache, lines } = run;
+    const b = rev('b', 2);
+    await cache.store(
+      {
+        workspaceId: W,
+        fileUri: A_URI,
+        contentHash: sha256Hex(b.content),
+        detectorId: 'scripted',
+        detectorVersion: '1',
+      },
+      ok(1),
+    );
+    const c = await completeFirst(run, fail('failed')); // a failure stores nothing
+    until(run, c + 5000);
+    scheduler.submit(at(b));
+    until(run, c + COOL);
+
+    expect(lines.at(-1)).toContain('cache hit 1 findings v2');
+    expect(detector.outstanding).toBe(1);
+    expect(scheduler.fileState(W, A_URI)?.lastSettledAt).toBe(c);
+    expect(scheduler.fileState(W, A_URI)?.pending).toBeUndefined();
+  });
+
+  it('moves the wake-up to the new deadline as soon as a request settles (FR-005)', async () => {
+    const run = cooled();
+    const { scheduler, detector, at, lines, clock } = run;
+    scheduler.submit(at(rev('a', 1)));
+    clock.advance(QUIET); // A starts at 3 s
+    clock.advance(1000);
+    scheduler.submit(at(rev('b', 2))); // quiet until 7 s, while A runs
+    clock.advance(1000);
+    detector.calls[0].resolve(ok(1)); // C = 5 s, before b's quiet deadline
+    await settle();
+    const c = clock.now();
+
+    expect(clock.pendingCount).toBe(1);
+    expect(scheduler.fileState(W, A_URI)?.eligibleAt).toBe(c + COOL);
+    expect(lines.at(-1)).toContain(' until 1970-01-01T00:00:35.000Z ');
+    const logged = lines.length;
+
+    until(run, c + COOL - 1);
+    // The old 7 s wake-up is gone, so nothing fires, reschedules or logs before the deadline.
+    expect(lines).toHaveLength(logged);
+    expect(detector.outstanding).toBe(1);
+    until(run, c + COOL);
+    expect(detector.outstanding).toBe(2);
+  });
 });

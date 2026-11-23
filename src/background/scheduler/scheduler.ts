@@ -80,8 +80,13 @@ export interface FileStateView {
   readonly latestHash: string;
   /** `observedAt` of the latest first report or meaningful change; repeats never move it. */
   readonly lastChangeAt: number;
-  /** While work is pending: when it may start (`lastChangeAt` + the quiet period). */
+  /**
+   * While work is pending: when it may start, the later of `lastChangeAt` + the quiet period
+   * and `lastSettledAt` + the cooldown (card 07).
+   */
   readonly eligibleAt?: number;
+  /** While work is pending: which of the two deadlines sets `eligibleAt`. */
+  readonly waitingFor?: 'quiet' | 'cooldown';
   readonly open: boolean;
   readonly lastSettledAt?: number;
 }
@@ -326,7 +331,10 @@ export class Scheduler implements SnapshotSink {
       }),
       latestHash: state.latestHash,
       lastChangeAt: state.lastChangeAt,
-      ...(pending && { eligibleAt: this.eligibleAt(state) }),
+      ...(pending && {
+        eligibleAt: this.eligibleAt(state),
+        waitingFor: this.waitingFor(state),
+      }),
       open: state.open,
       ...(state.lastSettledAt !== undefined && {
         lastSettledAt: state.lastSettledAt,
@@ -404,6 +412,16 @@ export class Scheduler implements SnapshotSink {
     const cooled =
       this.cooldownMs === 0 || cooldown === undefined || cooldown <= now;
     return quiet && cooled;
+  }
+
+  /** Which deadline sets `eligibleAt`: what card 09's status page shows as the waiting reason. */
+  private waitingFor(state: FileState): 'quiet' | 'cooldown' {
+    const cooldown = this.cooldownDeadline(state);
+    return this.cooldownMs > 0 &&
+      cooldown !== undefined &&
+      cooldown > this.quietDeadline(state)
+      ? 'cooldown'
+      : 'quiet';
   }
 
   /** At most one wake-up per file: a new deadline replaces the old timer rather than adding one. */
@@ -663,7 +681,8 @@ export class Scheduler implements SnapshotSink {
         this.counts.followUps++;
       }
     } else if (next !== undefined) {
-      if (state.wakeup === undefined) {
+      // This completion starts a cooldown, so the deadline may have moved past the wake-up.
+      if (state.wakeup?.due !== this.eligibleAt(state)) {
         this.schedule(state, next);
       }
     } else if (!state.open) {
