@@ -87,6 +87,10 @@ export interface FileStateView {
   readonly eligibleAt?: number;
   /** While work is pending: which of the two deadlines sets `eligibleAt`. */
   readonly waitingFor?: 'quiet' | 'cooldown';
+  /**
+   * `false` after close: while the closed file's request still runs, or (card 07) while its
+   * cooldown does, so a reopen still waits for it. Closed files never receive results.
+   */
   readonly open: boolean;
   readonly lastSettledAt?: number;
 }
@@ -185,8 +189,9 @@ function describeMiss(lookup: Exclude<CacheLookup, { hit: true }>): string {
  * deduplication: at most one detector request per file, with the latest different content kept
  * as pending. Card 05 makes repeats of a file's latest content observation only, whether or not
  * a request is running. Card 06 makes pending work wait for a quiet period after the last
- * meaningful change, with at most one wake-up per file. Card 07 extends this class rather than
- * adding its own state. Never logs file text or findings.
+ * meaningful change, with at most one wake-up per file. Card 07 adds a cooldown after every
+ * detector completion to the same deadline, and keeps a closed file's state while it runs.
+ * Never logs file text or findings.
  */
 export class Scheduler implements SnapshotSink {
   private readonly inner: SnapshotSink;
