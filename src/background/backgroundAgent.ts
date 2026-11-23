@@ -8,7 +8,11 @@ import {
   describeSinkError,
 } from '@/background/events/loggingSink';
 import type { Clock } from '@/background/scheduler/clock';
-import { DEFAULT_QUIET_MS, Scheduler } from '@/background/scheduler/scheduler';
+import {
+  DEFAULT_COOLDOWN_MS,
+  DEFAULT_QUIET_MS,
+  Scheduler,
+} from '@/background/scheduler/scheduler';
 
 /** The one place real time is bound; core modules only ever see a `Clock`. */
 const realClock: Clock = {
@@ -39,6 +43,7 @@ export function startBackgroundAgent(context: vscode.ExtensionContext): void {
     log,
     clock: realClock,
     quietMs: DEFAULT_QUIET_MS,
+    cooldownMs: DEFAULT_COOLDOWN_MS,
   });
   const monitor = startFileEventMonitor(scheduler, (error) =>
     log(describeSinkError(error)),

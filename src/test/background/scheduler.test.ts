@@ -163,6 +163,8 @@ interface SetupOptions {
   readonly clock?: FakeTimers;
   /** Defaults to 0, so card 08 and 05 tests keep their immediate starts (card 06 FR-010). */
   readonly quietMs?: number;
+  /** Defaults to 0, so earlier cards' tests keep their timing (card 07 FR-011). */
+  readonly cooldownMs?: number;
 }
 
 function setup(options: SetupOptions = {}) {
@@ -188,6 +190,7 @@ function setup(options: SetupOptions = {}) {
     },
     clock,
     quietMs: options.quietMs ?? 0,
+    cooldownMs: options.cooldownMs ?? 0,
     onSettled:
       options.onSettled ??
       ((event) => {
@@ -1445,6 +1448,7 @@ describe('event coalescing: inspection (card 05 US4)', () => {
       latestHash: sha256Hex(c.content),
       lastChangeAt: 30,
       eligibleAt: 30, // no quiet period in this suite (card 06)
+      waitingFor: 'quiet', // no cooldown either (card 07)
       open: true,
     });
 
@@ -1482,7 +1486,14 @@ describe('debounce (card 06)', () => {
   function debounced(store?: CacheStore) {
     const clock = createFakeTimers();
     const detector = new ScriptedDetector();
-    const run = setup({ detector, store, clock, quietMs: QUIET });
+    // Pure debounce: card 07's cooldown is tested in its own block.
+    const run = setup({
+      detector,
+      store,
+      clock,
+      quietMs: QUIET,
+      cooldownMs: 0,
+    });
     const at = (s: FileSnapshot): FileSnapshot => ({
       ...s,
       observedAt: clock.now(),
@@ -1872,4 +1883,521 @@ describe('debounce (card 06)', () => {
       expect(() => setup({ quietMs })).not.toThrow();
     },
   );
+
+  it.each([Infinity, NaN, -1, 2 ** 31])(
+    'rejects a cooldown of %p, which no timer can wait for (card 07 FR-012)',
+    (cooldownMs) => {
+      expect(() => setup({ cooldownMs })).toThrow(RangeError);
+    },
+  );
+
+  it.each([0, 30_000, 2 ** 31 - 1])(
+    'accepts a cooldown of %p',
+    (cooldownMs) => {
+      expect(() => setup({ cooldownMs })).not.toThrow();
+    },
+  );
+});
+
+describe('cooldown (card 07)', () => {
+  const QUIET = 3000;
+  const COOL = 30_000;
+
+  /** A scripted scheduler with both deadlines on and one fake clock for every timestamp. */
+  function cooled() {
+    const clock = createFakeTimers();
+    const detector = new ScriptedDetector();
+    const run = setup({ detector, clock, quietMs: QUIET, cooldownMs: COOL });
+    const at = (s: FileSnapshot): FileSnapshot => ({
+      ...s,
+      observedAt: clock.now(),
+    });
+    return { ...run, detector, clock, at };
+  }
+
+  /** Runs `a` through its quiet period and settles it; returns C, the completion time. */
+  async function completeFirst(
+    run: ReturnType<typeof cooled>,
+    result: DetectorResult = ok(1),
+  ): Promise<number> {
+    run.scheduler.submit(run.at(rev('a', 1)));
+    run.clock.advance(QUIET);
+    run.detector.calls[0].resolve(result);
+    await settle();
+    return run.clock.now();
+  }
+
+  /** Advances the fake clock to absolute time `t`. */
+  function until(run: ReturnType<typeof cooled>, t: number): void {
+    run.clock.advance(t - run.clock.now());
+  }
+
+  it('starts nothing for 30 s after a completion, then the latest content once (SC-001, US1-1, US1-2)', async () => {
+    const run = cooled();
+    const { scheduler, detector, at } = run;
+    const c = await completeFirst(run);
+    until(run, c + 5000);
+    const b = at(rev('b', 2));
+    scheduler.submit(b);
+
+    until(run, c + COOL - 1);
+    expect(detector.outstanding).toBe(1);
+    until(run, c + COOL);
+
+    expect(detector.outstanding).toBe(2);
+    expect(detector.calls[1].input.contentHash).toBe(sha256Hex(b.content));
+  });
+
+  it('runs only the newest of several paused edits, once, after the cooldown (US1-3)', async () => {
+    const run = cooled();
+    const { scheduler, detector, at } = run;
+    const c = await completeFirst(run);
+    let last = rev('none', 1);
+    for (const t of [5000, 12_000, 20_000]) {
+      until(run, c + t);
+      last = at(rev(`e${t}`, t));
+      scheduler.submit(last);
+      run.clock.advance(3500); // a pause longer than the quiet period
+    }
+
+    expect(detector.outstanding).toBe(1);
+    until(run, c + COOL);
+    expect(detector.outstanding).toBe(2);
+    expect(detector.calls[1].input.contentHash).toBe(sha256Hex(last.content));
+    run.clock.advance(60_000);
+    expect(detector.outstanding).toBe(2);
+  });
+
+  it('never retries a failure on repeats, however long they go on (SC-002, US2-1)', async () => {
+    const run = cooled();
+    const { scheduler, detector, at } = run;
+    await completeFirst(run, fail('failed'));
+    for (let i = 0; i < 12; i++) {
+      run.clock.advance(5000);
+      scheduler.submit(
+        at({ ...rev('a', 1), trigger: i % 2 ? 'save' : 'activate' }),
+      );
+    }
+
+    expect(detector.outstanding).toBe(1);
+  });
+
+  it.each(['failed', 'timeout', 'cancelled'] as const)(
+    'cools down after a %s request like after a success (US2-2)',
+    async (kind) => {
+      const run = cooled();
+      const { scheduler, detector, at } = run;
+      const c = await completeFirst(run, fail(kind));
+      until(run, c + 2000);
+      scheduler.submit(at(rev('b', 2)));
+
+      until(run, c + COOL - 1);
+      expect(detector.outstanding).toBe(1);
+      until(run, c + COOL);
+      expect(detector.outstanding).toBe(2);
+    },
+  );
+
+  it('waits for the quiet period when it ends after the cooldown (US3-1, SC-003)', async () => {
+    const run = cooled();
+    const { scheduler, detector, at } = run;
+    const c = await completeFirst(run);
+    until(run, c + 28_000);
+    scheduler.submit(at(rev('b', 2)));
+
+    expect(scheduler.fileState(W, A_URI)).toMatchObject({
+      eligibleAt: c + 31_000,
+      waitingFor: 'quiet',
+    });
+    until(run, c + 31_000 - 1);
+    expect(detector.outstanding).toBe(1);
+    until(run, c + 31_000);
+    expect(detector.outstanding).toBe(2);
+  });
+
+  it('waits for the cooldown when it ends after the quiet period (US3-2)', async () => {
+    const run = cooled();
+    const { scheduler, at } = run;
+    const c = await completeFirst(run);
+    until(run, c + 5000);
+    scheduler.submit(at(rev('b', 2)));
+
+    expect(scheduler.fileState(W, A_URI)).toMatchObject({
+      eligibleAt: c + COOL,
+      waitingFor: 'cooldown',
+    });
+  });
+
+  it('moves neither deadline on repeats during the cooldown (US3-3, SC-004)', async () => {
+    const run = cooled();
+    const { scheduler, at } = run;
+    const c = await completeFirst(run);
+    until(run, c + 5000);
+    const b = at(rev('b', 2));
+    scheduler.submit(b);
+    const before = scheduler.fileState(W, A_URI);
+
+    until(run, c + 10_000);
+    repeatBurst(scheduler, at(b), 5);
+
+    expect(scheduler.fileState(W, A_URI)).toEqual(before);
+  });
+
+  it('clears cached waiting work at eligibility without a call or a new cooldown (US3-4)', async () => {
+    const run = cooled();
+    const { scheduler, detector, at, cache, lines } = run;
+    const b = rev('b', 2);
+    await cache.store(
+      {
+        workspaceId: W,
+        fileUri: A_URI,
+        contentHash: sha256Hex(b.content),
+        detectorId: 'scripted',
+        detectorVersion: '1',
+      },
+      ok(1),
+    );
+    const c = await completeFirst(run, fail('failed')); // a failure stores nothing
+    until(run, c + 5000);
+    scheduler.submit(at(b));
+    until(run, c + COOL);
+
+    expect(lines.at(-1)).toContain('cache hit 1 findings v2');
+    expect(detector.outstanding).toBe(1);
+    expect(scheduler.fileState(W, A_URI)?.lastSettledAt).toBe(c);
+    expect(scheduler.fileState(W, A_URI)?.pending).toBeUndefined();
+  });
+
+  it('checks the cache when the quiet period ends, then waits out the cooldown for a call (FR-005, review)', async () => {
+    const run = cooled();
+    const { scheduler, detector, at, lines, clock } = run;
+    scheduler.submit(at(rev('a', 1)));
+    clock.advance(QUIET); // A starts at 3 s
+    clock.advance(1000);
+    const b = at(rev('b', 2)); // quiet until 7 s, while A runs
+    scheduler.submit(b);
+    clock.advance(1000);
+    detector.calls[0].resolve(ok(1)); // C = 5 s, before b's quiet deadline
+    await settle();
+    const c = clock.now();
+
+    expect(clock.pendingCount).toBe(1);
+    expect(scheduler.fileState(W, A_URI)).toMatchObject({
+      eligibleAt: c + COOL,
+      waitingFor: 'cooldown',
+    });
+
+    until(run, 7000); // b's quiet deadline: the cache answers now, a miss keeps it waiting
+    expect(lines.slice(-2)).toEqual([
+      `1970-01-01T00:00:07.000Z cache miss (content changed) v2 sha ${sha8(b)} scripted@1 ${A_URI}`,
+      `1970-01-01T00:00:07.000Z cooldown until 1970-01-01T00:00:35.000Z v2 sha ${sha8(b)} scripted@1 ${A_URI}`,
+    ]);
+    expect(clock.pendingCount).toBe(1);
+    const logged = lines.length;
+
+    until(run, c + COOL - 1);
+    expect(lines).toHaveLength(logged);
+    expect(detector.outstanding).toBe(1);
+    until(run, c + COOL);
+    expect(detector.outstanding).toBe(2);
+  });
+
+  it('serves a cached result after the quiet period, without waiting out the cooldown (review)', async () => {
+    const run = cooled();
+    const { scheduler, detector, at, lines, clock } = run;
+    const a = rev('a', 1);
+    const c = await completeFirst(run); // stores a's result
+    until(run, c + 2000);
+    scheduler.submit(at(rev('b', 2)));
+    until(run, c + 4000);
+    scheduler.submit(at({ ...a, version: 3 })); // an undo back to analysed content
+
+    until(run, c + 7000 - 1);
+    expect(lines.filter((l) => l.includes('cache hit'))).toEqual([]);
+    until(run, c + 7000);
+
+    expect(lines.at(-1)).toContain('cache hit 1 findings v3');
+    expect(scheduler.fileState(W, A_URI)?.pending).toBeUndefined();
+    expect(scheduler.fileState(W, A_URI)?.lastSettledAt).toBe(c);
+    expect(clock.pendingCount).toBe(0);
+    run.clock.advance(60_000);
+    expect(detector.outstanding).toBe(1);
+  });
+
+  it('serves a cached result on a reopen within the cooldown after just the quiet period (review)', async () => {
+    const run = cooled();
+    const { scheduler, detector, at, lines } = run;
+    const c = await completeFirst(run);
+    scheduler.closed({ workspaceId: W, fileUri: A_URI, observedAt: 0 });
+    until(run, c + 10_000);
+    scheduler.submit(at({ ...rev('a', 1), trigger: 'open' }));
+
+    until(run, c + 13_000);
+    expect(lines.at(-1)).toContain('cache hit 1 findings v1');
+    expect(detector.outstanding).toBe(1);
+  });
+
+  it('reports an expired kept record as absent even when no other file closes (review)', async () => {
+    const run = cooled();
+    const c = await completeFirst(run);
+    until(run, c + 5000);
+    run.scheduler.closed({ workspaceId: W, fileUri: A_URI, observedAt: 0 });
+    expect(run.scheduler.fileState(W, A_URI)?.open).toBe(false);
+
+    until(run, c + 5 * 60_000);
+
+    expect(run.scheduler.fileState(W, A_URI)).toBeUndefined();
+  });
+
+  const B_URI = 'file:///w/B.java';
+  const closeOf = (fileUri: string) => ({
+    workspaceId: W,
+    fileUri,
+    observedAt: 0,
+  });
+
+  it('holds no wake-up for an idle file that just finished (US4-1, SC-005)', async () => {
+    const run = cooled();
+    await completeFirst(run);
+
+    expect(run.clock.pendingCount).toBe(0);
+    expect(run.scheduler.fileState(W, A_URI)?.lastSettledAt).toBeDefined();
+  });
+
+  it("never lets one file's cooldown delay another file (US4-2)", async () => {
+    const run = cooled();
+    const { scheduler, detector, at } = run;
+    const c = await completeFirst(run);
+    until(run, c + 5000);
+    scheduler.submit(at(rev('a2', 2))); // A waits until c + 30 s
+    scheduler.submit(at(snapshot({ fileUri: B_URI, content: 'class B {}' })));
+
+    until(run, c + 8000);
+    expect(detector.calls.map((x) => x.input.fileUri)).toEqual([A_URI, B_URI]);
+    until(run, c + COOL);
+    expect(detector.calls.map((x) => x.input.fileUri)).toEqual([
+      A_URI,
+      B_URI,
+      A_URI,
+    ]);
+  });
+
+  it('leaves no timer or call behind on close or dispose during a cooldown (US4-3, US4-4)', async () => {
+    const run = cooled();
+    const { scheduler, detector, at, clock } = run;
+    const c = await completeFirst(run);
+    until(run, c + 5000);
+    scheduler.submit(at(rev('a2', 2)));
+    scheduler.submit(at(snapshot({ fileUri: B_URI, content: 'class B {}' })));
+    expect(clock.pendingCount).toBe(2);
+
+    scheduler.closed(closeOf(A_URI));
+    expect(clock.pendingCount).toBe(1);
+    scheduler.dispose();
+    expect(clock.pendingCount).toBe(0);
+    clock.advance(60_000);
+
+    expect(detector.outstanding).toBe(1);
+  });
+
+  it('keeps the cooldown across a close and reopen (US4-5, FR-016)', async () => {
+    const run = cooled();
+    const { scheduler, detector, at, lines } = run;
+    const c = await completeFirst(run);
+    until(run, c + 5000);
+    scheduler.closed(closeOf(A_URI));
+    until(run, c + 10_000);
+    scheduler.submit(at({ ...rev('b', 2), trigger: 'open' }));
+
+    expect(lines.some((l) => l.includes(' unchanged '))).toBe(false);
+    until(run, c + COOL - 1);
+    expect(detector.outstanding).toBe(1);
+    until(run, c + COOL);
+    expect(detector.outstanding).toBe(2);
+  });
+
+  it('only waits the quiet period on a reopen after the cooldown expired (US4-6)', async () => {
+    const run = cooled();
+    const { scheduler, detector, at } = run;
+    const c = await completeFirst(run);
+    scheduler.closed(closeOf(A_URI));
+    until(run, c + 45_000);
+    scheduler.submit(at({ ...rev('b', 2), trigger: 'open' }));
+
+    until(run, c + 48_000 - 1);
+    expect(detector.outstanding).toBe(1);
+    until(run, c + 48_000);
+    expect(detector.outstanding).toBe(2);
+  });
+
+  it('retains a file closed while its request ran, from the moment it settles (spec edge case)', async () => {
+    const run = cooled();
+    const { scheduler, detector, at, clock } = run;
+    scheduler.submit(at(rev('a', 1)));
+    clock.advance(QUIET); // A starts
+    scheduler.closed(closeOf(A_URI));
+    clock.advance(1000);
+    detector.calls[0].resolve(ok(1));
+    await settle();
+    const c = clock.now();
+
+    expect(scheduler.fileState(W, A_URI)).toMatchObject({
+      open: false,
+      lastSettledAt: c,
+    });
+    expect(scheduler.fileState(W, A_URI)?.pending).toBeUndefined();
+    expect(clock.pendingCount).toBe(0);
+
+    until(run, c + 10_000);
+    scheduler.submit(at({ ...rev('b', 2), trigger: 'open' }));
+    until(run, c + COOL - 1);
+    expect(detector.outstanding).toBe(1);
+    until(run, c + COOL);
+    expect(detector.outstanding).toBe(2);
+  });
+
+  it('sweeps an expired retained record when any file closes (research R4)', async () => {
+    const run = cooled();
+    const { scheduler, at } = run;
+    const c = await completeFirst(run);
+    scheduler.closed(closeOf(A_URI));
+    expect(scheduler.fileState(W, A_URI)?.open).toBe(false);
+
+    until(run, c + COOL);
+    scheduler.submit(at(snapshot({ fileUri: B_URI, content: 'class B {}' })));
+    scheduler.closed(closeOf(B_URI));
+
+    expect(scheduler.fileState(W, A_URI)).toBeUndefined();
+    expect(scheduler.fileState(W, B_URI)).toBeUndefined();
+  });
+
+  it('names the governing deadline in metadata-only lines (US5-3, SC-007)', async () => {
+    const run = cooled();
+    const { scheduler, at, lines } = run;
+    const c = await completeFirst(run);
+    until(run, c + 5000);
+    scheduler.submit(at(rev('b', 2))); // cooldown ends later
+    until(run, c + 28_000);
+    scheduler.submit(at(rev('d', 3))); // quiet period ends later
+
+    const time = String.raw`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z`;
+    const format = new RegExp(
+      String.raw`^${time} (cooldown|quiet) until ${time} v\d+ sha [0-9a-f]{8} scripted@1 file:///w/A\.java$`,
+    );
+    const waits = lines.filter((l) => l.includes(' until '));
+
+    expect(waits.filter((l) => !format.test(l))).toEqual([]);
+    expect(waits.at(-2)).toContain(
+      ` cooldown until ${new Date(c + COOL).toISOString()} v2 `,
+    );
+    expect(waits.at(-1)).toContain(
+      ` quiet until ${new Date(c + 31_000).toISOString()} v3 `,
+    );
+    expect(lines.join('\n')).not.toContain(SECRET);
+  });
+
+  it("reproduces card 09's call sequence offline with the mock detector (US5-2, SC-006)", async () => {
+    const clock = createFakeTimers();
+    const mock = new MockDetector({ timers: clock, delayMs: 2000 });
+    const { scheduler } = setup({
+      detector: mock,
+      clock,
+      quietMs: QUIET,
+      cooldownMs: COOL,
+    });
+    const edit = (n: number): void =>
+      scheduler.submit(
+        snapshot({
+          version: n,
+          content: `class A { ${n} }`,
+          observedAt: clock.now(),
+        }),
+      );
+    const tick = async (ms: number): Promise<void> => {
+      clock.advance(ms);
+      await settle();
+    };
+    const counts: number[] = [];
+
+    for (let n = 1; n <= 5; n++) {
+      edit(n);
+      await tick(1000);
+    }
+    counts.push(mock.callCount); // editing every 1 s
+    await tick(QUIET);
+    counts.push(mock.callCount); // 3 s of quiet
+    for (let n = 6; n <= 15; n++) {
+      edit(n);
+      await tick(1000);
+    }
+    counts.push(mock.callCount); // edits while running, then cooling down
+    await tick(COOL);
+    counts.push(mock.callCount); // past both deadlines
+    await tick(COOL * 2);
+    counts.push(mock.callCount); // nothing new to analyse
+
+    expect(counts).toEqual([0, 1, 1, 2, 2]);
+  });
+
+  it('keeps its cooldown invariants through a long seeded sequence (US5)', async () => {
+    const run = cooled();
+    const { scheduler, detector, at, clock } = run;
+    const uris = [A_URI, B_URI, 'file:///w/C.java'];
+    const resolved = new Set<number>();
+    let seed = 7;
+    const random = (n: number): number => {
+      seed = (seed * 1103515245 + 12345) % 2147483648;
+      return seed % n;
+    };
+    let version = 0;
+
+    for (let step = 0; step < 300; step++) {
+      const fileUri = uris[random(uris.length)];
+      const action = random(10);
+      const callsBefore = detector.calls.length;
+      if (action < 4) {
+        scheduler.submit(
+          at(
+            snapshot({ fileUri, version: ++version, content: `v${random(3)}` }),
+          ),
+        );
+      } else if (action < 6) {
+        const index = detector.calls.findIndex(
+          (x, i) => x.input.fileUri === fileUri && !resolved.has(i),
+        );
+        if (index >= 0) {
+          resolved.add(index);
+          detector.calls[index].resolve(
+            random(3) === 0 ? fail('failed') : ok(1),
+          );
+        }
+      } else if (action < 9) {
+        clock.advance(random(35_001));
+      } else {
+        scheduler.closed(closeOf(fileUri));
+      }
+      if (random(2) === 0) {
+        await settle();
+      }
+
+      expect(clock.pendingCount).toBeLessThanOrEqual(scheduler.pendingCount());
+      for (const call of detector.calls.slice(callsBefore)) {
+        // Nothing starts inside a quiet period or a cooldown.
+        const state = scheduler.fileState(W, call.input.fileUri);
+        expect((state?.lastChangeAt ?? 0) + QUIET).toBeLessThanOrEqual(
+          clock.now(),
+        );
+        expect((state?.lastSettledAt ?? -Infinity) + COOL).toBeLessThanOrEqual(
+          clock.now(),
+        );
+      }
+      for (const uri of uris) {
+        const unresolved = detector.calls.filter(
+          (x, i) => x.input.fileUri === uri && !resolved.has(i),
+        );
+        expect(unresolved.length).toBeLessThanOrEqual(1);
+      }
+    }
+    expect(detector.calls.length).toBeGreaterThan(10);
+  });
 });

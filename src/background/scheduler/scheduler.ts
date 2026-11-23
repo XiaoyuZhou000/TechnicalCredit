@@ -14,11 +14,24 @@ import type { Clock } from '@/background/scheduler/clock';
 /** Card 06's initial quiet period; tunable in code for Sprint 1. */
 export const DEFAULT_QUIET_MS = 3000;
 
+/** Card 07's initial cooldown after each detector completion; tunable in code for Sprint 1. */
+export const DEFAULT_COOLDOWN_MS = 30_000;
+
 /**
- * Node runs a timer with any longer delay after 1 ms, so a longer quiet period would make
- * `wake` reschedule itself in a tight loop.
+ * Node runs a timer with any longer delay after 1 ms, so a longer duration would make `wake`
+ * reschedule itself in a tight loop.
  */
 const MAX_TIMER_MS = 2 ** 31 - 1;
+
+/** One rule for every tunable duration, so a setting no timer can wait for fails loudly once. */
+function durationOption(name: string, value: number): number {
+  if (!Number.isFinite(value) || value < 0 || value > MAX_TIMER_MS) {
+    throw new RangeError(
+      `${name} must be between 0 and ${MAX_TIMER_MS} ms, got ${value}`,
+    );
+  }
+  return value;
+}
 
 export interface SchedulerOptions {
   /** Card 02's logging sink; always called first, so its lines stay unchanged. */
@@ -32,6 +45,8 @@ export interface SchedulerOptions {
   readonly clock: Clock;
   /** Quiet period after a file's last meaningful change (card 06); 0 starts work at once. */
   readonly quietMs?: number;
+  /** Pause after each detector completion, success or failure (card 07); 0 disables it. */
+  readonly cooldownMs?: number;
   /** Called once per released request, after its store; tests and the later display use it. */
   readonly onSettled?: (event: SettledRequest) => void;
 }
@@ -65,16 +80,26 @@ export interface FileStateView {
   readonly latestHash: string;
   /** `observedAt` of the latest first report or meaningful change; repeats never move it. */
   readonly lastChangeAt: number;
-  /** While work is pending: when it may start (`lastChangeAt` + the quiet period). */
+  /**
+   * While work is pending: when it may start, the later of `lastChangeAt` + the quiet period
+   * and `lastSettledAt` + the cooldown (card 07).
+   */
   readonly eligibleAt?: number;
+  /** While work is pending: which of the two deadlines sets `eligibleAt`. */
+  readonly waitingFor?: 'quiet' | 'cooldown';
+  /**
+   * `false` after close: while the closed file's request still runs, or (card 07) while its
+   * cooldown does, so a reopen still waits for it. Closed files never receive results.
+   */
   readonly open: boolean;
   readonly lastSettledAt?: number;
 }
 
 /**
- * Cumulative decision counts. Since card 06, "pending" means work that can't start yet for
- * either reason: a request is running for the file, or its quiet period hasn't passed. Read
- * `fileState()` (`active`, `eligibleAt`) to tell the two apart.
+ * Cumulative decision counts. "Pending" means work that can't start yet, for any of three
+ * reasons: a request is running for the file, its quiet period hasn't passed (card 06), or its
+ * cooldown hasn't (card 07). Read `fileState()` (`active`, `eligibleAt`, `waitingFor`) to tell
+ * them apart.
  */
 export interface SchedulerStats {
   readonly started: number;
@@ -82,9 +107,9 @@ export interface SchedulerStats {
   readonly followUps: number;
   /** Repeats (card 05), idle or not. */
   readonly duplicates: number;
-  /** Pending work created: behind a running request or inside a quiet period. */
+  /** Pending work created: behind a running request, inside a quiet period or a cooldown. */
   readonly pendingHeld: number;
-  /** Pending work replaced by newer content, for either reason. */
+  /** Pending work replaced by newer content, for any of those reasons. */
   readonly pendingReplaced: number;
   /** Pending work cleared by a change back to the running content. */
   readonly pendingCleared: number;
@@ -165,8 +190,9 @@ function describeMiss(lookup: Exclude<CacheLookup, { hit: true }>): string {
  * deduplication: at most one detector request per file, with the latest different content kept
  * as pending. Card 05 makes repeats of a file's latest content observation only, whether or not
  * a request is running. Card 06 makes pending work wait for a quiet period after the last
- * meaningful change, with at most one wake-up per file. Card 07 extends this class rather than
- * adding its own state. Never logs file text or findings.
+ * meaningful change, with at most one wake-up per file. Card 07 adds a cooldown after every
+ * detector completion to the same deadline, and keeps a closed file's state while it runs.
+ * Never logs file text or findings.
  */
 export class Scheduler implements SnapshotSink {
   private readonly inner: SnapshotSink;
@@ -176,6 +202,7 @@ export class Scheduler implements SnapshotSink {
   private readonly log: (line: string) => void;
   private readonly clock: Clock;
   private readonly quietMs: number;
+  private readonly cooldownMs: number;
   private readonly onSettled?: (event: SettledRequest) => void;
   private readonly files = new Map<string, FileState>();
   private readonly counts: Record<keyof SchedulerStats, number> = {
@@ -198,16 +225,14 @@ export class Scheduler implements SnapshotSink {
     this.hash = options.hash;
     this.log = options.log;
     this.clock = options.clock;
-    this.quietMs = options.quietMs ?? DEFAULT_QUIET_MS;
-    if (
-      !Number.isFinite(this.quietMs) ||
-      this.quietMs < 0 ||
-      this.quietMs > MAX_TIMER_MS
-    ) {
-      throw new RangeError(
-        `quietMs must be between 0 and ${MAX_TIMER_MS} ms, got ${this.quietMs}`,
-      );
-    }
+    this.quietMs = durationOption(
+      'quietMs',
+      options.quietMs ?? DEFAULT_QUIET_MS,
+    );
+    this.cooldownMs = durationOption(
+      'cooldownMs',
+      options.cooldownMs ?? DEFAULT_COOLDOWN_MS,
+    );
     this.onSettled = options.onSettled;
   }
 
@@ -263,6 +288,10 @@ export class Scheduler implements SnapshotSink {
       return;
     }
     this.inner.closed(notice);
+    // Closes are rare, so they also clear out closed files whose cooldown has since expired.
+    for (const other of this.files.values()) {
+      this.forgetIfClosed(other);
+    }
     const state = this.files.get(keyOf(notice.workspaceId, notice.fileUri));
     if (state === undefined) {
       return;
@@ -275,9 +304,7 @@ export class Scheduler implements SnapshotSink {
     this.cancelWakeup(state);
     state.open = false;
     // An active request is left to finish: a success is still worth caching for a reopen.
-    if (state.active === undefined) {
-      this.files.delete(state.key);
-    }
+    this.forgetIfClosed(state);
   }
 
   dispose(): void {
@@ -290,7 +317,13 @@ export class Scheduler implements SnapshotSink {
   }
 
   fileState(workspaceId: string, fileUri: string): FileStateView | undefined {
-    const state = this.files.get(keyOf(workspaceId, fileUri));
+    const key = keyOf(workspaceId, fileUri);
+    const kept = this.files.get(key);
+    // A closed file kept for its cooldown has no timer to drop it, so expiry is checked here too.
+    if (kept !== undefined) {
+      this.forgetIfClosed(kept);
+    }
+    const state = this.files.get(key);
     if (state === undefined) {
       return undefined;
     }
@@ -312,7 +345,10 @@ export class Scheduler implements SnapshotSink {
       }),
       latestHash: state.latestHash,
       lastChangeAt: state.lastChangeAt,
-      ...(pending && { eligibleAt: this.eligibleAt(state) }),
+      ...(pending && {
+        eligibleAt: this.eligibleAt(state),
+        waitingFor: this.waitingFor(state),
+      }),
       open: state.open,
       ...(state.lastSettledAt !== undefined && {
         lastSettledAt: state.lastSettledAt,
@@ -357,30 +393,138 @@ export class Scheduler implements SnapshotSink {
     this.log(`${iso(this.clock.now())} ${text}`);
   }
 
-  /** When the file's pending work may start. Card 07 adds its cooldown here and nowhere else. */
-  private eligibleAt(state: FileState): number {
+  private quietDeadline(state: FileState): number {
     return state.lastChangeAt + this.quietMs;
   }
 
+  /** Only after a completion (card 07); a cache hit is never one, so it never cools a file. */
+  private cooldownDeadline(state: FileState): number | undefined {
+    return state.lastSettledAt === undefined
+      ? undefined
+      : state.lastSettledAt + this.cooldownMs;
+  }
+
   /**
-   * Without a quiet period nothing waits, whatever the event timestamps say; that keeps the
-   * card 08/05 behaviour exact (card 06 FR-010).
+   * When the file's pending work may start: the later of the quiet-period and cooldown
+   * deadlines. Every timing rule lives here and in `isDue`, nowhere else.
    */
+  private eligibleAt(state: FileState): number {
+    return Math.max(
+      this.quietDeadline(state),
+      this.cooldownDeadline(state) ?? -Infinity,
+    );
+  }
+
+  /*
+   * A deadline whose setting is 0 never makes work wait, whatever the timestamps say; that
+   * keeps earlier cards' behaviour exact (card 06 FR-010, card 07 FR-011).
+   */
+  private isQuiet(state: FileState): boolean {
+    return this.quietMs === 0 || this.quietDeadline(state) <= this.clock.now();
+  }
+
+  private isCooled(state: FileState): boolean {
+    const cooldown = this.cooldownDeadline(state);
+    return (
+      this.cooldownMs === 0 ||
+      cooldown === undefined ||
+      cooldown <= this.clock.now()
+    );
+  }
+
+  /** Whether a detector call may start: past both deadlines. */
   private isDue(state: FileState): boolean {
-    return this.quietMs === 0 || this.eligibleAt(state) <= this.clock.now();
+    return this.isQuiet(state) && this.isCooled(state);
+  }
+
+  /**
+   * When pending work can next move on: its quiet deadline, when the cache gets to answer, then
+   * `eligibleAt`, when a call may start. The wake-up is always set for this time.
+   */
+  private nextCheckAt(state: FileState): number {
+    return this.isQuiet(state)
+      ? this.eligibleAt(state)
+      : this.quietDeadline(state);
+  }
+
+  /** Which deadline sets `eligibleAt`: what card 09's status page shows as the waiting reason. */
+  private waitingFor(state: FileState): 'quiet' | 'cooldown' {
+    const cooldown = this.cooldownDeadline(state);
+    return this.cooldownMs > 0 &&
+      cooldown !== undefined &&
+      cooldown > this.quietDeadline(state)
+      ? 'cooldown'
+      : 'quiet';
+  }
+
+  /**
+   * A closed file with nothing running or waiting is forgotten, except while its cooldown runs:
+   * closing and reopening a tab must not bypass the limit on calls (card 07 FR-016). The kept
+   * state holds no timer, so an expired one goes on the next close or report.
+   */
+  private forgetIfClosed(state: FileState): void {
+    if (
+      state.open ||
+      state.active !== undefined ||
+      state.pending !== undefined
+    ) {
+      return;
+    }
+    const cooldown = this.cooldownDeadline(state);
+    const coolingDown =
+      this.cooldownMs > 0 &&
+      cooldown !== undefined &&
+      cooldown > this.clock.now();
+    if (!coolingDown) {
+      this.files.delete(state.key);
+    }
   }
 
   /** At most one wake-up per file: a new deadline replaces the old timer rather than adding one. */
   private schedule(state: FileState, item: PendingSnapshot): void {
     this.cancelWakeup(state);
-    const due = this.eligibleAt(state);
+    const due = this.nextCheckAt(state);
     const token = ++this.wakeups;
     const handle = this.clock.setTimeout(
       () => this.wake(state, token),
       Math.max(0, due - this.clock.now()),
     );
     state.wakeup = { token, handle, due };
-    this.line(`quiet until ${iso(due)} ${this.suffix(item)}`);
+    // Names what the wake-up waits for: the quiet period first, then the cooldown.
+    const reason = this.isQuiet(state) ? 'cooldown' : 'quiet';
+    this.line(`${reason} until ${iso(due)} ${this.suffix(item)}`);
+  }
+
+  /** Keeps the file's one wake-up on its next check, rescheduling only when that moved. */
+  private ensureWakeup(state: FileState, item: PendingSnapshot): void {
+    if (state.wakeup?.due !== this.nextCheckAt(state)) {
+      this.schedule(state, item);
+    }
+  }
+
+  /**
+   * Moves an idle file's pending work on, and reports whether a call started. Once the quiet
+   * period has passed the cache answers at once: a hit costs no detector call, so the cooldown,
+   * which limits calls, doesn't hold it back. A miss waits out the cooldown, and `dispatch`
+   * checks the cache again right before the call.
+   */
+  private advance(state: FileState): boolean {
+    const next = state.pending;
+    if (next === undefined || state.active !== undefined || !state.open) {
+      return false;
+    }
+    if (this.isDue(state)) {
+      state.pending = undefined;
+      this.cancelWakeup(state);
+      return this.dispatch(state, next);
+    }
+    if (this.isQuiet(state) && this.lookup(next)) {
+      state.pending = undefined;
+      this.cancelWakeup(state);
+      return false;
+    }
+    this.ensureWakeup(state, next);
+    return false;
   }
 
   private cancelWakeup(state: FileState): void {
@@ -407,16 +551,11 @@ export class Scheduler implements SnapshotSink {
     if (!state.open || next === undefined) {
       return;
     }
-    // The running request settles first, past the deadline by then, so it dispatches `next`.
+    // The running request settles first, and its settlement moves `next` on.
     if (state.active !== undefined) {
       return;
     }
-    if (!this.isDue(state)) {
-      this.schedule(state, next);
-      return;
-    }
-    state.pending = undefined;
-    this.dispatch(state, next);
+    this.advance(state);
   }
 
   /**
@@ -435,9 +574,9 @@ export class Scheduler implements SnapshotSink {
   }
 
   /**
-   * Work that can't start yet: a request is running for this file, or its quiet period hasn't
-   * passed. Never starts or aborts a request. Content compares by hash, so `open` + `activate`,
-   * unchanged saves and an edit followed by its undo are all duplicates.
+   * Work that can't start yet: a request is running for this file, or its quiet period or
+   * cooldown hasn't passed. Never starts or aborts a request. Content compares by hash, so
+   * `open` + `activate`, unchanged saves and an edit followed by its undo are all duplicates.
    */
   private hold(
     state: FileState,
@@ -470,24 +609,34 @@ export class Scheduler implements SnapshotSink {
       this.line(`pending replaced ${this.suffix(item)}`);
     }
     state.pending = item;
-    if (this.isDue(state)) {
-      // Only reachable while a request runs: its settlement starts this work.
+    if (active === undefined) {
+      this.advance(state);
+    } else if (this.isDue(state)) {
+      // The running request's settlement starts this work.
       this.cancelWakeup(state);
     } else {
-      this.schedule(state, item);
+      this.ensureWakeup(state, item);
     }
   }
 
-  /** Only for a file with no active request: the cache decides whether a request starts. */
-  private dispatch(state: FileState, item: PendingSnapshot): boolean {
+  /** Looks the content up and logs the outcome; true on a hit. */
+  private lookup(item: PendingSnapshot): boolean {
     const lookup = this.cache.lookup(this.identityOf(item));
     if (lookup.hit) {
       this.line(
         `cache hit ${lookup.entry.output.findings.length} findings ${this.suffix(item)}`,
       );
-      return false;
+      return true;
     }
     this.line(`cache miss (${describeMiss(lookup)}) ${this.suffix(item)}`);
+    return false;
+  }
+
+  /** Only for a file with no active request: the cache decides whether a request starts. */
+  private dispatch(state: FileState, item: PendingSnapshot): boolean {
+    if (this.lookup(item)) {
+      return false;
+    }
     this.start(state, item);
     return true;
   }
@@ -618,20 +767,14 @@ export class Scheduler implements SnapshotSink {
     });
 
     // Only the latest pending snapshot goes on, through the cache; the settled request itself
-    // is never retried here, even if it failed. Work still inside its quiet period keeps waiting.
-    const next = state.pending;
-    if (next !== undefined && this.isDue(state)) {
-      state.pending = undefined;
-      this.cancelWakeup(state);
-      if (this.dispatch(state, next)) {
+    // is never retried here, even if it failed. This completion starts a cooldown, so work that
+    // isn't due keeps waiting, its wake-up moved to its next check if that changed.
+    if (state.pending !== undefined) {
+      if (this.advance(state)) {
         this.counts.followUps++;
       }
-    } else if (next !== undefined) {
-      if (state.wakeup === undefined) {
-        this.schedule(state, next);
-      }
-    } else if (!state.open) {
-      this.files.delete(state.key);
+    } else {
+      this.forgetIfClosed(state);
     }
   }
 }
