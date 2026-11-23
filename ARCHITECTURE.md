@@ -66,10 +66,10 @@ From the repository root, the same on Windows, macOS and Linux:
 This manual check covers visibility only. The offline suite (`npx jest src/test/background`) proves the timing, call counts and restart behaviour (constitution IV); don't use the page to prove those.
 
 1. Press **F5**. In the **[Extension Development Host]** window, the extension activates as above.
-2. Open a Java file, for example `src/test/creational/prototype/Positive.java`. Run **Technical Credit: Show Background Status** from the command palette. One tab opens beside the editor, labelled "Sprint 1 mock detector".
+2. Open a Java file, for example `src/test/creational/prototype/Positive.java`. Run **Technical Credit: Show Background Status** from the command palette. One tab titled **Technical Credit: Background Status** opens beside the editor. Inside the page, a badge reads "Sprint 1 mock detector".
 3. Run the command again. The same tab is revealed, and no second tab appears.
 4. Type in the Java file, then stop. The row shows waiting work, `quiet until …`. About 3 s later it shows running, then `current · analysed` with a finding count, and **Analyses** goes up.
-5. Type again straight away, then stop. After the quiet period the row shows `cooldown until …`, about 30 s after the first analysis finished. The next analysis starts then.
+5. Type again straight away, then stop. The row shows `cooldown until …` at once, about 30 s after the first analysis finished, with no `quiet until …` first: the cooldown ends later than the quiet period, so it sets the time. While the first analysis is still running, the row can show `after running request` instead. The next analysis starts at the cooldown time.
 6. Close the tab. Background analysis continues: the **Technical Credit (Background)** output channel keeps logging.
 
 For the presentation, capture a screenshot or short recording of steps 4 and 5 beside the Java file. Also save the output of `npx jest src/test/background --verbose`. It shows the functional suite's call-sequence, waiting-hash, timer-state and restart cache-hit tests.
@@ -407,13 +407,13 @@ Since card 08, `backgroundAgent.ts` plugs in the `Scheduler`, which wraps `loggi
 
 ### Status interface (card 09)
 
-**Agreed (card 09).** Sources: `src/background/status/*` and `Scheduler.files()` / `onChange()`. These are additions only; no scheduler rule changes.
+**Proposed (card 09), until PR #12 is approved.** Sources: `src/background/status/*` and `Scheduler.files()` / `onChange()`. These are additions only; no scheduler rule changes.
 
 1. **Read-only**: nothing on the status surface can trigger analysis, change scheduler or cache state, or edit a document. The page has no scripts, forms, inputs or message channel. It is separate from the Accept/Dismiss annotation UI.
 2. **`Scheduler.files()`** lists every tracked file, sorted by workspace and URI, as `FileStateView` plus `workspaceId`, `fileUri`, `latest` and `keptUntil`. Expired kept records are dropped first.
    - `latest` is the file's last detector result or cache answer, with its finding count.
    - `latest.current` is decided when read (content and detector version match, and the file is open), so a stale result can never show as current.
-3. **`Scheduler.onChange()`** notifies once after each burst of decisions, through a microtask, never during one. A throwing listener is logged as `status listener error: …` and skipped. `dispose()` drops every listener.
+3. **`Scheduler.onChange()`** notifies once after each burst of changes, through a microtask, never during one. A change is any logged decision, any close (even with nothing pending), or the removal of an expired kept record, including a removal made while reading `files()` or `fileState()`. A throwing listener is logged as `status listener error: …` and skipped. `dispose()` drops every listener.
 4. **Snapshot**: `BackgroundStatus.snapshot()` is deep-frozen metadata. It holds the label ("Sprint 1 mock detector"), `detector`, `takenAt`, the session counts (`analyses`, `followUps`, `repeats` and the cache's hits, misses and stores) and the rows. Counts reset with each session; cached results persist.
    - `nextChangeAt` is the earliest future eligible time or kept-record expiry, so a page refreshes then without polling.
 5. **Page**: `renderStatusHtml` escapes every value. Its CSP is `default-src 'none'; style-src 'nonce-…'`. The feed renders at most once per 200 ms after changes, and its timers are cleared when the panel or the extension closes. A failed render is reported and skipped.
