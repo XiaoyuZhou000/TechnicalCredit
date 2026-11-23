@@ -1686,4 +1686,71 @@ describe('debounce (card 06)', () => {
 
     expect(detector.outstanding).toBe(1);
   });
+
+  it('debounces each file on its own clock (US4-1)', () => {
+    const { scheduler, detector, clock, at } = debounced();
+    scheduler.submit(at(rev('a', 1))); // T
+    clock.advance(2000);
+    scheduler.submit(at(snapshot({ fileUri: B_URI, content: 'class B {}' })));
+
+    expect(scheduler.fileState(W, A_URI)?.eligibleAt).toBe(QUIET);
+    clock.advance(1000); // T + 3000
+    expect(detector.calls.map((c) => c.input.fileUri)).toEqual([A_URI]);
+    clock.advance(1999);
+    expect(detector.outstanding).toBe(1);
+    clock.advance(1); // T + 5000
+    expect(detector.calls.map((c) => c.input.fileUri)).toEqual([A_URI, B_URI]);
+  });
+
+  it('drops waiting work and its wake-up on close (US4-2)', () => {
+    const { scheduler, detector, clock, at, lines } = debounced();
+    const a = rev('a', 1);
+    scheduler.submit(at(a));
+    scheduler.submit(at(snapshot({ fileUri: B_URI, content: 'class B {}' })));
+    expect(clock.pendingCount).toBe(2);
+
+    scheduler.closed({ workspaceId: W, fileUri: A_URI, observedAt: 0 });
+
+    expect(lines.at(-1)).toBe(
+      `${T0} pending dropped (closed) v1 sha ${sha8(a)} scripted@1 ${A_URI}`,
+    );
+    expect(clock.pendingCount).toBe(1);
+    clock.advance(10_000);
+    expect(detector.calls.map((c) => c.input.fileUri)).toEqual([B_URI]);
+  });
+
+  it('clears every wake-up on dispose and starts nothing afterwards (US4-3)', () => {
+    const { scheduler, detector, clock, at } = debounced();
+    scheduler.submit(at(rev('a', 1)));
+    scheduler.submit(at(snapshot({ fileUri: B_URI, content: 'class B {}' })));
+
+    scheduler.dispose();
+
+    expect(clock.pendingCount).toBe(0);
+    clock.advance(10_000);
+    expect(detector.outstanding).toBe(0);
+  });
+
+  it('leaves no wake-up after dispatch, a cache hit, a drop, or only repeats (US4-4, SC-003)', async () => {
+    const { scheduler, detector, clock, at, cache } = debounced();
+    const C_URI = 'file:///w/C.java';
+    const a = rev('a', 1);
+    const b = snapshot({ fileUri: B_URI, content: 'class B {}' });
+    await cache.store(identity(b), ok(1));
+    scheduler.submit(at(a));
+    scheduler.submit(at(b));
+    scheduler.submit(at(snapshot({ fileUri: C_URI, content: 'class C {}' })));
+
+    scheduler.closed({ workspaceId: W, fileUri: C_URI, observedAt: 0 });
+    expect(clock.pendingCount).toBe(2);
+    clock.advance(QUIET); // A dispatched, B a cache hit
+
+    expect(clock.pendingCount).toBe(0);
+    detector.calls[0].resolve(ok(1));
+    await settle();
+    repeatBurst(scheduler, at(a), 5);
+
+    expect(clock.pendingCount).toBe(0);
+    expect(detector.outstanding).toBe(1);
+  });
 });

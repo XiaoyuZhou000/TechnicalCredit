@@ -248,6 +248,7 @@ export class Scheduler implements SnapshotSink {
       this.line(`pending dropped (closed) ${this.suffix(state.pending)}`);
       state.pending = undefined;
     }
+    this.cancelWakeup(state);
     state.open = false;
     // An active request is left to finish: a success is still worth caching for a reopen.
     if (state.active === undefined) {
@@ -258,6 +259,7 @@ export class Scheduler implements SnapshotSink {
   dispose(): void {
     this.disposed = true;
     for (const state of this.files.values()) {
+      this.cancelWakeup(state);
       state.active?.controller.abort();
     }
     this.files.clear();
