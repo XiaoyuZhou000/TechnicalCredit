@@ -7,7 +7,17 @@ import {
   createLoggingSink,
   describeSinkError,
 } from '@/background/events/loggingSink';
-import { Scheduler } from '@/background/scheduler/scheduler';
+import type { Clock } from '@/background/scheduler/clock';
+import { DEFAULT_QUIET_MS, Scheduler } from '@/background/scheduler/scheduler';
+
+/** The one place real time is bound; core modules only ever see a `Clock`. */
+const realClock: Clock = {
+  now: () => Date.now(),
+  setTimeout: (callback, ms) => setTimeout(callback, ms),
+  // Handles only ever come from `setTimeout` above, so the narrowing is safe.
+  clearTimeout: (handle) =>
+    clearTimeout(handle as Parameters<typeof clearTimeout>[0]),
+};
 
 /** Composition root for the Background Agent; every piece it creates is disposed with the extension. */
 export function startBackgroundAgent(context: vscode.ExtensionContext): void {
@@ -18,16 +28,17 @@ export function startBackgroundAgent(context: vscode.ExtensionContext): void {
   // `globalState` persists across restarts; no `setKeysForSync`, so results stay on this machine.
   const cache = new ResultCache({
     store: context.globalState,
-    now: () => Date.now(),
+    now: () => realClock.now(),
   });
   // Cards 05–07 add coalescing, debounce and cooldown to this scheduler, not a second sink.
   const scheduler = new Scheduler({
     inner: createLoggingSink(log),
-    detector: new MockDetector(),
+    detector: new MockDetector({ timers: realClock }),
     cache,
     hash: sha256Hex,
     log,
-    now: () => Date.now(),
+    clock: realClock,
+    quietMs: DEFAULT_QUIET_MS,
   });
   const monitor = startFileEventMonitor(scheduler, (error) =>
     log(describeSinkError(error)),

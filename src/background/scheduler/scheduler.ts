@@ -9,6 +9,16 @@ import type {
   FileSnapshot,
   SnapshotSink,
 } from '@/background/events/fileEvents';
+import type { Clock } from '@/background/scheduler/clock';
+
+/** Card 06's initial quiet period; tunable in code for Sprint 1. */
+export const DEFAULT_QUIET_MS = 3000;
+
+/**
+ * Node runs a timer with any longer delay after 1 ms, so a longer quiet period would make
+ * `wake` reschedule itself in a tight loop.
+ */
+const MAX_TIMER_MS = 2 ** 31 - 1;
 
 export interface SchedulerOptions {
   /** Card 02's logging sink; always called first, so its lines stay unchanged. */
@@ -18,7 +28,10 @@ export interface SchedulerOptions {
   /** SHA-256 hex of the content; the composition root passes card 04's `sha256Hex`. */
   readonly hash: (content: string) => string;
   readonly log: (line: string) => void;
-  readonly now: () => number;
+  /** The only source of time; the composition root binds the real one. */
+  readonly clock: Clock;
+  /** Quiet period after a file's last meaningful change (card 06); 0 starts work at once. */
+  readonly quietMs?: number;
   /** Called once per released request, after its store; tests and the later display use it. */
   readonly onSettled?: (event: SettledRequest) => void;
 }
@@ -52,17 +65,30 @@ export interface FileStateView {
   readonly latestHash: string;
   /** `observedAt` of the latest first report or meaningful change; repeats never move it. */
   readonly lastChangeAt: number;
+  /** While work is pending: when it may start (`lastChangeAt` + the quiet period). */
+  readonly eligibleAt?: number;
   readonly open: boolean;
   readonly lastSettledAt?: number;
 }
 
+/**
+ * Cumulative decision counts. Since card 06, "pending" means work that can't start yet for
+ * either reason: a request is running for the file, or its quiet period hasn't passed. Read
+ * `fileState()` (`active`, `eligibleAt`) to tell the two apart.
+ */
 export interface SchedulerStats {
   readonly started: number;
+  /** Calls started for pending work when the file's running request settled. */
   readonly followUps: number;
+  /** Repeats (card 05), idle or not. */
   readonly duplicates: number;
+  /** Pending work created: behind a running request or inside a quiet period. */
   readonly pendingHeld: number;
+  /** Pending work replaced by newer content, for either reason. */
   readonly pendingReplaced: number;
+  /** Pending work cleared by a change back to the running content. */
   readonly pendingCleared: number;
+  /** Pending work dropped on close. */
   readonly pendingDropped: number;
 }
 
@@ -79,10 +105,19 @@ interface PendingSnapshot {
   readonly contentHash: string;
 }
 
+/** The file's single scheduled check; `token` tells a superseded callback apart from the current one. */
+interface Wakeup {
+  readonly token: number;
+  readonly handle: unknown;
+  readonly due: number;
+}
+
 interface FileState {
   readonly key: string;
   active?: ActiveRequest;
   pending?: PendingSnapshot;
+  /** Only while pending work waits for a deadline still ahead (card 06). */
+  wakeup?: Wakeup;
   latestHash: string;
   /** Detector version when `latestHash` was observed; a new version makes old content new work. */
   latestDetectorVersion: string;
@@ -129,8 +164,9 @@ function describeMiss(lookup: Exclude<CacheLookup, { hit: true }>): string {
  * The single owner of per-file Background Agent state (ARCHITECTURE.md). Card 08 adds in-flight
  * deduplication: at most one detector request per file, with the latest different content kept
  * as pending. Card 05 makes repeats of a file's latest content observation only, whether or not
- * a request is running. Cards 06–07 extend this class rather than adding their own state. Never logs file
- * text or findings.
+ * a request is running. Card 06 makes pending work wait for a quiet period after the last
+ * meaningful change, with at most one wake-up per file. Card 07 extends this class rather than
+ * adding its own state. Never logs file text or findings.
  */
 export class Scheduler implements SnapshotSink {
   private readonly inner: SnapshotSink;
@@ -138,7 +174,8 @@ export class Scheduler implements SnapshotSink {
   private readonly cache: ResultCache;
   private readonly hash: (content: string) => string;
   private readonly log: (line: string) => void;
-  private readonly now: () => number;
+  private readonly clock: Clock;
+  private readonly quietMs: number;
   private readonly onSettled?: (event: SettledRequest) => void;
   private readonly files = new Map<string, FileState>();
   private readonly counts: Record<keyof SchedulerStats, number> = {
@@ -151,6 +188,7 @@ export class Scheduler implements SnapshotSink {
     pendingDropped: 0,
   };
   private requests = 0;
+  private wakeups = 0;
   private disposed = false;
 
   constructor(options: SchedulerOptions) {
@@ -159,7 +197,17 @@ export class Scheduler implements SnapshotSink {
     this.cache = options.cache;
     this.hash = options.hash;
     this.log = options.log;
-    this.now = options.now;
+    this.clock = options.clock;
+    this.quietMs = options.quietMs ?? DEFAULT_QUIET_MS;
+    if (
+      !Number.isFinite(this.quietMs) ||
+      this.quietMs < 0 ||
+      this.quietMs > MAX_TIMER_MS
+    ) {
+      throw new RangeError(
+        `quietMs must be between 0 and ${MAX_TIMER_MS} ms, got ${this.quietMs}`,
+      );
+    }
     this.onSettled = options.onSettled;
   }
 
@@ -198,7 +246,12 @@ export class Scheduler implements SnapshotSink {
       state.lastChangeAt = snapshot.observedAt;
       state.open = true;
     }
-    if (state.active === undefined) {
+    if (state.active === undefined && this.isDue(state)) {
+      if (state.pending !== undefined) {
+        // Superseded by this snapshot, which starts now instead.
+        state.pending = undefined;
+        this.cancelWakeup(state);
+      }
       this.dispatch(state, item);
     } else {
       this.hold(state, state.active, item);
@@ -219,6 +272,7 @@ export class Scheduler implements SnapshotSink {
       this.line(`pending dropped (closed) ${this.suffix(state.pending)}`);
       state.pending = undefined;
     }
+    this.cancelWakeup(state);
     state.open = false;
     // An active request is left to finish: a success is still worth caching for a reopen.
     if (state.active === undefined) {
@@ -229,6 +283,7 @@ export class Scheduler implements SnapshotSink {
   dispose(): void {
     this.disposed = true;
     for (const state of this.files.values()) {
+      this.cancelWakeup(state);
       state.active?.controller.abort();
     }
     this.files.clear();
@@ -257,6 +312,7 @@ export class Scheduler implements SnapshotSink {
       }),
       latestHash: state.latestHash,
       lastChangeAt: state.lastChangeAt,
+      ...(pending && { eligibleAt: this.eligibleAt(state) }),
       open: state.open,
       ...(state.lastSettledAt !== undefined && {
         lastSettledAt: state.lastSettledAt,
@@ -298,7 +354,69 @@ export class Scheduler implements SnapshotSink {
   }
 
   private line(text: string): void {
-    this.log(`${iso(this.now())} ${text}`);
+    this.log(`${iso(this.clock.now())} ${text}`);
+  }
+
+  /** When the file's pending work may start. Card 07 adds its cooldown here and nowhere else. */
+  private eligibleAt(state: FileState): number {
+    return state.lastChangeAt + this.quietMs;
+  }
+
+  /**
+   * Without a quiet period nothing waits, whatever the event timestamps say; that keeps the
+   * card 08/05 behaviour exact (card 06 FR-010).
+   */
+  private isDue(state: FileState): boolean {
+    return this.quietMs === 0 || this.eligibleAt(state) <= this.clock.now();
+  }
+
+  /** At most one wake-up per file: a new deadline replaces the old timer rather than adding one. */
+  private schedule(state: FileState, item: PendingSnapshot): void {
+    this.cancelWakeup(state);
+    const due = this.eligibleAt(state);
+    const token = ++this.wakeups;
+    const handle = this.clock.setTimeout(
+      () => this.wake(state, token),
+      Math.max(0, due - this.clock.now()),
+    );
+    state.wakeup = { token, handle, due };
+    this.line(`quiet until ${iso(due)} ${this.suffix(item)}`);
+  }
+
+  private cancelWakeup(state: FileState): void {
+    if (state.wakeup !== undefined) {
+      this.clock.clearTimeout(state.wakeup.handle);
+      state.wakeup = undefined;
+    }
+  }
+
+  /**
+   * The file's deadline has come. Nothing seen when the timer was set is trusted: the work may
+   * have been replaced, cleared or closed since, or a request may now be running.
+   */
+  private wake(state: FileState, token: number): void {
+    if (
+      this.disposed ||
+      this.files.get(state.key) !== state ||
+      state.wakeup?.token !== token
+    ) {
+      return;
+    }
+    state.wakeup = undefined;
+    const next = state.pending;
+    if (!state.open || next === undefined) {
+      return;
+    }
+    // The running request settles first, past the deadline by then, so it dispatches `next`.
+    if (state.active !== undefined) {
+      return;
+    }
+    if (!this.isDue(state)) {
+      this.schedule(state, next);
+      return;
+    }
+    state.pending = undefined;
+    this.dispatch(state, next);
   }
 
   /**
@@ -307,7 +425,7 @@ export class Scheduler implements SnapshotSink {
    * analysis a lookup would miss and retry it with nothing new to analyse (card 05).
    */
   private repeat(state: FileState, item: PendingSnapshot): void {
-    if (state.active !== undefined) {
+    if (state.active !== undefined || state.pending !== undefined) {
       // The latest report is the running or the pending content, so `hold` only logs it.
       this.hold(state, state.active, item);
       return;
@@ -317,21 +435,23 @@ export class Scheduler implements SnapshotSink {
   }
 
   /**
-   * A request is running for this file: never start or abort one. Content compares by hash,
-   * so `open` + `activate`, unchanged saves and an edit followed by its undo are all duplicates.
+   * Work that can't start yet: a request is running for this file, or its quiet period hasn't
+   * passed. Never starts or aborts a request. Content compares by hash, so `open` + `activate`,
+   * unchanged saves and an edit followed by its undo are all duplicates.
    */
   private hold(
     state: FileState,
-    active: ActiveRequest,
+    active: ActiveRequest | undefined,
     item: PendingSnapshot,
   ): void {
-    if (item.contentHash === active.contentHash) {
+    if (active !== undefined && item.contentHash === active.contentHash) {
       if (state.pending === undefined) {
         this.counts.duplicates++;
         this.line(`duplicate of running ${this.suffix(item)}`);
       } else {
         // Back to the running content, which the active request already covers.
         state.pending = undefined;
+        this.cancelWakeup(state);
         this.counts.pendingCleared++;
         this.line(`pending cleared ${this.suffix(item)}`);
       }
@@ -350,6 +470,12 @@ export class Scheduler implements SnapshotSink {
       this.line(`pending replaced ${this.suffix(item)}`);
     }
     state.pending = item;
+    if (this.isDue(state)) {
+      // Only reachable while a request runs: its settlement starts this work.
+      this.cancelWakeup(state);
+    } else {
+      this.schedule(state, item);
+    }
   }
 
   /** Only for a file with no active request: the cache decides whether a request starts. */
@@ -477,7 +603,7 @@ export class Scheduler implements SnapshotSink {
     }
 
     state.active = undefined;
-    state.lastSettledAt = this.now();
+    state.lastSettledAt = this.clock.now();
     this.report({
       workspaceId: snapshot.workspaceId,
       fileUri: snapshot.fileUri,
@@ -492,12 +618,17 @@ export class Scheduler implements SnapshotSink {
     });
 
     // Only the latest pending snapshot goes on, through the cache; the settled request itself
-    // is never retried here, even if it failed.
+    // is never retried here, even if it failed. Work still inside its quiet period keeps waiting.
     const next = state.pending;
-    if (next !== undefined) {
+    if (next !== undefined && this.isDue(state)) {
       state.pending = undefined;
+      this.cancelWakeup(state);
       if (this.dispatch(state, next)) {
         this.counts.followUps++;
+      }
+    } else if (next !== undefined) {
+      if (state.wakeup === undefined) {
+        this.schedule(state, next);
       }
     } else if (!state.open) {
       this.files.delete(state.key);

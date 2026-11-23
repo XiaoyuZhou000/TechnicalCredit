@@ -4,6 +4,7 @@ import * as path from 'path';
 import {
   ResultCache,
   sha256Hex,
+  type CacheIdentity,
   type CacheStore,
 } from '@/background/cache/resultCache';
 import {
@@ -22,7 +23,10 @@ import {
   Scheduler,
   type SettledRequest,
 } from '@/background/scheduler/scheduler';
-import { createFakeTimers } from '@/test/background/fakeTimers';
+import {
+  createFakeTimers,
+  type FakeTimers,
+} from '@/test/background/fakeTimers';
 import {
   createMemoryCacheStore,
   rejectingUpdateStore,
@@ -156,11 +160,15 @@ interface SetupOptions {
   readonly detector?: Detector;
   readonly store?: CacheStore;
   readonly onSettled?: (event: SettledRequest) => void;
+  readonly clock?: FakeTimers;
+  /** Defaults to 0, so card 08 and 05 tests keep their immediate starts (card 06 FR-010). */
+  readonly quietMs?: number;
 }
 
 function setup(options: SetupOptions = {}) {
   const detector = options.detector ?? new ScriptedDetector();
   const store = options.store ?? createMemoryCacheStore();
+  const clock = options.clock ?? createFakeTimers();
   const order: string[] = [];
   const lines: string[] = [];
   const events: SettledRequest[] = [];
@@ -178,14 +186,15 @@ function setup(options: SetupOptions = {}) {
       lines.push(line);
       order.push(line);
     },
-    now: () => 0,
+    clock,
+    quietMs: options.quietMs ?? 0,
     onSettled:
       options.onSettled ??
       ((event) => {
         events.push(event);
       }),
   });
-  return { scheduler, detector, store, cache, lines, order, events };
+  return { scheduler, detector, store, cache, lines, order, events, clock };
 }
 
 function scripted() {
@@ -1435,6 +1444,7 @@ describe('event coalescing: inspection (card 05 US4)', () => {
       pending: { version: 3, contentHash: sha256Hex(c.content) },
       latestHash: sha256Hex(c.content),
       lastChangeAt: 30,
+      eligibleAt: 30, // no quiet period in this suite (card 06)
       open: true,
     });
 
@@ -1462,4 +1472,404 @@ describe('event coalescing: inspection (card 05 US4)', () => {
     });
     expect(scheduler.pendingCount()).toBe(0);
   });
+});
+
+describe('debounce (card 06)', () => {
+  const QUIET = 3000;
+  const B_URI = 'file:///w/B.java';
+
+  /** A scripted scheduler with the 3 s quiet period and one fake clock for every timestamp. */
+  function debounced(store?: CacheStore) {
+    const clock = createFakeTimers();
+    const detector = new ScriptedDetector();
+    const run = setup({ detector, store, clock, quietMs: QUIET });
+    const at = (s: FileSnapshot): FileSnapshot => ({
+      ...s,
+      observedAt: clock.now(),
+    });
+    return { ...run, detector, clock, at };
+  }
+
+  function identity(s: FileSnapshot): CacheIdentity {
+    return {
+      workspaceId: s.workspaceId,
+      fileUri: s.fileUri,
+      contentHash: sha256Hex(s.content),
+      detectorId: 'scripted',
+      detectorVersion: '1',
+    };
+  }
+
+  it('starts nothing while edits arrive every second, then one call 3 s after the last (SC-001, US1-1, US1-2, US1-3)', () => {
+    const { scheduler, detector, clock, at } = debounced();
+    let last = rev('e1', 1);
+    scheduler.submit(at(last));
+    for (let v = 2; v <= 10; v++) {
+      clock.advance(1000);
+      last = rev(`e${v}`, v);
+      scheduler.submit(at(last));
+    }
+
+    expect(detector.outstanding).toBe(0);
+    clock.advance(QUIET - 1);
+    expect(detector.outstanding).toBe(0);
+    clock.advance(1);
+
+    expect(detector.outstanding).toBe(1);
+    expect(detector.calls[0].input.contentHash).toBe(sha256Hex(last.content));
+  });
+
+  it('makes a first report wait too, then checks the cache (US1-4, SC-005)', async () => {
+    const { scheduler, detector, clock, at, cache, lines } = debounced();
+    const cached = rev('cached', 1);
+    await cache.store(identity(cached), ok(1));
+
+    scheduler.submit(at({ ...cached, trigger: 'open' }));
+    scheduler.submit(at(snapshot({ fileUri: B_URI, trigger: 'startup' })));
+    clock.advance(QUIET - 1);
+
+    expect(lines.filter((l) => l.includes(' cache '))).toEqual([]);
+    expect(detector.outstanding).toBe(0);
+
+    clock.advance(1);
+
+    expect(lines).toContain(
+      `1970-01-01T00:00:03.000Z cache hit 1 findings v1 sha ${sha8(cached)} scripted@1 ${A_URI}`,
+    );
+    expect(detector.calls.map((c) => c.input.fileUri)).toEqual([B_URI]);
+  });
+
+  it('holds one wake-up per waiting file and none once dispatched or cached (SC-003)', async () => {
+    const { scheduler, detector, clock, at, cache } = debounced();
+    const b = snapshot({ fileUri: B_URI, content: 'class B {}' });
+    await cache.store(identity(b), ok(1));
+
+    scheduler.submit(at(rev('a1', 1)));
+    clock.advance(500);
+    scheduler.submit(at(rev('a2', 2)));
+    scheduler.submit(at(b));
+
+    expect(clock.pendingCount).toBe(2);
+    expect(scheduler.pendingCount()).toBe(2);
+
+    clock.advance(QUIET);
+
+    expect(clock.pendingCount).toBe(0);
+    expect(scheduler.pendingCount()).toBe(0);
+    expect(detector.outstanding).toBe(1);
+  });
+
+  it('exposes when waiting work becomes eligible, and drops it once dispatched (FileStateView.eligibleAt)', () => {
+    const { scheduler, clock, at } = debounced();
+
+    scheduler.submit(at(rev('a1', 1)));
+    expect(scheduler.fileState(W, A_URI)?.eligibleAt).toBe(QUIET);
+
+    clock.advance(1000);
+    scheduler.submit(at(rev('a2', 2)));
+    expect(scheduler.fileState(W, A_URI)?.eligibleAt).toBe(1000 + QUIET);
+
+    clock.advance(QUIET);
+    expect(scheduler.fileState(W, A_URI)?.eligibleAt).toBeUndefined();
+    expect(scheduler.fileState(W, A_URI)?.active).toBeDefined();
+  });
+
+  it('keeps the deadline through unchanged saves, Auto Saves, opens and activates (SC-002, US2-1)', () => {
+    const { scheduler, detector, clock, at } = debounced();
+    const a = rev('a', 1);
+    scheduler.submit(at(a));
+    for (const step of [1000, 1500]) {
+      clock.advance(step); // T + 1000, then T + 2500
+      for (const trigger of TRIGGERS) {
+        scheduler.submit(at({ ...a, trigger }));
+      }
+    }
+
+    expect(scheduler.fileState(W, A_URI)?.eligibleAt).toBe(QUIET);
+    clock.advance(QUIET - 2500 - 1);
+    expect(detector.outstanding).toBe(0);
+    clock.advance(1);
+    expect(detector.outstanding).toBe(1);
+  });
+
+  it('logs a repeat of waiting work as a duplicate and changes nothing (US2-2)', () => {
+    const { scheduler, clock, at, lines } = debounced();
+    const a = rev('a', 1);
+    scheduler.submit(at(a));
+    clock.advance(1000);
+    const state = scheduler.fileState(W, A_URI);
+    const timers = clock.pendingCount;
+
+    scheduler.submit(at({ ...a, trigger: 'save' }));
+
+    expect(lines.at(-1)).toBe(
+      `1970-01-01T00:00:01.000Z duplicate of pending v1 sha ${sha8(a)} scripted@1 ${A_URI}`,
+    );
+    expect(scheduler.fileState(W, A_URI)).toEqual(state);
+    expect(clock.pendingCount).toBe(timers);
+  });
+
+  it('starts nothing at a deadline passed while A runs, then C as soon as A settles (SC-004, US3-1, US3-2)', async () => {
+    const { scheduler, detector, clock, at } = debounced();
+    const c = rev('c', 2);
+    scheduler.submit(at(rev('a', 1)));
+    clock.advance(QUIET); // A starts
+    scheduler.submit(at(c));
+
+    expect(clock.pendingCount).toBe(1);
+    clock.advance(QUIET + 500);
+    expect(detector.outstanding).toBe(1);
+    expect(clock.pendingCount).toBe(0);
+
+    detector.calls[0].resolve(ok(1));
+    await settle();
+
+    expect(detector.outstanding).toBe(2);
+    expect(detector.calls[1].input.contentHash).toBe(sha256Hex(c.content));
+    expect(detector.calls[0].signal.aborted).toBe(false);
+  });
+
+  it('lets C wait out its quiet period when A settles first (US3-3)', async () => {
+    const { scheduler, detector, clock, at } = debounced();
+    scheduler.submit(at(rev('a', 1)));
+    clock.advance(QUIET); // A starts
+    scheduler.submit(at(rev('c', 2))); // T
+    clock.advance(1000);
+    detector.calls[0].resolve(ok(1));
+    await settle();
+
+    expect(detector.outstanding).toBe(1);
+    expect(clock.pendingCount).toBe(1);
+    clock.advance(QUIET - 1000 - 1); // T + 2999
+    expect(detector.outstanding).toBe(1);
+    clock.advance(1); // T + 3000
+    expect(detector.outstanding).toBe(2);
+  });
+
+  it('moves the deadline again on a change after A settled (US3-3)', async () => {
+    const { scheduler, detector, clock, at } = debounced();
+    scheduler.submit(at(rev('a', 1)));
+    clock.advance(QUIET); // A starts
+    scheduler.submit(at(rev('c', 2))); // T
+    clock.advance(1000);
+    detector.calls[0].resolve(ok(1));
+    await settle();
+    clock.advance(1000);
+    const d = at(rev('d', 3)); // T + 2000
+    scheduler.submit(d);
+
+    clock.advance(QUIET - 1); // T + 4999
+    expect(detector.outstanding).toBe(1);
+    clock.advance(1); // T + 5000
+    expect(detector.outstanding).toBe(2);
+    expect(detector.calls[1].input.contentHash).toBe(sha256Hex(d.content));
+  });
+
+  it('clears waiting work and its wake-up on a change back to the running content (US3-4)', async () => {
+    const { scheduler, detector, clock, at, lines } = debounced();
+    const a = rev('a', 1);
+    scheduler.submit(at(a));
+    clock.advance(QUIET); // A starts
+    scheduler.submit(at(rev('c', 2)));
+    clock.advance(500);
+
+    scheduler.submit(at({ ...a, version: 3 }));
+
+    expect(lines.at(-1)).toBe(
+      `1970-01-01T00:00:03.500Z pending cleared v3 sha ${sha8(a)} scripted@1 ${A_URI}`,
+    );
+    expect(clock.pendingCount).toBe(0);
+
+    detector.calls[0].resolve(ok(1));
+    await settle();
+    clock.advance(10_000);
+
+    expect(detector.outstanding).toBe(1);
+  });
+
+  it('debounces each file on its own clock (US4-1)', () => {
+    const { scheduler, detector, clock, at } = debounced();
+    scheduler.submit(at(rev('a', 1))); // T
+    clock.advance(2000);
+    scheduler.submit(at(snapshot({ fileUri: B_URI, content: 'class B {}' })));
+
+    expect(scheduler.fileState(W, A_URI)?.eligibleAt).toBe(QUIET);
+    clock.advance(1000); // T + 3000
+    expect(detector.calls.map((c) => c.input.fileUri)).toEqual([A_URI]);
+    clock.advance(1999);
+    expect(detector.outstanding).toBe(1);
+    clock.advance(1); // T + 5000
+    expect(detector.calls.map((c) => c.input.fileUri)).toEqual([A_URI, B_URI]);
+  });
+
+  it('drops waiting work and its wake-up on close (US4-2)', () => {
+    const { scheduler, detector, clock, at, lines } = debounced();
+    const a = rev('a', 1);
+    scheduler.submit(at(a));
+    scheduler.submit(at(snapshot({ fileUri: B_URI, content: 'class B {}' })));
+    expect(clock.pendingCount).toBe(2);
+
+    scheduler.closed({ workspaceId: W, fileUri: A_URI, observedAt: 0 });
+
+    expect(lines.at(-1)).toBe(
+      `${T0} pending dropped (closed) v1 sha ${sha8(a)} scripted@1 ${A_URI}`,
+    );
+    expect(clock.pendingCount).toBe(1);
+    clock.advance(10_000);
+    expect(detector.calls.map((c) => c.input.fileUri)).toEqual([B_URI]);
+  });
+
+  it('clears every wake-up on dispose and starts nothing afterwards (US4-3)', () => {
+    const { scheduler, detector, clock, at } = debounced();
+    scheduler.submit(at(rev('a', 1)));
+    scheduler.submit(at(snapshot({ fileUri: B_URI, content: 'class B {}' })));
+
+    scheduler.dispose();
+
+    expect(clock.pendingCount).toBe(0);
+    clock.advance(10_000);
+    expect(detector.outstanding).toBe(0);
+  });
+
+  it('leaves no wake-up after dispatch, a cache hit, a drop, or only repeats (US4-4, SC-003)', async () => {
+    const { scheduler, detector, clock, at, cache } = debounced();
+    const C_URI = 'file:///w/C.java';
+    const a = rev('a', 1);
+    const b = snapshot({ fileUri: B_URI, content: 'class B {}' });
+    await cache.store(identity(b), ok(1));
+    scheduler.submit(at(a));
+    scheduler.submit(at(b));
+    scheduler.submit(at(snapshot({ fileUri: C_URI, content: 'class C {}' })));
+
+    scheduler.closed({ workspaceId: W, fileUri: C_URI, observedAt: 0 });
+    expect(clock.pendingCount).toBe(2);
+    clock.advance(QUIET); // A dispatched, B a cache hit
+
+    expect(clock.pendingCount).toBe(0);
+    detector.calls[0].resolve(ok(1));
+    await settle();
+    repeatBurst(scheduler, at(a), 5);
+
+    expect(clock.pendingCount).toBe(0);
+    expect(detector.outstanding).toBe(1);
+  });
+
+  it('writes quiet-period lines in an agreed, metadata-only format (SC-007, US5-2)', async () => {
+    const { scheduler, detector, clock, at, lines } = debounced();
+    const a = rev('a', 1);
+    scheduler.submit(at(a)); // quiet until 3 s
+    clock.advance(1000);
+    scheduler.submit(at(rev('b', 2))); // quiet until 4 s
+    clock.advance(QUIET); // b starts
+    scheduler.submit(at(rev('c', 3))); // quiet until 7 s, while b runs
+    detector.calls[0].resolve(ok(1));
+    await settle();
+    clock.advance(QUIET);
+
+    const time = String.raw`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z`;
+    const format = new RegExp(
+      String.raw`^${time} quiet until ${time} v\d+ sha [0-9a-f]{8} scripted@1 file:///w/A\.java$`,
+    );
+    const quiet = lines.filter((l) => l.includes(' quiet until '));
+
+    expect(quiet).toHaveLength(3);
+    expect(quiet.filter((l) => !format.test(l))).toEqual([]);
+    expect(quiet[0]).toBe(
+      `${T0} quiet until 1970-01-01T00:00:03.000Z v1 sha ${sha8(a)} scripted@1 ${A_URI}`,
+    );
+    expect(detector.outstanding).toBe(2);
+    expect(lines.join('\n')).not.toContain(SECRET);
+  });
+
+  it('keeps its timer invariants through a long seeded sequence (US5)', async () => {
+    const { scheduler, detector, clock, at } = debounced();
+    const uris = [A_URI, B_URI, 'file:///w/C.java'];
+    const resolved = new Set<number>();
+    const last = new Map<string, FileSnapshot>();
+    let seed = 6;
+    const random = (n: number): number => {
+      seed = (seed * 1103515245 + 12345) % 2147483648;
+      return seed % n;
+    };
+    let version = 0;
+
+    for (let step = 0; step < 300; step++) {
+      const fileUri = uris[random(uris.length)];
+      const action = random(10);
+      const callsBefore = detector.calls.length;
+      if (action < 4) {
+        const s = at(
+          snapshot({ fileUri, version: ++version, content: `v${random(3)}` }),
+        );
+        scheduler.submit(s);
+        last.set(fileUri, s);
+      } else if (action < 5) {
+        const previous = last.get(fileUri);
+        if (previous !== undefined) {
+          const before = scheduler.fileState(W, fileUri);
+          scheduler.submit(at({ ...previous, trigger: 'save' }));
+          if (
+            before?.open === true &&
+            before.latestHash === sha256Hex(previous.content)
+          ) {
+            // A repeat: nothing may change, least of all the deadline.
+            expect(scheduler.fileState(W, fileUri)).toEqual(before);
+            expect(detector.calls).toHaveLength(callsBefore);
+          }
+        }
+      } else if (action < 7) {
+        const index = detector.calls.findIndex(
+          (c, i) => c.input.fileUri === fileUri && !resolved.has(i),
+        );
+        if (index >= 0) {
+          resolved.add(index);
+          detector.calls[index].resolve(
+            random(4) === 0 ? fail('failed') : ok(1),
+          );
+        }
+      } else if (action < 9) {
+        clock.advance(random(4001));
+      } else {
+        scheduler.closed({ workspaceId: W, fileUri, observedAt: clock.now() });
+        last.delete(fileUri);
+      }
+      if (random(2) === 0) {
+        await settle();
+      }
+
+      expect(clock.pendingCount).toBeLessThanOrEqual(scheduler.pendingCount());
+      for (const call of detector.calls.slice(callsBefore)) {
+        // Nothing starts inside a quiet period.
+        const state = scheduler.fileState(W, call.input.fileUri);
+        expect((state?.lastChangeAt ?? 0) + QUIET).toBeLessThanOrEqual(
+          clock.now(),
+        );
+      }
+      for (const uri of uris) {
+        const unresolved = detector.calls.filter(
+          (c, i) => c.input.fileUri === uri && !resolved.has(i),
+        );
+        expect(unresolved.length).toBeLessThanOrEqual(1);
+        const state = scheduler.fileState(W, uri);
+        if (state?.pending !== undefined && state.active === undefined) {
+          expect(state.eligibleAt ?? 0).toBeGreaterThan(clock.now());
+        }
+      }
+    }
+    expect(detector.calls.length).toBeGreaterThan(10);
+  });
+
+  it.each([Infinity, NaN, -1, 2 ** 31])(
+    'rejects a quiet period of %p, which no timer can wait for',
+    (quietMs) => {
+      expect(() => setup({ quietMs })).toThrow(RangeError);
+    },
+  );
+
+  it.each([0, QUIET, 2 ** 31 - 1])(
+    'accepts a quiet period of %p',
+    (quietMs) => {
+      expect(() => setup({ quietMs })).not.toThrow();
+    },
+  );
 });
