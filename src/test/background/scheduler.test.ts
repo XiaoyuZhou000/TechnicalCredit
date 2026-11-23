@@ -1573,4 +1573,39 @@ describe('debounce (card 06)', () => {
     expect(scheduler.fileState(W, A_URI)?.eligibleAt).toBeUndefined();
     expect(scheduler.fileState(W, A_URI)?.active).toBeDefined();
   });
+
+  it('keeps the deadline through unchanged saves, Auto Saves, opens and activates (SC-002, US2-1)', () => {
+    const { scheduler, detector, clock, at } = debounced();
+    const a = rev('a', 1);
+    scheduler.submit(at(a));
+    for (const step of [1000, 1500]) {
+      clock.advance(step); // T + 1000, then T + 2500
+      for (const trigger of TRIGGERS) {
+        scheduler.submit(at({ ...a, trigger }));
+      }
+    }
+
+    expect(scheduler.fileState(W, A_URI)?.eligibleAt).toBe(QUIET);
+    clock.advance(QUIET - 2500 - 1);
+    expect(detector.outstanding).toBe(0);
+    clock.advance(1);
+    expect(detector.outstanding).toBe(1);
+  });
+
+  it('logs a repeat of waiting work as a duplicate and changes nothing (US2-2)', () => {
+    const { scheduler, clock, at, lines } = debounced();
+    const a = rev('a', 1);
+    scheduler.submit(at(a));
+    clock.advance(1000);
+    const state = scheduler.fileState(W, A_URI);
+    const timers = clock.pendingCount;
+
+    scheduler.submit(at({ ...a, trigger: 'save' }));
+
+    expect(lines.at(-1)).toBe(
+      `1970-01-01T00:00:01.000Z duplicate of pending v1 sha ${sha8(a)} scripted@1 ${A_URI}`,
+    );
+    expect(scheduler.fileState(W, A_URI)).toEqual(state);
+    expect(clock.pendingCount).toBe(timers);
+  });
 });

@@ -399,7 +399,7 @@ export class Scheduler implements SnapshotSink {
    * analysis a lookup would miss and retry it with nothing new to analyse (card 05).
    */
   private repeat(state: FileState, item: PendingSnapshot): void {
-    if (state.active !== undefined) {
+    if (state.active !== undefined || state.pending !== undefined) {
       // The latest report is the running or the pending content, so `hold` only logs it.
       this.hold(state, state.active, item);
       return;
