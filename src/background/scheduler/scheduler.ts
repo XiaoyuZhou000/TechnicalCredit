@@ -117,6 +117,39 @@ export interface SchedulerStats {
   readonly pendingDropped: number;
 }
 
+/**
+ * A file's latest detector result or cache answer, as card 09's status page shows it. Whether
+ * it is current is decided when read, never stored, so a result can't go stale unnoticed.
+ */
+export interface Latest {
+  readonly source: 'detector' | 'cache';
+  /** `false` only for a failed, cancelled or timed-out request. */
+  readonly ok: boolean;
+  readonly findings?: number;
+  /** Document version the outcome is for. */
+  readonly version: number;
+  /** Its content and detector version still match the open file. */
+  readonly current: boolean;
+  readonly at: number;
+}
+
+/** One row of `files()`: where the file is, its state, and its latest outcome. */
+export interface FileStatus extends FileStateView {
+  readonly workspaceId: string;
+  readonly fileUri: string;
+  readonly latest?: Latest;
+}
+
+interface LastOutcome {
+  readonly source: 'detector' | 'cache';
+  readonly ok: boolean;
+  readonly findings?: number;
+  readonly version: number;
+  readonly contentHash: string;
+  readonly detectorVersion: string;
+  readonly at: number;
+}
+
 interface ActiveRequest {
   readonly n: number;
   readonly snapshot: FileSnapshot;
@@ -139,6 +172,8 @@ interface Wakeup {
 
 interface FileState {
   readonly key: string;
+  readonly workspaceId: string;
+  readonly fileUri: string;
   active?: ActiveRequest;
   pending?: PendingSnapshot;
   /** Only while pending work waits for a deadline still ahead (card 06). */
@@ -150,6 +185,8 @@ interface FileState {
   lastChangeAt: number;
   open: boolean;
   lastSettledAt?: number;
+  /** For card 09's status page; set on every settle and every cache hit. */
+  lastOutcome?: LastOutcome;
 }
 
 /** JSON encoding keeps two URIs from colliding the way plain concatenation could. */
@@ -192,7 +229,8 @@ function describeMiss(lookup: Exclude<CacheLookup, { hit: true }>): string {
  * a request is running. Card 06 makes pending work wait for a quiet period after the last
  * meaningful change, with at most one wake-up per file. Card 07 adds a cooldown after every
  * detector completion to the same deadline, and keeps a closed file's state while it runs.
- * Never logs file text or findings.
+ * Card 09 adds read-only `files()` and `onChange` for the status page. Never logs file text or
+ * findings.
  */
 export class Scheduler implements SnapshotSink {
   private readonly inner: SnapshotSink;
@@ -204,7 +242,9 @@ export class Scheduler implements SnapshotSink {
   private readonly quietMs: number;
   private readonly cooldownMs: number;
   private readonly onSettled?: (event: SettledRequest) => void;
-  private readonly files = new Map<string, FileState>();
+  private readonly states = new Map<string, FileState>();
+  private readonly listeners = new Set<() => void>();
+  private notifyQueued = false;
   private readonly counts: Record<keyof SchedulerStats, number> = {
     started: 0,
     followUps: 0,
@@ -245,7 +285,7 @@ export class Scheduler implements SnapshotSink {
     const detectorVersion = this.detector.version;
     const key = keyOf(snapshot.workspaceId, snapshot.fileUri);
     const item: PendingSnapshot = { snapshot, contentHash };
-    let state = this.files.get(key);
+    let state = this.states.get(key);
     // A closed file's state survives only until its request settles, so a reopen is a first
     // report rather than a repeat.
     if (
@@ -259,12 +299,14 @@ export class Scheduler implements SnapshotSink {
     if (state === undefined) {
       state = {
         key,
+        workspaceId: snapshot.workspaceId,
+        fileUri: snapshot.fileUri,
         latestHash: contentHash,
         latestDetectorVersion: detectorVersion,
         lastChangeAt: snapshot.observedAt,
         open: true,
       };
-      this.files.set(key, state);
+      this.states.set(key, state);
     } else {
       state.latestHash = contentHash;
       state.latestDetectorVersion = detectorVersion;
@@ -289,10 +331,10 @@ export class Scheduler implements SnapshotSink {
     }
     this.inner.closed(notice);
     // Closes are rare, so they also clear out closed files whose cooldown has since expired.
-    for (const other of this.files.values()) {
+    for (const other of this.states.values()) {
       this.forgetIfClosed(other);
     }
-    const state = this.files.get(keyOf(notice.workspaceId, notice.fileUri));
+    const state = this.states.get(keyOf(notice.workspaceId, notice.fileUri));
     if (state === undefined) {
       return;
     }
@@ -309,24 +351,81 @@ export class Scheduler implements SnapshotSink {
 
   dispose(): void {
     this.disposed = true;
-    for (const state of this.files.values()) {
+    this.listeners.clear();
+    for (const state of this.states.values()) {
       this.cancelWakeup(state);
       state.active?.controller.abort();
     }
-    this.files.clear();
+    this.states.clear();
   }
 
   fileState(workspaceId: string, fileUri: string): FileStateView | undefined {
     const key = keyOf(workspaceId, fileUri);
-    const kept = this.files.get(key);
+    const kept = this.states.get(key);
     // A closed file kept for its cooldown has no timer to drop it, so expiry is checked here too.
     if (kept !== undefined) {
       this.forgetIfClosed(kept);
     }
-    const state = this.files.get(key);
-    if (state === undefined) {
-      return undefined;
+    const state = this.states.get(key);
+    return state === undefined ? undefined : this.viewOf(state);
+  }
+
+  /**
+   * Every tracked file, sorted, for card 09's status page. Like `fileState()`, it applies the
+   * rules as they stand now: expired kept records are dropped first, and `latest.current` is
+   * worked out here rather than stored.
+   */
+  files(): readonly FileStatus[] {
+    for (const state of this.states.values()) {
+      this.forgetIfClosed(state);
     }
+    const rows = [...this.states.values()]
+      .sort(
+        (a, b) =>
+          a.workspaceId.localeCompare(b.workspaceId) ||
+          a.fileUri.localeCompare(b.fileUri),
+      )
+      .map((state) => this.statusOf(state));
+    return Object.freeze(rows);
+  }
+
+  /**
+   * Called once after any burst of decisions, never during one, so a slow or throwing listener
+   * can't delay scheduling or see a half-made change (constitution VIII). Read the new state
+   * through `files()` or `stats()`. Returns the unsubscribe.
+   */
+  onChange(listener: () => void): () => void {
+    if (this.disposed) {
+      return () => undefined;
+    }
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  private statusOf(state: FileState): FileStatus {
+    const outcome = state.lastOutcome;
+    const latest: Latest | undefined = outcome && {
+      source: outcome.source,
+      ok: outcome.ok,
+      ...(outcome.findings !== undefined && { findings: outcome.findings }),
+      version: outcome.version,
+      current:
+        outcome.contentHash === state.latestHash &&
+        outcome.detectorVersion === this.detector.version &&
+        state.open,
+      at: outcome.at,
+    };
+    return Object.freeze({
+      workspaceId: state.workspaceId,
+      fileUri: state.fileUri,
+      ...this.viewOf(state),
+      ...(latest && { latest: Object.freeze(latest) }),
+    });
+  }
+
+  private viewOf(state: FileState): FileStateView {
     const { active, pending } = state;
     return Object.freeze({
       ...(active && {
@@ -363,7 +462,7 @@ export class Scheduler implements SnapshotSink {
   /** Files currently holding a not-yet-started snapshot; never more than one each. */
   pendingCount(): number {
     let count = 0;
-    for (const state of this.files.values()) {
+    for (const state of this.states.values()) {
       if (state.pending !== undefined) {
         count++;
       }
@@ -389,8 +488,34 @@ export class Scheduler implements SnapshotSink {
     return `v${snapshot.version} sha ${contentHash.slice(0, 8)} ${this.detector.id}@${this.detector.version} ${snapshot.fileUri}`;
   }
 
+  /** Every decision is logged here, so this is also the one place that marks a change. */
   private line(text: string): void {
     this.log(`${iso(this.clock.now())} ${text}`);
+    this.changed();
+  }
+
+  /** Batches a burst of decisions into one notification, delivered after the burst. */
+  private changed(): void {
+    if (this.notifyQueued || this.listeners.size === 0) {
+      return;
+    }
+    this.notifyQueued = true;
+    queueMicrotask(() => {
+      this.notifyQueued = false;
+      if (this.disposed) {
+        return;
+      }
+      for (const listener of [...this.listeners]) {
+        try {
+          listener();
+        } catch (error) {
+          // Logged past `line()`, so a listener that always throws can't re-arm the flush.
+          this.log(
+            `${iso(this.clock.now())} status listener error: ${messageOf(error)}`,
+          );
+        }
+      }
+    });
   }
 
   private quietDeadline(state: FileState): number {
@@ -476,7 +601,7 @@ export class Scheduler implements SnapshotSink {
       cooldown !== undefined &&
       cooldown > this.clock.now();
     if (!coolingDown) {
-      this.files.delete(state.key);
+      this.states.delete(state.key);
     }
   }
 
@@ -518,7 +643,7 @@ export class Scheduler implements SnapshotSink {
       this.cancelWakeup(state);
       return this.dispatch(state, next);
     }
-    if (this.isQuiet(state) && this.lookup(next)) {
+    if (this.isQuiet(state) && this.lookup(state, next)) {
       state.pending = undefined;
       this.cancelWakeup(state);
       return false;
@@ -541,7 +666,7 @@ export class Scheduler implements SnapshotSink {
   private wake(state: FileState, token: number): void {
     if (
       this.disposed ||
-      this.files.get(state.key) !== state ||
+      this.states.get(state.key) !== state ||
       state.wakeup?.token !== token
     ) {
       return;
@@ -620,12 +745,20 @@ export class Scheduler implements SnapshotSink {
   }
 
   /** Looks the content up and logs the outcome; true on a hit. */
-  private lookup(item: PendingSnapshot): boolean {
+  private lookup(state: FileState, item: PendingSnapshot): boolean {
     const lookup = this.cache.lookup(this.identityOf(item));
     if (lookup.hit) {
-      this.line(
-        `cache hit ${lookup.entry.output.findings.length} findings ${this.suffix(item)}`,
-      );
+      const findings = lookup.entry.output.findings.length;
+      state.lastOutcome = {
+        source: 'cache',
+        ok: true,
+        findings,
+        version: item.snapshot.version,
+        contentHash: item.contentHash,
+        detectorVersion: this.detector.version,
+        at: this.clock.now(),
+      };
+      this.line(`cache hit ${findings} findings ${this.suffix(item)}`);
       return true;
     }
     this.line(`cache miss (${describeMiss(lookup)}) ${this.suffix(item)}`);
@@ -634,7 +767,7 @@ export class Scheduler implements SnapshotSink {
 
   /** Only for a file with no active request: the cache decides whether a request starts. */
   private dispatch(state: FileState, item: PendingSnapshot): boolean {
-    if (this.lookup(item)) {
+    if (this.lookup(state, item)) {
       return false;
     }
     this.start(state, item);
@@ -699,7 +832,7 @@ export class Scheduler implements SnapshotSink {
   private isCurrent(state: FileState, active: ActiveRequest): boolean {
     return (
       !this.disposed &&
-      this.files.get(state.key) === state &&
+      this.states.get(state.key) === state &&
       state.active === active
     );
   }
@@ -753,6 +886,15 @@ export class Scheduler implements SnapshotSink {
 
     state.active = undefined;
     state.lastSettledAt = this.clock.now();
+    state.lastOutcome = {
+      source: 'detector',
+      ok: result.ok,
+      ...(result.ok && { findings: result.output.findings.length }),
+      version: snapshot.version,
+      contentHash: active.contentHash,
+      detectorVersion: active.detectorVersion,
+      at: state.lastSettledAt,
+    };
     this.report({
       workspaceId: snapshot.workspaceId,
       fileUri: snapshot.fileUri,
