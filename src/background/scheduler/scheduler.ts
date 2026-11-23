@@ -459,7 +459,9 @@ export class Scheduler implements SnapshotSink {
       Math.max(0, due - this.clock.now()),
     );
     state.wakeup = { token, handle, due };
-    this.line(`quiet until ${iso(due)} ${this.suffix(item)}`);
+    this.line(
+      `${this.waitingFor(state)} until ${iso(due)} ${this.suffix(item)}`,
+    );
   }
 
   private cancelWakeup(state: FileState): void {

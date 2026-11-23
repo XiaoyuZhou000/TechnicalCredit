@@ -2214,4 +2214,134 @@ describe('cooldown (card 07)', () => {
     expect(scheduler.fileState(W, A_URI)).toBeUndefined();
     expect(scheduler.fileState(W, B_URI)).toBeUndefined();
   });
+
+  it('names the governing deadline in metadata-only lines (US5-3, SC-007)', async () => {
+    const run = cooled();
+    const { scheduler, at, lines } = run;
+    const c = await completeFirst(run);
+    until(run, c + 5000);
+    scheduler.submit(at(rev('b', 2))); // cooldown ends later
+    until(run, c + 28_000);
+    scheduler.submit(at(rev('d', 3))); // quiet period ends later
+
+    const time = String.raw`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z`;
+    const format = new RegExp(
+      String.raw`^${time} (cooldown|quiet) until ${time} v\d+ sha [0-9a-f]{8} scripted@1 file:///w/A\.java$`,
+    );
+    const waits = lines.filter((l) => l.includes(' until '));
+
+    expect(waits.filter((l) => !format.test(l))).toEqual([]);
+    expect(waits.at(-2)).toContain(
+      ` cooldown until ${new Date(c + COOL).toISOString()} v2 `,
+    );
+    expect(waits.at(-1)).toContain(
+      ` quiet until ${new Date(c + 31_000).toISOString()} v3 `,
+    );
+    expect(lines.join('\n')).not.toContain(SECRET);
+  });
+
+  it("reproduces card 09's call sequence offline with the mock detector (US5-2, SC-006)", async () => {
+    const clock = createFakeTimers();
+    const mock = new MockDetector({ timers: clock, delayMs: 2000 });
+    const { scheduler } = setup({
+      detector: mock,
+      clock,
+      quietMs: QUIET,
+      cooldownMs: COOL,
+    });
+    const edit = (n: number): void =>
+      scheduler.submit(
+        snapshot({
+          version: n,
+          content: `class A { ${n} }`,
+          observedAt: clock.now(),
+        }),
+      );
+    const tick = async (ms: number): Promise<void> => {
+      clock.advance(ms);
+      await settle();
+    };
+    const counts: number[] = [];
+
+    for (let n = 1; n <= 5; n++) {
+      edit(n);
+      await tick(1000);
+    }
+    counts.push(mock.callCount); // editing every 1 s
+    await tick(QUIET);
+    counts.push(mock.callCount); // 3 s of quiet
+    for (let n = 6; n <= 15; n++) {
+      edit(n);
+      await tick(1000);
+    }
+    counts.push(mock.callCount); // edits while running, then cooling down
+    await tick(COOL);
+    counts.push(mock.callCount); // past both deadlines
+    await tick(COOL * 2);
+    counts.push(mock.callCount); // nothing new to analyse
+
+    expect(counts).toEqual([0, 1, 1, 2, 2]);
+  });
+
+  it('keeps its cooldown invariants through a long seeded sequence (US5)', async () => {
+    const run = cooled();
+    const { scheduler, detector, at, clock } = run;
+    const uris = [A_URI, B_URI, 'file:///w/C.java'];
+    const resolved = new Set<number>();
+    let seed = 7;
+    const random = (n: number): number => {
+      seed = (seed * 1103515245 + 12345) % 2147483648;
+      return seed % n;
+    };
+    let version = 0;
+
+    for (let step = 0; step < 300; step++) {
+      const fileUri = uris[random(uris.length)];
+      const action = random(10);
+      const callsBefore = detector.calls.length;
+      if (action < 4) {
+        scheduler.submit(
+          at(
+            snapshot({ fileUri, version: ++version, content: `v${random(3)}` }),
+          ),
+        );
+      } else if (action < 6) {
+        const index = detector.calls.findIndex(
+          (x, i) => x.input.fileUri === fileUri && !resolved.has(i),
+        );
+        if (index >= 0) {
+          resolved.add(index);
+          detector.calls[index].resolve(
+            random(3) === 0 ? fail('failed') : ok(1),
+          );
+        }
+      } else if (action < 9) {
+        clock.advance(random(35_001));
+      } else {
+        scheduler.closed(closeOf(fileUri));
+      }
+      if (random(2) === 0) {
+        await settle();
+      }
+
+      expect(clock.pendingCount).toBeLessThanOrEqual(scheduler.pendingCount());
+      for (const call of detector.calls.slice(callsBefore)) {
+        // Nothing starts inside a quiet period or a cooldown.
+        const state = scheduler.fileState(W, call.input.fileUri);
+        expect((state?.lastChangeAt ?? 0) + QUIET).toBeLessThanOrEqual(
+          clock.now(),
+        );
+        expect((state?.lastSettledAt ?? -Infinity) + COOL).toBeLessThanOrEqual(
+          clock.now(),
+        );
+      }
+      for (const uri of uris) {
+        const unresolved = detector.calls.filter(
+          (x, i) => x.input.fileUri === uri && !resolved.has(i),
+        );
+        expect(unresolved.length).toBeLessThanOrEqual(1);
+      }
+    }
+    expect(detector.calls.length).toBeGreaterThan(10);
+  });
 });
