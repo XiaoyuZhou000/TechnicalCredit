@@ -15,6 +15,7 @@ import {
 import type {
   FileSnapshot,
   SnapshotSink,
+  TriggerKind,
 } from '@/background/events/fileEvents';
 import { MockDetector } from '@/background/detector/mockDetector';
 import {
@@ -104,6 +105,21 @@ class ThrowingDetector implements Detector {
   }
 }
 
+/** A `ScriptedDetector` whose version can change between submits, as a detector update would. */
+class VersionedDetector implements Detector {
+  readonly id = 'scripted';
+  version = '1';
+  private readonly inner = new ScriptedDetector();
+
+  get calls(): Call[] {
+    return this.inner.calls;
+  }
+
+  analyse(input: DetectorInput, signal: AbortSignal): Promise<DetectorResult> {
+    return this.inner.analyse(input, signal);
+  }
+}
+
 function ok(findings: number): DetectorResult {
   return {
     ok: true,
@@ -175,6 +191,29 @@ function setup(options: SetupOptions = {}) {
 function scripted() {
   const detector = new ScriptedDetector();
   return { ...setup({ detector }), detector };
+}
+
+const TRIGGERS: readonly TriggerKind[] = [
+  'open',
+  'activate',
+  'save',
+  'startup',
+  'edit',
+];
+
+/** Submits `count` reports of `base`'s content, cycling through every trigger, each 1 ms later. */
+function repeatBurst(
+  sink: SnapshotSink,
+  base: FileSnapshot,
+  count: number,
+): void {
+  for (let i = 0; i < count; i++) {
+    sink.submit({
+      ...base,
+      trigger: TRIGGERS[i % TRIGGERS.length],
+      observedAt: base.observedAt + i + 1,
+    });
+  }
 }
 
 describe('scheduler basics', () => {
@@ -594,7 +633,7 @@ describe('scheduler with the mock detector', () => {
     });
   }
 
-  it('logs a miss, runs the mock, stores, then hits (SC-001)', async () => {
+  it('logs a miss, runs the mock, stores, skips an unchanged report, then hits on reopen (SC-001)', async () => {
     const timers = createFakeTimers();
     const mock = new MockDetector({ timers });
     const { scheduler, order } = setup({ detector: mock });
@@ -603,6 +642,8 @@ describe('scheduler with the mock detector', () => {
     timers.advance(2000);
     await settle();
     scheduler.submit(positive({ version: 2, trigger: 'activate' }));
+    scheduler.closed({ workspaceId: W, fileUri: URI, observedAt: 0 });
+    scheduler.submit(positive({ version: 3, trigger: 'open' }));
 
     expect(order).toEqual([
       `inner submit ${URI}`,
@@ -612,7 +653,10 @@ describe('scheduler with the mock detector', () => {
       `${T0} cache stored 6 findings v1 sha ${P8} mock@mock-1 ${URI}`,
       `${T0} result current #1 v1 ${URI}`,
       `inner submit ${URI}`,
-      `${T0} cache hit 6 findings v2 sha ${P8} mock@mock-1 ${URI}`,
+      `${T0} unchanged v2 sha ${P8} mock@mock-1 ${URI}`,
+      `inner closed ${URI}`,
+      `inner submit ${URI}`,
+      `${T0} cache hit 6 findings v3 sha ${P8} mock@mock-1 ${URI}`,
     ]);
     expect(mock.callCount).toBe(1);
   });
@@ -654,7 +698,7 @@ describe('scheduler with the mock detector', () => {
     ]);
   });
 
-  it('never stores a failed call, so the next submit misses again (SC-005)', async () => {
+  it('never stores a failed call, so a reopen misses again (SC-005)', async () => {
     const timers = createFakeTimers();
     const mock = new MockDetector({
       timers,
@@ -667,7 +711,9 @@ describe('scheduler with the mock detector', () => {
     scheduler.submit(positive());
     timers.advance(2000);
     await settle();
-    scheduler.submit(positive({ version: 2 }));
+    // An unchanged report never retries a failure (card 05); a reopen is a first report.
+    scheduler.closed({ workspaceId: W, fileUri: URI, observedAt: 0 });
+    scheduler.submit(positive({ version: 2, trigger: 'open' }));
 
     expect(lines).toContain(`${T0} mock failed: nope #1 v1 ${URI}`);
     expect(lines.filter((l) => l.includes('cache stored'))).toEqual([]);
@@ -957,7 +1003,9 @@ describe('inspection (US5)', () => {
     detector.calls[2].resolve(fail('failed')); // B failed
     detector.calls[1].resolve(ok(2)); // d stored, current
     await settle();
-    scheduler.submit(rev('d', 7)); // cache hit
+    scheduler.submit(rev('d', 7)); // unchanged
+    scheduler.closed(closeOf(A_URI)); // idle, so A is forgotten
+    scheduler.submit(rev('d', 8)); // reopen: cache hit
     return run;
   }
 
@@ -967,7 +1015,7 @@ describe('inspection (US5)', () => {
     expect(scheduler.stats()).toEqual({
       started: 3,
       followUps: 1,
-      duplicates: 2,
+      duplicates: 3,
       pendingHeld: 3,
       pendingReplaced: 1,
       pendingCleared: 1,
@@ -977,9 +1025,9 @@ describe('inspection (US5)', () => {
     expect(detector.outstanding).toBe(3);
     expect(scheduler.fileState(W, B_URI)).toBeUndefined();
     expect(scheduler.fileState(W, A_URI)).toEqual({
-      latestHash: sha256Hex(rev('d', 7).content),
+      latestHash: sha256Hex(rev('d', 8).content),
+      lastChangeAt: 0,
       open: true,
-      lastSettledAt: 0,
     });
   });
 
@@ -999,6 +1047,7 @@ describe('inspection (US5)', () => {
       String.raw`pending ${sfx}`,
       String.raw`pending replaced ${sfx}`,
       String.raw`duplicate of (running|pending) ${sfx}`,
+      String.raw`unchanged ${sfx}`,
       String.raw`pending cleared ${sfx}`,
       String.raw`pending dropped \(closed\) ${sfx}`,
     ].map((f) => new RegExp(`^${time} ${f}$`));
@@ -1032,9 +1081,20 @@ describe('inspection (US5)', () => {
       const fileUri = uris[random(uris.length)];
       const action = random(10);
       if (action < 6) {
-        scheduler.submit(
-          snapshot({ fileUri, version: ++version, content: `v${random(3)}` }),
-        );
+        const s = snapshot({
+          fileUri,
+          version: ++version,
+          content: `v${random(3)}`,
+        });
+        scheduler.submit(s);
+        // A save straight after is always a repeat: only the counter may change (card 05).
+        const state = scheduler.fileState(W, fileUri);
+        const calls = detector.calls.length;
+        const duplicates = scheduler.stats().duplicates;
+        scheduler.submit({ ...s, trigger: 'save', observedAt: 1 });
+        expect(scheduler.fileState(W, fileUri)).toEqual(state);
+        expect(detector.calls).toHaveLength(calls);
+        expect(scheduler.stats().duplicates).toBe(duplicates + 1);
       } else if (action < 9) {
         const index = detector.calls.findIndex(
           (c, i) => c.input.fileUri === fileUri && !resolved.has(i),
@@ -1065,5 +1125,341 @@ describe('inspection (US5)', () => {
       }
     }
     expect(scheduler.stats().started).toBeGreaterThan(10);
+  });
+});
+
+describe('event coalescing (card 05)', () => {
+  const unchanged = (s: FileSnapshot): string =>
+    `${T0} unchanged v${s.version} sha ${sha8(s)} scripted@1 ${s.fileUri}`;
+
+  it('makes no lookup or call for 50 unchanged reports on an idle file (SC-001, US1-1)', async () => {
+    const { scheduler, detector, lines } = scripted();
+    const a = rev('a', 1);
+    scheduler.submit(a);
+    detector.calls[0].resolve(ok(1));
+    await settle();
+    const before = lines.length;
+
+    repeatBurst(scheduler, a, 50);
+
+    expect(lines.slice(before)).toEqual(Array(50).fill(unchanged(a)));
+    expect(detector.outstanding).toBe(1);
+    expect(scheduler.stats().duplicates).toBe(50);
+    expect(scheduler.fileState(W, A_URI)).toMatchObject({
+      latestHash: sha256Hex(a.content),
+      lastChangeAt: 0,
+    });
+    expect(scheduler.fileState(W, A_URI)?.pending).toBeUndefined();
+  });
+
+  it('looks up a cached file once, not on every unchanged report (SC-001)', async () => {
+    const { scheduler, detector, cache, lines } = scripted();
+    const a = rev('a', 1);
+    await cache.store(
+      {
+        workspaceId: W,
+        fileUri: A_URI,
+        contentHash: sha256Hex(a.content),
+        detectorId: 'scripted',
+        detectorVersion: '1',
+      },
+      ok(2),
+    );
+
+    scheduler.submit({ ...a, trigger: 'startup' });
+    repeatBurst(scheduler, a, 5);
+
+    expect(lines.filter((l) => l.includes(' cache '))).toHaveLength(1);
+    expect(detector.outstanding).toBe(0);
+  });
+
+  it.each([
+    ['failed analysis', undefined, fail('failed')],
+    ['failed store', rejectingUpdateStore('disk full'), ok(1)],
+  ])(
+    'never retries after a %s on unchanged saves or activates (SC-003, US1-2)',
+    async (_what, store, result) => {
+      const detector = new ScriptedDetector();
+      const { scheduler } = setup({ detector, store });
+      const a = rev('a', 1);
+      scheduler.submit(a);
+      detector.calls[0].resolve(result);
+      await settle();
+
+      for (const trigger of ['save', 'activate', 'save'] as const) {
+        scheduler.submit({ ...a, trigger });
+      }
+
+      expect(detector.outstanding).toBe(1);
+    },
+  );
+
+  it('ignores a burst of the running content and never aborts it (US1-4)', () => {
+    const { scheduler, detector, lines } = scripted();
+    const a = rev('a', 1);
+    scheduler.submit(a);
+    const before = lines.length;
+
+    repeatBurst(scheduler, a, 10);
+
+    expect(lines.slice(before)).toEqual(
+      Array(10).fill(
+        `${T0} duplicate of running v1 sha ${sha8(a)} scripted@1 ${A_URI}`,
+      ),
+    );
+    expect(detector.outstanding).toBe(1);
+    expect(detector.calls[0].signal.aborted).toBe(false);
+    expect(scheduler.fileState(W, A_URI)?.pending).toBeUndefined();
+  });
+
+  it('leaves pending work and its change time alone on unchanged saves (SC-004, US1-3)', () => {
+    const { scheduler } = scripted();
+    scheduler.submit(rev('a', 1));
+    const c = { ...rev('c', 2), observedAt: 100 };
+    scheduler.submit(c);
+    const pending = scheduler.fileState(W, A_URI)?.pending;
+
+    scheduler.submit({ ...c, trigger: 'save', observedAt: 200 });
+    scheduler.submit({ ...c, trigger: 'save', observedAt: 300 });
+
+    const state = scheduler.fileState(W, A_URI);
+    expect(state?.pending).toEqual(pending);
+    expect(state?.lastChangeAt).toBe(100);
+  });
+
+  it('treats unchanged content as new work once the detector version changes (research R9)', async () => {
+    const detector = new VersionedDetector();
+    const { scheduler, lines } = setup({ detector });
+    const a = rev('a', 1);
+    scheduler.submit(a);
+    detector.calls[0].resolve(ok(1));
+    await settle();
+
+    detector.version = '2';
+    scheduler.submit({ ...a, trigger: 'activate' });
+    scheduler.submit({ ...a, trigger: 'save' });
+
+    expect(lines).toContain(
+      `${T0} cache miss (absent) v1 sha ${sha8(a)} scripted@2 ${A_URI}`,
+    );
+    expect(detector.calls).toHaveLength(2);
+  });
+});
+
+describe('event coalescing: newest unstarted content (card 05 US2)', () => {
+  const B_URI = 'file:///w/B.java';
+
+  it('keeps one pending snapshot, the newest, and runs only it after A (SC-002, US2-1)', async () => {
+    const { scheduler, detector } = scripted();
+    const c = rev('c', 3);
+
+    scheduler.submit(rev('a', 1));
+    scheduler.submit(rev('b', 2));
+    scheduler.submit(c);
+
+    expect(scheduler.pendingCount()).toBe(1);
+    expect(scheduler.fileState(W, A_URI)?.pending?.contentHash).toBe(
+      sha256Hex(c.content),
+    );
+
+    detector.calls[0].resolve(ok(1));
+    await settle();
+
+    expect(detector.outstanding).toBe(2);
+    expect(detector.calls[1].input.contentHash).toBe(sha256Hex(c.content));
+    expect(scheduler.pendingCount()).toBe(0);
+  });
+
+  it('makes no second call when the newest pending content is already cached (SC-002)', async () => {
+    const { scheduler, detector, cache } = scripted();
+    const c = rev('c', 3);
+    await cache.store(
+      {
+        workspaceId: W,
+        fileUri: A_URI,
+        contentHash: sha256Hex(c.content),
+        detectorId: 'scripted',
+        detectorVersion: '1',
+      },
+      ok(1),
+    );
+
+    scheduler.submit(rev('a', 1));
+    scheduler.submit(rev('b', 2));
+    scheduler.submit(c);
+    // A fails, so nothing is stored: storing A would replace C's entry (one entry per file, the
+    // open stale-result cache eviction decision).
+    detector.calls[0].resolve(fail('failed'));
+    await settle();
+
+    expect(detector.outstanding).toBe(1);
+    expect(scheduler.pendingCount()).toBe(0);
+  });
+
+  it('keeps pending on a repeat of it, and clears it on a change back to the running content (US2-2, US2-3)', () => {
+    const { scheduler, detector } = scripted();
+    const a = rev('a', 1);
+    const c = { ...rev('c', 2), observedAt: 10 };
+    scheduler.submit(a);
+    scheduler.submit(c);
+    const before = scheduler.fileState(W, A_URI);
+
+    scheduler.submit({ ...c, version: 3, trigger: 'activate', observedAt: 20 });
+
+    expect(scheduler.fileState(W, A_URI)).toEqual(before);
+
+    scheduler.submit({ ...a, version: 4, observedAt: 30 });
+
+    expect(scheduler.pendingCount()).toBe(0);
+    expect(scheduler.fileState(W, A_URI)).toMatchObject({ lastChangeAt: 30 });
+    expect(scheduler.fileState(W, A_URI)?.pending).toBeUndefined();
+    expect(detector.outstanding).toBe(1);
+  });
+
+  it('coalesces each file on its own (US2-4)', () => {
+    const { scheduler, detector } = scripted();
+    const a = rev('a', 1);
+    const b = snapshot({ fileUri: B_URI, content: 'class B { b }' });
+
+    scheduler.submit(a);
+    scheduler.submit(b);
+    for (let v = 2; v <= 4; v++) {
+      scheduler.submit(rev(`a${v}`, v));
+      scheduler.submit({ ...b, version: v, content: `class B { b${v} }` });
+    }
+    repeatBurst(scheduler, rev('a4', 4), 3); // repeats of A's pending content
+
+    expect(detector.outstanding).toBe(2);
+    expect(scheduler.pendingCount()).toBe(2);
+    expect(scheduler.fileState(W, B_URI)?.pending?.version).toBe(4);
+
+    // B's repeats never suppress a first report of another file.
+    repeatBurst(scheduler, { ...b, version: 4, content: 'class B { b4 }' }, 3);
+    scheduler.submit(snapshot({ fileUri: 'file:///w/C.java' }));
+
+    expect(detector.outstanding).toBe(3);
+  });
+});
+
+describe('event coalescing: close and reopen (card 05 US3)', () => {
+  const closeA = { workspaceId: W, fileUri: A_URI, observedAt: 0 };
+
+  it('drops pending work on close so it never runs (SC-005, US3-1)', async () => {
+    const { scheduler, detector, lines } = scripted();
+    const c = rev('c', 2);
+    scheduler.submit(rev('a', 1));
+    scheduler.submit(c);
+
+    scheduler.closed(closeA);
+
+    expect(lines.at(-1)).toBe(
+      `${T0} pending dropped (closed) v2 sha ${sha8(c)} scripted@1 ${A_URI}`,
+    );
+    expect(scheduler.pendingCount()).toBe(0);
+
+    detector.calls[0].resolve(ok(1));
+    await settle();
+
+    expect(detector.outstanding).toBe(1);
+  });
+
+  it('lets a request running at close finish, stores it, and marks it stale (US3-2)', async () => {
+    const { scheduler, detector, cache, events } = scripted();
+    scheduler.submit(rev('a', 1));
+
+    scheduler.closed(closeA);
+    detector.calls[0].resolve(ok(1));
+    await settle();
+
+    expect(detector.calls[0].signal.aborted).toBe(false);
+    expect(cache.stats().stored).toBe(1);
+    expect(events[0]).toMatchObject({ stored: true, eligible: false });
+  });
+
+  it('treats a reopen of an idle file as a first report, not a repeat (US3-3)', async () => {
+    const { scheduler, detector, lines } = scripted();
+    const a = rev('a', 1);
+    scheduler.submit(a);
+    detector.calls[0].resolve(ok(1));
+    await settle();
+
+    scheduler.closed(closeA);
+    const before = lines.length;
+    scheduler.submit({ ...a, trigger: 'open' });
+
+    expect(lines.slice(before)).toEqual([
+      `${T0} cache hit 1 findings v1 sha ${sha8(a)} scripted@1 ${A_URI}`,
+    ]);
+    expect(detector.outstanding).toBe(1);
+  });
+
+  it('retries a failed analysis on reopen, the trigger a repeat never is (US3-3, research R4)', async () => {
+    const { scheduler, detector } = scripted();
+    const a = rev('a', 1);
+    scheduler.submit(a);
+    detector.calls[0].resolve(fail('failed'));
+    await settle();
+    scheduler.submit({ ...a, trigger: 'save' });
+
+    expect(detector.outstanding).toBe(1);
+
+    scheduler.closed(closeA);
+    scheduler.submit({ ...a, trigger: 'open' });
+
+    expect(detector.outstanding).toBe(2);
+  });
+});
+
+describe('event coalescing: inspection (card 05 US4)', () => {
+  it('reports coalescing state and counts every decision exactly (US4-1, US4-2)', async () => {
+    const { scheduler, detector } = scripted();
+    const at = (s: FileSnapshot, observedAt: number): FileSnapshot => ({
+      ...s,
+      observedAt,
+    });
+    const [a, b, c] = [rev('a', 1), rev('b', 2), rev('c', 3)];
+
+    scheduler.submit(at(a, 10)); // start #1
+    scheduler.submit(at({ ...a, trigger: 'activate' }, 11)); // repeat (running)
+    scheduler.submit(at(b, 20)); // held
+    scheduler.submit(at(c, 30)); // replaced
+    scheduler.submit(at({ ...c, trigger: 'save' }, 31)); // repeat (pending)
+
+    expect(scheduler.fileState(W, A_URI)).toEqual({
+      active: {
+        n: 1,
+        version: 1,
+        contentHash: sha256Hex(a.content),
+        detectorVersion: '1',
+      },
+      pending: { version: 3, contentHash: sha256Hex(c.content) },
+      latestHash: sha256Hex(c.content),
+      lastChangeAt: 30,
+      open: true,
+    });
+
+    scheduler.submit(at({ ...a, version: 4 }, 40)); // cleared
+    detector.calls[0].resolve(ok(1));
+    await settle();
+    scheduler.submit(at({ ...a, version: 4, trigger: 'save' }, 41)); // repeat (idle)
+    scheduler.submit(at(b, 50)); // start #2
+    scheduler.submit(at(c, 60)); // held
+    scheduler.closed({ workspaceId: W, fileUri: A_URI, observedAt: 70 }); // dropped
+
+    expect(scheduler.stats()).toEqual({
+      started: 2,
+      followUps: 0,
+      duplicates: 3,
+      pendingHeld: 2,
+      pendingReplaced: 1,
+      pendingCleared: 1,
+      pendingDropped: 1,
+    });
+    expect(scheduler.fileState(W, A_URI)).toMatchObject({
+      latestHash: sha256Hex(c.content),
+      lastChangeAt: 60,
+      open: false,
+    });
+    expect(scheduler.pendingCount()).toBe(0);
   });
 });

@@ -50,6 +50,8 @@ export interface FileStateView {
     readonly contentHash: string;
   };
   readonly latestHash: string;
+  /** `observedAt` of the latest first report or meaningful change; repeats never move it. */
+  readonly lastChangeAt: number;
   readonly open: boolean;
   readonly lastSettledAt?: number;
 }
@@ -82,6 +84,10 @@ interface FileState {
   active?: ActiveRequest;
   pending?: PendingSnapshot;
   latestHash: string;
+  /** Detector version when `latestHash` was observed; a new version makes old content new work. */
+  latestDetectorVersion: string;
+  /** `observedAt` of the latest first report or meaningful change; card 06 debounces from it. */
+  lastChangeAt: number;
   open: boolean;
   lastSettledAt?: number;
 }
@@ -122,7 +128,8 @@ function describeMiss(lookup: Exclude<CacheLookup, { hit: true }>): string {
 /**
  * The single owner of per-file Background Agent state (ARCHITECTURE.md). Card 08 adds in-flight
  * deduplication: at most one detector request per file, with the latest different content kept
- * as pending. Cards 05–07 extend this class rather than adding their own state. Never logs file
+ * as pending. Card 05 makes repeats of a file's latest content observation only, whether or not
+ * a request is running. Cards 06–07 extend this class rather than adding their own state. Never logs file
  * text or findings.
  */
 export class Scheduler implements SnapshotSink {
@@ -162,15 +169,35 @@ export class Scheduler implements SnapshotSink {
     }
     this.inner.submit(snapshot);
     const contentHash = this.hash(snapshot.content);
+    const detectorVersion = this.detector.version;
     const key = keyOf(snapshot.workspaceId, snapshot.fileUri);
-    let state = this.files.get(key);
-    if (state === undefined) {
-      state = { key, latestHash: contentHash, open: true };
-      this.files.set(key, state);
-    }
-    state.latestHash = contentHash;
-    state.open = true;
     const item: PendingSnapshot = { snapshot, contentHash };
+    let state = this.files.get(key);
+    // A closed file's state survives only until its request settles, so a reopen is a first
+    // report rather than a repeat.
+    if (
+      state?.open === true &&
+      contentHash === state.latestHash &&
+      detectorVersion === state.latestDetectorVersion
+    ) {
+      this.repeat(state, item);
+      return;
+    }
+    if (state === undefined) {
+      state = {
+        key,
+        latestHash: contentHash,
+        latestDetectorVersion: detectorVersion,
+        lastChangeAt: snapshot.observedAt,
+        open: true,
+      };
+      this.files.set(key, state);
+    } else {
+      state.latestHash = contentHash;
+      state.latestDetectorVersion = detectorVersion;
+      state.lastChangeAt = snapshot.observedAt;
+      state.open = true;
+    }
     if (state.active === undefined) {
       this.dispatch(state, item);
     } else {
@@ -229,6 +256,7 @@ export class Scheduler implements SnapshotSink {
         }),
       }),
       latestHash: state.latestHash,
+      lastChangeAt: state.lastChangeAt,
       open: state.open,
       ...(state.lastSettledAt !== undefined && {
         lastSettledAt: state.lastSettledAt,
@@ -238,6 +266,17 @@ export class Scheduler implements SnapshotSink {
 
   stats(): SchedulerStats {
     return Object.freeze({ ...this.counts });
+  }
+
+  /** Files currently holding a not-yet-started snapshot; never more than one each. */
+  pendingCount(): number {
+    let count = 0;
+    for (const state of this.files.values()) {
+      if (state.pending !== undefined) {
+        count++;
+      }
+    }
+    return count;
   }
 
   private identityOf(
@@ -260,6 +299,21 @@ export class Scheduler implements SnapshotSink {
 
   private line(text: string): void {
     this.log(`${iso(this.now())} ${text}`);
+  }
+
+  /**
+   * Same content and detector version as the file's latest report, which is what saves, Auto
+   * Save and tab switches mostly are. The cache is not consulted: after a failed or unstored
+   * analysis a lookup would miss and retry it with nothing new to analyse (card 05).
+   */
+  private repeat(state: FileState, item: PendingSnapshot): void {
+    if (state.active !== undefined) {
+      // The latest report is the running or the pending content, so `hold` only logs it.
+      this.hold(state, state.active, item);
+      return;
+    }
+    this.counts.duplicates++;
+    this.line(`unchanged ${this.suffix(item)}`);
   }
 
   /**
