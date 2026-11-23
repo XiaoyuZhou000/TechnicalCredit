@@ -12,6 +12,7 @@ import {
 import type { FileSnapshot } from '@/background/events/fileEvents';
 import { Scheduler } from '@/background/scheduler/scheduler';
 import { BackgroundStatus } from '@/background/status/backgroundStatus';
+import { StatusFeed } from '@/background/status/statusFeed';
 import { renderStatusHtml } from '@/background/status/statusView';
 import { createFakeTimers } from '@/test/background/fakeTimers';
 import { createMemoryCacheStore } from '@/test/background/memoryCacheStore';
@@ -444,5 +445,94 @@ describe('status page rendering (card 09 US3)', () => {
     );
     expect(html).toContain('<style nonce="NONCE123">');
     expect(html).not.toMatch(/<script|<form|<input|<button|\son[a-z]+=/i);
+  });
+});
+
+describe('status feed: live and truthful (card 09 US4)', () => {
+  function feedHarness(
+    options: { quietMs?: number; cooldownMs?: number } = {},
+  ) {
+    const run = harness(options);
+    const status = new BackgroundStatus({
+      scheduler: run.scheduler,
+      cache: run.cache,
+      clock: run.clock,
+      detector: run.detector,
+      label: 'Sprint 1 mock detector',
+    });
+    const renders: string[] = [];
+    const feed = new StatusFeed({
+      status,
+      clock: run.clock,
+      render: (html) => renders.push(html),
+      nonce: () => 'N',
+      formatTime: (ms) => `t+${ms}`,
+    });
+    return { ...run, status, renders, feed };
+  }
+
+  it('renders a burst of changes at most once per 200 ms, ending on the final state (FR-008, SC-004)', async () => {
+    const { scheduler, clock, renders } = feedHarness({ quietMs: 3000 });
+    expect(renders).toHaveLength(1); // the first render, on opening
+
+    let last = snapshot(A_URI, 'class A { 0 }');
+    for (let i = 1; i <= 20; i++) {
+      clock.advance(2); // 20 changes in 40 ms
+      last = snapshot(A_URI, `class A { ${i} }`, i + 1, clock.now());
+      scheduler.submit(last);
+      await settle();
+    }
+
+    expect(renders).toHaveLength(1);
+    clock.advance(200);
+    expect(renders).toHaveLength(2);
+    expect(renders[1]).toContain(`v21 ${sha256Hex(last.content).slice(0, 8)}`);
+  });
+
+  it('refreshes at a kept record expiry, with no event and no polling before it (FR-011, US4-3)', async () => {
+    const { scheduler, detector, clock, renders } = feedHarness({
+      cooldownMs: 30_000,
+    });
+    scheduler.submit(snapshot(A_URI, 'class A {}'));
+    detector.calls[0].resolve(ok(1));
+    await settle();
+    scheduler.closed({ workspaceId: W, fileUri: A_URI, observedAt: 0 });
+    await settle();
+    clock.advance(200);
+    const before = renders.length;
+
+    expect(renders.at(-1)).toContain('closed · cooldown until t+30000');
+    clock.advance(30_000 - 200 - 1);
+    expect(renders).toHaveLength(before);
+    clock.advance(1);
+
+    expect(renders).toHaveLength(before + 1);
+    expect(renders.at(-1)).toContain('No Java files tracked yet');
+  });
+
+  it('shows a result that settled after the file changed as stale, never current (US4-2)', async () => {
+    const { scheduler, detector, clock, renders } = feedHarness();
+    scheduler.submit(snapshot(A_URI, 'class A {}'));
+    scheduler.submit(snapshot(A_URI, 'class A { int x; }', 2));
+    detector.calls[0].resolve(ok(1));
+    await settle();
+    clock.advance(200);
+
+    expect(renders.at(-1)).toContain('stale · analysed v1');
+    expect(renders.at(-1)).not.toContain('current ·');
+  });
+
+  it('escapes a file location full of markup (US4-4, SC-005)', async () => {
+    const { scheduler, clock, renders } = feedHarness();
+    const nasty = `file:///w/<script>alert(1)</script>&"'.java`;
+    scheduler.submit(snapshot(nasty, 'class A {}'));
+    await settle();
+    clock.advance(200);
+
+    const html = renders.at(-1) ?? '';
+    expect(html).toContain(
+      '&lt;script&gt;alert(1)&lt;/script&gt;&amp;&quot;&#39;.java',
+    );
+    expect(html).not.toMatch(/<script/i);
   });
 });
