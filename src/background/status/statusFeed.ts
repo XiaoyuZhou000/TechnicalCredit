@@ -13,6 +13,8 @@ export interface StatusFeedOptions {
   /** A fresh CSP nonce per render. */
   readonly nonce: () => string;
   readonly formatTime?: (ms: number) => string;
+  /** A failed render is reported here and skipped; the next change renders again. */
+  readonly onError?: (error: unknown) => void;
 }
 
 /**
@@ -52,18 +54,23 @@ export class StatusFeed {
     if (this.disposed) {
       return;
     }
-    const { status, clock, render, nonce, formatTime } = this.options;
+    const { status, clock, render, nonce, formatTime, onError } = this.options;
     if (this.refresh !== undefined) {
       clock.clearTimeout(this.refresh);
       this.refresh = undefined;
     }
     const snapshot = status.snapshot();
-    render(
-      renderStatusHtml(snapshot, {
-        nonce: nonce(),
-        ...(formatTime && { formatTime }),
-      }),
-    );
+    try {
+      render(
+        renderStatusHtml(snapshot, {
+          nonce: nonce(),
+          ...(formatTime && { formatTime }),
+        }),
+      );
+    } catch (error) {
+      // A page that can't draw must not take scheduling, or the next render, down with it.
+      onError?.(error);
+    }
     if (snapshot.nextChangeAt !== undefined) {
       this.refresh = clock.setTimeout(
         () => {

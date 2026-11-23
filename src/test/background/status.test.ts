@@ -536,3 +536,132 @@ describe('status feed: live and truthful (card 09 US4)', () => {
     expect(html).not.toMatch(/<script/i);
   });
 });
+
+describe('status feed: observes only, leaves nothing behind (card 09 US5)', () => {
+  function statusOf(run: ReturnType<typeof harness>): BackgroundStatus {
+    return new BackgroundStatus({
+      scheduler: run.scheduler,
+      cache: run.cache,
+      clock: run.clock,
+      detector: run.detector,
+      label: 'Sprint 1 mock detector',
+    });
+  }
+
+  /** One scripted session; returns what it did. */
+  async function session(withFeed: boolean) {
+    const run = harness({ quietMs: 3000, cooldownMs: 30_000 });
+    const feed = withFeed
+      ? new StatusFeed({
+          status: statusOf(run),
+          clock: run.clock,
+          render: () => undefined,
+          nonce: () => 'N',
+        })
+      : undefined;
+    const step = async (ms: number): Promise<void> => {
+      for (let left = ms; left > 0; left -= 100) {
+        run.clock.advance(Math.min(100, left));
+        await settle();
+      }
+    };
+    run.scheduler.submit(snapshot(A_URI, 'class A { 1 }', 1, run.clock.now()));
+    await step(3000);
+    run.detector.calls[0].resolve(ok(1));
+    await settle();
+    run.scheduler.submit(snapshot(A_URI, 'class A { 2 }', 2, run.clock.now()));
+    run.scheduler.submit(snapshot(B_URI, 'class B {}', 1, run.clock.now()));
+    await step(31_000);
+    for (const call of run.detector.calls.slice(1)) {
+      call.resolve(ok(2));
+    }
+    await settle();
+    feed?.dispose();
+    return {
+      calls: run.detector.calls.map((c) => [c.input.fileUri, c.input.version]),
+      cache: run.cache.stats(),
+      stats: run.scheduler.stats(),
+    };
+  }
+
+  it('changes nothing about the session it watches (US5-1, SC-006)', async () => {
+    expect(await session(true)).toEqual(await session(false));
+  });
+
+  it('clears its timers and stops rendering once disposed (US5-2)', async () => {
+    const run = harness({ cooldownMs: 30_000 });
+    let renders = 0;
+    const feed = new StatusFeed({
+      status: statusOf(run),
+      clock: run.clock,
+      render: () => renders++,
+      nonce: () => 'N',
+    });
+    run.scheduler.submit(snapshot(A_URI, 'class A {}'));
+    run.detector.calls[0].resolve(ok(1));
+    await settle();
+    run.scheduler.closed({ workspaceId: W, fileUri: A_URI, observedAt: 0 });
+    await settle();
+    run.clock.advance(200); // a render; it sets the refresh for the kept record's expiry
+    run.scheduler.submit(snapshot(B_URI, 'class B {}'));
+    await settle(); // a throttled render is now pending too
+    expect(run.clock.pendingCount).toBe(2);
+    const before = renders;
+
+    feed.dispose();
+
+    expect(run.clock.pendingCount).toBe(0);
+    run.scheduler.submit(snapshot(B_URI, 'class B { int x; }', 2));
+    await settle();
+    run.clock.advance(60_000);
+    expect(renders).toBe(before);
+  });
+
+  it('gets no notification after the scheduler is disposed (US5-3)', async () => {
+    const run = harness();
+    let renders = 0;
+    const feed = new StatusFeed({
+      status: statusOf(run),
+      clock: run.clock,
+      render: () => renders++,
+      nonce: () => 'N',
+    });
+
+    run.scheduler.dispose();
+    run.scheduler.submit(snapshot(A_URI, 'class A {}'));
+    await settle();
+    run.clock.advance(1000);
+
+    expect(renders).toBe(1); // only the opening render
+    expect(run.clock.pendingCount).toBe(0);
+    feed.dispose();
+  });
+
+  it('survives a render that throws, and scheduling never notices (US5-4)', async () => {
+    const run = harness();
+    let attempts = 0;
+    const errors: unknown[] = [];
+    const feed = new StatusFeed({
+      status: statusOf(run),
+      clock: run.clock,
+      render: () => {
+        attempts++;
+        throw new Error('webview gone');
+      },
+      nonce: () => 'N',
+      onError: (error) => errors.push(error),
+    });
+
+    run.scheduler.submit(snapshot(A_URI, 'class A {}'));
+    await settle();
+    run.clock.advance(200);
+    run.scheduler.submit(snapshot(B_URI, 'class B {}'));
+    await settle();
+    run.clock.advance(200);
+
+    expect(run.detector.calls).toHaveLength(2);
+    expect(attempts).toBe(3);
+    expect(errors).toHaveLength(3);
+    feed.dispose();
+  });
+});
