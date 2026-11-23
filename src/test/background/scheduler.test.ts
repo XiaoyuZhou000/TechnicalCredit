@@ -1753,4 +1753,109 @@ describe('debounce (card 06)', () => {
     expect(clock.pendingCount).toBe(0);
     expect(detector.outstanding).toBe(1);
   });
+
+  it('writes quiet-period lines in an agreed, metadata-only format (SC-007, US5-2)', async () => {
+    const { scheduler, detector, clock, at, lines } = debounced();
+    const a = rev('a', 1);
+    scheduler.submit(at(a)); // quiet until 3 s
+    clock.advance(1000);
+    scheduler.submit(at(rev('b', 2))); // quiet until 4 s
+    clock.advance(QUIET); // b starts
+    scheduler.submit(at(rev('c', 3))); // quiet until 7 s, while b runs
+    detector.calls[0].resolve(ok(1));
+    await settle();
+    clock.advance(QUIET);
+
+    const time = String.raw`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z`;
+    const format = new RegExp(
+      String.raw`^${time} quiet until ${time} v\d+ sha [0-9a-f]{8} scripted@1 file:///w/A\.java$`,
+    );
+    const quiet = lines.filter((l) => l.includes(' quiet until '));
+
+    expect(quiet).toHaveLength(3);
+    expect(quiet.filter((l) => !format.test(l))).toEqual([]);
+    expect(quiet[0]).toBe(
+      `${T0} quiet until 1970-01-01T00:00:03.000Z v1 sha ${sha8(a)} scripted@1 ${A_URI}`,
+    );
+    expect(detector.outstanding).toBe(2);
+    expect(lines.join('\n')).not.toContain(SECRET);
+  });
+
+  it('keeps its timer invariants through a long seeded sequence (US5)', async () => {
+    const { scheduler, detector, clock, at } = debounced();
+    const uris = [A_URI, B_URI, 'file:///w/C.java'];
+    const resolved = new Set<number>();
+    const last = new Map<string, FileSnapshot>();
+    let seed = 6;
+    const random = (n: number): number => {
+      seed = (seed * 1103515245 + 12345) % 2147483648;
+      return seed % n;
+    };
+    let version = 0;
+
+    for (let step = 0; step < 300; step++) {
+      const fileUri = uris[random(uris.length)];
+      const action = random(10);
+      const callsBefore = detector.calls.length;
+      if (action < 4) {
+        const s = at(
+          snapshot({ fileUri, version: ++version, content: `v${random(3)}` }),
+        );
+        scheduler.submit(s);
+        last.set(fileUri, s);
+      } else if (action < 5) {
+        const previous = last.get(fileUri);
+        if (previous !== undefined) {
+          const before = scheduler.fileState(W, fileUri);
+          scheduler.submit(at({ ...previous, trigger: 'save' }));
+          if (
+            before?.open === true &&
+            before.latestHash === sha256Hex(previous.content)
+          ) {
+            // A repeat: nothing may change, least of all the deadline.
+            expect(scheduler.fileState(W, fileUri)).toEqual(before);
+            expect(detector.calls).toHaveLength(callsBefore);
+          }
+        }
+      } else if (action < 7) {
+        const index = detector.calls.findIndex(
+          (c, i) => c.input.fileUri === fileUri && !resolved.has(i),
+        );
+        if (index >= 0) {
+          resolved.add(index);
+          detector.calls[index].resolve(
+            random(4) === 0 ? fail('failed') : ok(1),
+          );
+        }
+      } else if (action < 9) {
+        clock.advance(random(4001));
+      } else {
+        scheduler.closed({ workspaceId: W, fileUri, observedAt: clock.now() });
+        last.delete(fileUri);
+      }
+      if (random(2) === 0) {
+        await settle();
+      }
+
+      expect(clock.pendingCount).toBeLessThanOrEqual(scheduler.pendingCount());
+      for (const call of detector.calls.slice(callsBefore)) {
+        // Nothing starts inside a quiet period.
+        const state = scheduler.fileState(W, call.input.fileUri);
+        expect((state?.lastChangeAt ?? 0) + QUIET).toBeLessThanOrEqual(
+          clock.now(),
+        );
+      }
+      for (const uri of uris) {
+        const unresolved = detector.calls.filter(
+          (c, i) => c.input.fileUri === uri && !resolved.has(i),
+        );
+        expect(unresolved.length).toBeLessThanOrEqual(1);
+        const state = scheduler.fileState(W, uri);
+        if (state?.pending !== undefined && state.active === undefined) {
+          expect(state.eligibleAt ?? 0).toBeGreaterThan(clock.now());
+        }
+      }
+    }
+    expect(detector.calls.length).toBeGreaterThan(10);
+  });
 });
