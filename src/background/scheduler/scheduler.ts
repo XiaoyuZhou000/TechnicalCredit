@@ -138,6 +138,8 @@ export interface FileStatus extends FileStateView {
   readonly workspaceId: string;
   readonly fileUri: string;
   readonly latest?: Latest;
+  /** For a closed file kept only for its cooldown (card 07): when that record expires. */
+  readonly keptUntil?: number;
 }
 
 interface LastOutcome {
@@ -417,11 +419,16 @@ export class Scheduler implements SnapshotSink {
         state.open,
       at: outcome.at,
     };
+    const kept =
+      !state.open && state.active === undefined && state.pending === undefined
+        ? this.cooldownDeadline(state)
+        : undefined;
     return Object.freeze({
       workspaceId: state.workspaceId,
       fileUri: state.fileUri,
       ...this.viewOf(state),
       ...(latest && { latest: Object.freeze(latest) }),
+      ...(kept !== undefined && { keptUntil: kept }),
     });
   }
 

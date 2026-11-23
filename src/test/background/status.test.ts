@@ -11,6 +11,8 @@ import {
 } from '@/background/detector/detector';
 import type { FileSnapshot } from '@/background/events/fileEvents';
 import { Scheduler } from '@/background/scheduler/scheduler';
+import { BackgroundStatus } from '@/background/status/backgroundStatus';
+import { renderStatusHtml } from '@/background/status/statusView';
 import { createFakeTimers } from '@/test/background/fakeTimers';
 import { createMemoryCacheStore } from '@/test/background/memoryCacheStore';
 
@@ -268,5 +270,179 @@ describe('scheduler change notifications (card 09)', () => {
     await settle();
 
     expect(calls).toBe(0);
+  });
+});
+
+describe('background status model (card 09 US3)', () => {
+  const LABEL = 'Sprint 1 mock detector';
+
+  function withStatus(options: { quietMs?: number; cooldownMs?: number } = {}) {
+    const run = harness(options);
+    const status = new BackgroundStatus({
+      scheduler: run.scheduler,
+      cache: run.cache,
+      clock: run.clock,
+      detector: run.detector,
+      label: LABEL,
+    });
+    return { ...run, status };
+  }
+
+  it('labels the session and counts its work from the scheduler and the cache', async () => {
+    const { scheduler, detector, cache, status } = withStatus();
+    const b = snapshot(B_URI, 'class B {}');
+    await cache.store(identity(b), ok(1));
+    scheduler.submit(snapshot(A_URI, 'class A {}'));
+    scheduler.submit(b);
+    detector.calls[0].resolve(ok(2));
+    await settle();
+
+    const snap = status.snapshot();
+
+    expect(snap).toMatchObject({
+      label: LABEL,
+      detector: 'scripted@1',
+      session: {
+        analyses: 1,
+        followUps: 0,
+        repeats: 0,
+        cacheHits: 1,
+        cacheMisses: 1,
+        cacheStored: 2,
+      },
+    });
+    expect(snap.files).toEqual(scheduler.files());
+    expect(Object.isFrozen(snap)).toBe(true);
+    expect(Object.isFrozen(snap.session)).toBe(true);
+  });
+
+  it('points nextChangeAt at the earliest future deadline, including a kept record expiry', async () => {
+    const { scheduler, detector, clock, status } = withStatus({
+      quietMs: 3000,
+      cooldownMs: 30_000,
+    });
+    scheduler.submit(snapshot(A_URI, 'class A {}'));
+    expect(status.snapshot().nextChangeAt).toBe(3000);
+
+    clock.advance(3000);
+    detector.calls[0].resolve(ok(1));
+    await settle(); // settles at 3 s, cooling until 33 s
+    scheduler.closed({ workspaceId: W, fileUri: A_URI, observedAt: 3000 });
+
+    expect(status.snapshot().files[0]).toMatchObject({
+      open: false,
+      keptUntil: 33_000,
+    });
+    expect(status.snapshot().nextChangeAt).toBe(33_000);
+    clock.advance(30_000);
+    expect(status.snapshot().nextChangeAt).toBeUndefined();
+    expect(status.snapshot().files).toEqual([]);
+  });
+
+  it('delivers scheduler changes to subscribers', async () => {
+    const { scheduler, status } = withStatus();
+    let calls = 0;
+    const unsubscribe = status.subscribe(() => calls++);
+
+    scheduler.submit(snapshot(A_URI, 'class A {}'));
+    await settle();
+    unsubscribe();
+    scheduler.submit(snapshot(B_URI, 'class B {}'));
+    await settle();
+
+    expect(calls).toBe(1);
+  });
+});
+
+describe('status page rendering (card 09 US3)', () => {
+  const time = (ms: number): string => `t+${ms}`;
+
+  function render(status: BackgroundStatus): string {
+    return renderStatusHtml(status.snapshot(), {
+      nonce: 'NONCE123',
+      formatTime: time,
+    });
+  }
+
+  function withStatus(options: { quietMs?: number; cooldownMs?: number } = {}) {
+    const run = harness(options);
+    const status = new BackgroundStatus({
+      scheduler: run.scheduler,
+      cache: run.cache,
+      clock: run.clock,
+      detector: run.detector,
+      label: 'Sprint 1 mock detector',
+    });
+    return { ...run, status };
+  }
+
+  it('shows an empty state before any file is reported', () => {
+    const html = render(withStatus().status);
+
+    expect(html).toContain('No Java files tracked yet');
+    expect(html).toContain('Sprint 1 mock detector');
+  });
+
+  it('shows the label, the counters and each row', async () => {
+    const { scheduler, detector, clock, status } = withStatus({
+      quietMs: 3000,
+      cooldownMs: 30_000,
+    });
+    const a = snapshot(A_URI, 'class A {}');
+    scheduler.submit(a);
+    clock.advance(3000); // A starts
+    const c = snapshot(A_URI, 'class A { int x; }', 2, 3000);
+    scheduler.submit(c); // waits behind A, then the cooldown
+
+    const html = render(status);
+
+    expect(html).toContain('Sprint 1 mock detector');
+    expect(html).toContain('A.java');
+    expect(html).toContain(A_URI);
+    expect(html).toContain(`v1 ${sha256Hex(a.content).slice(0, 8)}`);
+    expect(html).toContain(`v2 ${sha256Hex(c.content).slice(0, 8)}`);
+    expect(html).toContain('quiet');
+    expect(html).toContain('t+6000');
+
+    detector.calls[0].resolve(ok(2));
+    await settle();
+    const after = render(status);
+
+    expect(after).toContain('cooldown');
+    expect(after).toContain('t+33000');
+    expect(after).toContain('stale');
+    expect(after).toContain('2 findings');
+    expect(after).toMatch(/Analyses<\/dt>\s*<dd>1</);
+  });
+
+  it('marks a current result, a failure and a cache answer', async () => {
+    const { scheduler, detector, cache, status } = withStatus();
+    const b = snapshot(B_URI, 'class B {}');
+    await cache.store(identity(b), ok(1));
+    scheduler.submit(snapshot(A_URI, 'class A {}'));
+    scheduler.submit(b);
+    scheduler.submit(snapshot('file:///w/C.java', 'class C {}'));
+    detector.calls[0].resolve(ok(2));
+    detector.calls[1].resolve(failed);
+    await settle();
+
+    const html = render(status);
+
+    expect(html).toMatch(/A\.java[\s\S]*current[\s\S]*2 findings/);
+    expect(html).toMatch(/B\.java[\s\S]*cached[\s\S]*1 finding/);
+    expect(html).toMatch(/C\.java[\s\S]*failed/);
+  });
+
+  it('declares a strict CSP and has no scripts, forms, inputs or handlers', async () => {
+    const { scheduler, status } = withStatus();
+    scheduler.submit(snapshot(A_URI, 'class A {}'));
+
+    const html = render(status);
+
+    expect(html).toContain(
+      `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'nonce-NONCE123'">`,
+    );
+    expect(html).toContain('<style nonce="NONCE123">');
+    expect(html).not.toMatch(/<script|<form|<input|<button|\son[a-z]+=/i);
   });
 });

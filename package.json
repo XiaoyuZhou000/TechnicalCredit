@@ -26,6 +26,10 @@
       {
         "command": "technicalcredit.dismissTCComment",
         "title": "Technical Credit: Dismiss"
+      },
+      {
+        "command": "technicalcredit.showBackgroundStatus",
+        "title": "Technical Credit: Show Background Status"
       }
     ],
     "menus": {

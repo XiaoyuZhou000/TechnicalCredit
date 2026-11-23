@@ -13,6 +13,8 @@ import {
   DEFAULT_QUIET_MS,
   Scheduler,
 } from '@/background/scheduler/scheduler';
+import { BackgroundStatus } from '@/background/status/backgroundStatus';
+import { BackgroundStatusPanel } from '@/background/status/statusPanel';
 
 /** The one place real time is bound; core modules only ever see a `Clock`. */
 const realClock: Clock = {
@@ -34,10 +36,11 @@ export function startBackgroundAgent(context: vscode.ExtensionContext): void {
     store: context.globalState,
     now: () => realClock.now(),
   });
+  const detector = new MockDetector({ timers: realClock });
   // Cards 05–07 add coalescing, debounce and cooldown to this scheduler, not a second sink.
   const scheduler = new Scheduler({
     inner: createLoggingSink(log),
-    detector: new MockDetector({ timers: realClock }),
+    detector,
     cache,
     hash: sha256Hex,
     log,
@@ -48,7 +51,29 @@ export function startBackgroundAgent(context: vscode.ExtensionContext): void {
   const monitor = startFileEventMonitor(scheduler, (error) =>
     log(describeSinkError(error)),
   );
+  // Card 09's read-only status page; the output channel stays for diagnosis.
+  const statusPanel = new BackgroundStatusPanel(
+    new BackgroundStatus({
+      scheduler,
+      cache,
+      clock: realClock,
+      detector,
+      label: 'Sprint 1 mock detector',
+    }),
+    realClock,
+  );
+  const showStatus = vscode.commands.registerCommand(
+    'technicalcredit.showBackgroundStatus',
+    () => statusPanel.show(),
+  );
 
-  // Stop the events first and the channel last, so no in-flight call logs to a closed channel.
-  context.subscriptions.push(monitor, scheduler, channel);
+  // Stop the events first, then the page, and the channel last, so nothing logs to a closed
+  // channel.
+  context.subscriptions.push(
+    monitor,
+    showStatus,
+    statusPanel,
+    scheduler,
+    channel,
+  );
 }
