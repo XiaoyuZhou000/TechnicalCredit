@@ -248,3 +248,52 @@ describe('functional suite: the Sprint 1 pipeline (card 09 US1)', () => {
     p.shutdown();
   });
 });
+
+describe('functional suite: restart (card 09 US2)', () => {
+  /** Session 1 analyses A and shuts down, leaving its result in `store`. */
+  async function firstSession(store: CacheStore, doc: FakeDoc): Promise<void> {
+    const first = pipeline(store);
+    first.events.opened(doc);
+    await first.tick(QUIET + MOCK_DELAY + 100);
+    expect(first.mock.callCount).toBe(1);
+    first.shutdown();
+  }
+
+  it('serves unchanged files from the cache after a restart, with a fresh call counter (SC-002, US2-1, US2-2)', async () => {
+    const store = createMemoryCacheStore();
+    const doc = new FakeDoc('A.java', 'class A {}');
+    await firstSession(store, doc);
+
+    const second = pipeline(store); // new scheduler, detector and cache over the same store
+    second.events.startup([doc]);
+    await second.tick(QUIET + 100);
+
+    expect(second.lines.at(-1)).toContain('cache hit 1 findings');
+    expect(second.mock.callCount).toBe(0);
+    expect(second.scheduler.stats().started).toBe(0);
+    expect(second.cache.stats().hits).toBe(1);
+    expect(second.scheduler.files()[0].latest).toMatchObject({
+      source: 'cache',
+      current: true,
+    });
+    second.shutdown();
+  });
+
+  it('analyses a change after the restart with no cooldown carried over (US2-3)', async () => {
+    const store = createMemoryCacheStore();
+    const doc = new FakeDoc('A.java', 'class A {}');
+    await firstSession(store, doc);
+
+    const second = pipeline(store);
+    second.events.startup([doc]);
+    await second.tick(QUIET + 100);
+    second.edit(doc, 'class A { int x; }');
+    const changedAt = second.clock.now();
+
+    await second.until(changedAt + QUIET - 1);
+    expect(second.mock.callCount).toBe(0);
+    await second.until(changedAt + QUIET);
+    expect(second.mock.callCount).toBe(1);
+    second.shutdown();
+  });
+});
