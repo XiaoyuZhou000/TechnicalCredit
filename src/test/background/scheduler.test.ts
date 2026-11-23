@@ -1858,4 +1858,18 @@ describe('debounce (card 06)', () => {
     }
     expect(detector.calls.length).toBeGreaterThan(10);
   });
+
+  it.each([Infinity, NaN, -1, 2 ** 31])(
+    'rejects a quiet period of %p, which no timer can wait for',
+    (quietMs) => {
+      expect(() => setup({ quietMs })).toThrow(RangeError);
+    },
+  );
+
+  it.each([0, QUIET, 2 ** 31 - 1])(
+    'accepts a quiet period of %p',
+    (quietMs) => {
+      expect(() => setup({ quietMs })).not.toThrow();
+    },
+  );
 });

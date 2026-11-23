@@ -14,6 +14,12 @@ import type { Clock } from '@/background/scheduler/clock';
 /** Card 06's initial quiet period; tunable in code for Sprint 1. */
 export const DEFAULT_QUIET_MS = 3000;
 
+/**
+ * Node runs a timer with any longer delay after 1 ms, so a longer quiet period would make
+ * `wake` reschedule itself in a tight loop.
+ */
+const MAX_TIMER_MS = 2 ** 31 - 1;
+
 export interface SchedulerOptions {
   /** Card 02's logging sink; always called first, so its lines stay unchanged. */
   readonly inner: SnapshotSink;
@@ -182,8 +188,14 @@ export class Scheduler implements SnapshotSink {
     this.log = options.log;
     this.clock = options.clock;
     this.quietMs = options.quietMs ?? DEFAULT_QUIET_MS;
-    if (!(this.quietMs >= 0)) {
-      throw new RangeError(`quietMs must be >= 0, got ${this.quietMs}`);
+    if (
+      !Number.isFinite(this.quietMs) ||
+      this.quietMs < 0 ||
+      this.quietMs > MAX_TIMER_MS
+    ) {
+      throw new RangeError(
+        `quietMs must be between 0 and ${MAX_TIMER_MS} ms, got ${this.quietMs}`,
+      );
     }
     this.onSettled = options.onSettled;
   }
