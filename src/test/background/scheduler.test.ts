@@ -2068,29 +2068,73 @@ describe('cooldown (card 07)', () => {
     expect(scheduler.fileState(W, A_URI)?.pending).toBeUndefined();
   });
 
-  it('moves the wake-up to the new deadline as soon as a request settles (FR-005)', async () => {
+  it('checks the cache when the quiet period ends, then waits out the cooldown for a call (FR-005, review)', async () => {
     const run = cooled();
     const { scheduler, detector, at, lines, clock } = run;
     scheduler.submit(at(rev('a', 1)));
     clock.advance(QUIET); // A starts at 3 s
     clock.advance(1000);
-    scheduler.submit(at(rev('b', 2))); // quiet until 7 s, while A runs
+    const b = at(rev('b', 2)); // quiet until 7 s, while A runs
+    scheduler.submit(b);
     clock.advance(1000);
     detector.calls[0].resolve(ok(1)); // C = 5 s, before b's quiet deadline
     await settle();
     const c = clock.now();
 
     expect(clock.pendingCount).toBe(1);
-    expect(scheduler.fileState(W, A_URI)?.eligibleAt).toBe(c + COOL);
-    expect(lines.at(-1)).toContain(' until 1970-01-01T00:00:35.000Z ');
+    expect(scheduler.fileState(W, A_URI)).toMatchObject({
+      eligibleAt: c + COOL,
+      waitingFor: 'cooldown',
+    });
+
+    until(run, 7000); // b's quiet deadline: the cache answers now, a miss keeps it waiting
+    expect(lines.slice(-2)).toEqual([
+      `1970-01-01T00:00:07.000Z cache miss (content changed) v2 sha ${sha8(b)} scripted@1 ${A_URI}`,
+      `1970-01-01T00:00:07.000Z cooldown until 1970-01-01T00:00:35.000Z v2 sha ${sha8(b)} scripted@1 ${A_URI}`,
+    ]);
+    expect(clock.pendingCount).toBe(1);
     const logged = lines.length;
 
     until(run, c + COOL - 1);
-    // The old 7 s wake-up is gone, so nothing fires, reschedules or logs before the deadline.
     expect(lines).toHaveLength(logged);
     expect(detector.outstanding).toBe(1);
     until(run, c + COOL);
     expect(detector.outstanding).toBe(2);
+  });
+
+  it('serves a cached result after the quiet period, without waiting out the cooldown (review)', async () => {
+    const run = cooled();
+    const { scheduler, detector, at, lines, clock } = run;
+    const a = rev('a', 1);
+    const c = await completeFirst(run); // stores a's result
+    until(run, c + 2000);
+    scheduler.submit(at(rev('b', 2)));
+    until(run, c + 4000);
+    scheduler.submit(at({ ...a, version: 3 })); // an undo back to analysed content
+
+    until(run, c + 7000 - 1);
+    expect(lines.filter((l) => l.includes('cache hit'))).toEqual([]);
+    until(run, c + 7000);
+
+    expect(lines.at(-1)).toContain('cache hit 1 findings v3');
+    expect(scheduler.fileState(W, A_URI)?.pending).toBeUndefined();
+    expect(scheduler.fileState(W, A_URI)?.lastSettledAt).toBe(c);
+    expect(clock.pendingCount).toBe(0);
+    run.clock.advance(60_000);
+    expect(detector.outstanding).toBe(1);
+  });
+
+  it('serves a cached result on a reopen within the cooldown after just the quiet period (review)', async () => {
+    const run = cooled();
+    const { scheduler, detector, at, lines } = run;
+    const c = await completeFirst(run);
+    scheduler.closed({ workspaceId: W, fileUri: A_URI, observedAt: 0 });
+    until(run, c + 10_000);
+    scheduler.submit(at({ ...rev('a', 1), trigger: 'open' }));
+
+    until(run, c + 13_000);
+    expect(lines.at(-1)).toContain('cache hit 1 findings v1');
+    expect(detector.outstanding).toBe(1);
   });
 
   const B_URI = 'file:///w/B.java';

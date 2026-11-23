@@ -408,17 +408,36 @@ export class Scheduler implements SnapshotSink {
     );
   }
 
-  /**
+  /*
    * A deadline whose setting is 0 never makes work wait, whatever the timestamps say; that
    * keeps earlier cards' behaviour exact (card 06 FR-010, card 07 FR-011).
    */
-  private isDue(state: FileState): boolean {
-    const now = this.clock.now();
-    const quiet = this.quietMs === 0 || this.quietDeadline(state) <= now;
+  private isQuiet(state: FileState): boolean {
+    return this.quietMs === 0 || this.quietDeadline(state) <= this.clock.now();
+  }
+
+  private isCooled(state: FileState): boolean {
     const cooldown = this.cooldownDeadline(state);
-    const cooled =
-      this.cooldownMs === 0 || cooldown === undefined || cooldown <= now;
-    return quiet && cooled;
+    return (
+      this.cooldownMs === 0 ||
+      cooldown === undefined ||
+      cooldown <= this.clock.now()
+    );
+  }
+
+  /** Whether a detector call may start: past both deadlines. */
+  private isDue(state: FileState): boolean {
+    return this.isQuiet(state) && this.isCooled(state);
+  }
+
+  /**
+   * When pending work can next move on: its quiet deadline, when the cache gets to answer, then
+   * `eligibleAt`, when a call may start. The wake-up is always set for this time.
+   */
+  private nextCheckAt(state: FileState): number {
+    return this.isQuiet(state)
+      ? this.eligibleAt(state)
+      : this.quietDeadline(state);
   }
 
   /** Which deadline sets `eligibleAt`: what card 09's status page shows as the waiting reason. */
@@ -457,16 +476,48 @@ export class Scheduler implements SnapshotSink {
   /** At most one wake-up per file: a new deadline replaces the old timer rather than adding one. */
   private schedule(state: FileState, item: PendingSnapshot): void {
     this.cancelWakeup(state);
-    const due = this.eligibleAt(state);
+    const due = this.nextCheckAt(state);
     const token = ++this.wakeups;
     const handle = this.clock.setTimeout(
       () => this.wake(state, token),
       Math.max(0, due - this.clock.now()),
     );
     state.wakeup = { token, handle, due };
-    this.line(
-      `${this.waitingFor(state)} until ${iso(due)} ${this.suffix(item)}`,
-    );
+    // Names what the wake-up waits for: the quiet period first, then the cooldown.
+    const reason = this.isQuiet(state) ? 'cooldown' : 'quiet';
+    this.line(`${reason} until ${iso(due)} ${this.suffix(item)}`);
+  }
+
+  /** Keeps the file's one wake-up on its next check, rescheduling only when that moved. */
+  private ensureWakeup(state: FileState, item: PendingSnapshot): void {
+    if (state.wakeup?.due !== this.nextCheckAt(state)) {
+      this.schedule(state, item);
+    }
+  }
+
+  /**
+   * Moves an idle file's pending work on, and reports whether a call started. Once the quiet
+   * period has passed the cache answers at once: a hit costs no detector call, so the cooldown,
+   * which limits calls, doesn't hold it back. A miss waits out the cooldown, and `dispatch`
+   * checks the cache again right before the call.
+   */
+  private advance(state: FileState): boolean {
+    const next = state.pending;
+    if (next === undefined || state.active !== undefined || !state.open) {
+      return false;
+    }
+    if (this.isDue(state)) {
+      state.pending = undefined;
+      this.cancelWakeup(state);
+      return this.dispatch(state, next);
+    }
+    if (this.isQuiet(state) && this.lookup(next)) {
+      state.pending = undefined;
+      this.cancelWakeup(state);
+      return false;
+    }
+    this.ensureWakeup(state, next);
+    return false;
   }
 
   private cancelWakeup(state: FileState): void {
@@ -493,16 +544,11 @@ export class Scheduler implements SnapshotSink {
     if (!state.open || next === undefined) {
       return;
     }
-    // The running request settles first, past the deadline by then, so it dispatches `next`.
+    // The running request settles first, and its settlement moves `next` on.
     if (state.active !== undefined) {
       return;
     }
-    if (!this.isDue(state)) {
-      this.schedule(state, next);
-      return;
-    }
-    state.pending = undefined;
-    this.dispatch(state, next);
+    this.advance(state);
   }
 
   /**
@@ -556,24 +602,34 @@ export class Scheduler implements SnapshotSink {
       this.line(`pending replaced ${this.suffix(item)}`);
     }
     state.pending = item;
-    if (this.isDue(state)) {
-      // Only reachable while a request runs: its settlement starts this work.
+    if (active === undefined) {
+      this.advance(state);
+    } else if (this.isDue(state)) {
+      // The running request's settlement starts this work.
       this.cancelWakeup(state);
     } else {
-      this.schedule(state, item);
+      this.ensureWakeup(state, item);
     }
   }
 
-  /** Only for a file with no active request: the cache decides whether a request starts. */
-  private dispatch(state: FileState, item: PendingSnapshot): boolean {
+  /** Looks the content up and logs the outcome; true on a hit. */
+  private lookup(item: PendingSnapshot): boolean {
     const lookup = this.cache.lookup(this.identityOf(item));
     if (lookup.hit) {
       this.line(
         `cache hit ${lookup.entry.output.findings.length} findings ${this.suffix(item)}`,
       );
-      return false;
+      return true;
     }
     this.line(`cache miss (${describeMiss(lookup)}) ${this.suffix(item)}`);
+    return false;
+  }
+
+  /** Only for a file with no active request: the cache decides whether a request starts. */
+  private dispatch(state: FileState, item: PendingSnapshot): boolean {
+    if (this.lookup(item)) {
+      return false;
+    }
     this.start(state, item);
     return true;
   }
@@ -704,18 +760,11 @@ export class Scheduler implements SnapshotSink {
     });
 
     // Only the latest pending snapshot goes on, through the cache; the settled request itself
-    // is never retried here, even if it failed. Work still inside its quiet period keeps waiting.
-    const next = state.pending;
-    if (next !== undefined && this.isDue(state)) {
-      state.pending = undefined;
-      this.cancelWakeup(state);
-      if (this.dispatch(state, next)) {
+    // is never retried here, even if it failed. This completion starts a cooldown, so work that
+    // isn't due keeps waiting, its wake-up moved to its next check if that changed.
+    if (state.pending !== undefined) {
+      if (this.advance(state)) {
         this.counts.followUps++;
-      }
-    } else if (next !== undefined) {
-      // This completion starts a cooldown, so the deadline may have moved past the wake-up.
-      if (state.wakeup?.due !== this.eligibleAt(state)) {
-        this.schedule(state, next);
       }
     } else {
       this.forgetIfClosed(state);
