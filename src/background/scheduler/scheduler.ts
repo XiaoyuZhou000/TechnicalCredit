@@ -71,13 +71,24 @@ export interface FileStateView {
   readonly lastSettledAt?: number;
 }
 
+/**
+ * Cumulative decision counts. Since card 06, "pending" means work that can't start yet for
+ * either reason: a request is running for the file, or its quiet period hasn't passed. Read
+ * `fileState()` (`active`, `eligibleAt`) to tell the two apart.
+ */
 export interface SchedulerStats {
   readonly started: number;
+  /** Calls started for pending work when the file's running request settled. */
   readonly followUps: number;
+  /** Repeats (card 05), idle or not. */
   readonly duplicates: number;
+  /** Pending work created: behind a running request or inside a quiet period. */
   readonly pendingHeld: number;
+  /** Pending work replaced by newer content, for either reason. */
   readonly pendingReplaced: number;
+  /** Pending work cleared by a change back to the running content. */
   readonly pendingCleared: number;
+  /** Pending work dropped on close. */
   readonly pendingDropped: number;
 }
 
