@@ -50,6 +50,8 @@ export interface FileStateView {
     readonly contentHash: string;
   };
   readonly latestHash: string;
+  /** `observedAt` of the latest first report or meaningful change; repeats never move it. */
+  readonly lastChangeAt: number;
   readonly open: boolean;
   readonly lastSettledAt?: number;
 }
@@ -166,23 +168,35 @@ export class Scheduler implements SnapshotSink {
     }
     this.inner.submit(snapshot);
     const contentHash = this.hash(snapshot.content);
+    const detectorVersion = this.detector.version;
     const key = keyOf(snapshot.workspaceId, snapshot.fileUri);
+    const item: PendingSnapshot = { snapshot, contentHash };
     let state = this.files.get(key);
+    // A closed file's state survives only until its request settles, so a reopen is a first
+    // report rather than a repeat.
+    if (
+      state?.open === true &&
+      contentHash === state.latestHash &&
+      detectorVersion === state.latestDetectorVersion
+    ) {
+      this.repeat(state, item);
+      return;
+    }
     if (state === undefined) {
       state = {
         key,
         latestHash: contentHash,
-        latestDetectorVersion: this.detector.version,
+        latestDetectorVersion: detectorVersion,
         lastChangeAt: snapshot.observedAt,
         open: true,
       };
       this.files.set(key, state);
+    } else {
+      state.latestHash = contentHash;
+      state.latestDetectorVersion = detectorVersion;
+      state.lastChangeAt = snapshot.observedAt;
+      state.open = true;
     }
-    state.latestHash = contentHash;
-    state.latestDetectorVersion = this.detector.version;
-    state.lastChangeAt = snapshot.observedAt;
-    state.open = true;
-    const item: PendingSnapshot = { snapshot, contentHash };
     if (state.active === undefined) {
       this.dispatch(state, item);
     } else {
@@ -241,6 +255,7 @@ export class Scheduler implements SnapshotSink {
         }),
       }),
       latestHash: state.latestHash,
+      lastChangeAt: state.lastChangeAt,
       open: state.open,
       ...(state.lastSettledAt !== undefined && {
         lastSettledAt: state.lastSettledAt,
@@ -272,6 +287,21 @@ export class Scheduler implements SnapshotSink {
 
   private line(text: string): void {
     this.log(`${iso(this.now())} ${text}`);
+  }
+
+  /**
+   * Same content and detector version as the file's latest report, which is what saves, Auto
+   * Save and tab switches mostly are. The cache is not consulted: after a failed or unstored
+   * analysis a lookup would miss and retry it with nothing new to analyse (card 05).
+   */
+  private repeat(state: FileState, item: PendingSnapshot): void {
+    if (state.active !== undefined) {
+      // The latest report is the running or the pending content, so `hold` only logs it.
+      this.hold(state, state.active, item);
+      return;
+    }
+    this.counts.duplicates++;
+    this.line(`unchanged ${this.suffix(item)}`);
   }
 
   /**
