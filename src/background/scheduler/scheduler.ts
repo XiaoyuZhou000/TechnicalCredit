@@ -82,6 +82,10 @@ interface FileState {
   active?: ActiveRequest;
   pending?: PendingSnapshot;
   latestHash: string;
+  /** Detector version when `latestHash` was observed; a new version makes old content new work. */
+  latestDetectorVersion: string;
+  /** `observedAt` of the latest first report or meaningful change; card 06 debounces from it. */
+  lastChangeAt: number;
   open: boolean;
   lastSettledAt?: number;
 }
@@ -165,10 +169,18 @@ export class Scheduler implements SnapshotSink {
     const key = keyOf(snapshot.workspaceId, snapshot.fileUri);
     let state = this.files.get(key);
     if (state === undefined) {
-      state = { key, latestHash: contentHash, open: true };
+      state = {
+        key,
+        latestHash: contentHash,
+        latestDetectorVersion: this.detector.version,
+        lastChangeAt: snapshot.observedAt,
+        open: true,
+      };
       this.files.set(key, state);
     }
     state.latestHash = contentHash;
+    state.latestDetectorVersion = this.detector.version;
+    state.lastChangeAt = snapshot.observedAt;
     state.open = true;
     const item: PendingSnapshot = { snapshot, contentHash };
     if (state.active === undefined) {
