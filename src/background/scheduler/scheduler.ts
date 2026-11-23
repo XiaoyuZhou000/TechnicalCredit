@@ -96,9 +96,10 @@ export interface FileStateView {
 }
 
 /**
- * Cumulative decision counts. Since card 06, "pending" means work that can't start yet for
- * either reason: a request is running for the file, or its quiet period hasn't passed. Read
- * `fileState()` (`active`, `eligibleAt`) to tell the two apart.
+ * Cumulative decision counts. "Pending" means work that can't start yet, for any of three
+ * reasons: a request is running for the file, its quiet period hasn't passed (card 06), or its
+ * cooldown hasn't (card 07). Read `fileState()` (`active`, `eligibleAt`, `waitingFor`) to tell
+ * them apart.
  */
 export interface SchedulerStats {
   readonly started: number;
@@ -106,9 +107,9 @@ export interface SchedulerStats {
   readonly followUps: number;
   /** Repeats (card 05), idle or not. */
   readonly duplicates: number;
-  /** Pending work created: behind a running request or inside a quiet period. */
+  /** Pending work created: behind a running request, inside a quiet period or a cooldown. */
   readonly pendingHeld: number;
-  /** Pending work replaced by newer content, for either reason. */
+  /** Pending work replaced by newer content, for any of those reasons. */
   readonly pendingReplaced: number;
   /** Pending work cleared by a change back to the running content. */
   readonly pendingCleared: number;
@@ -573,9 +574,9 @@ export class Scheduler implements SnapshotSink {
   }
 
   /**
-   * Work that can't start yet: a request is running for this file, or its quiet period hasn't
-   * passed. Never starts or aborts a request. Content compares by hash, so `open` + `activate`,
-   * unchanged saves and an edit followed by its undo are all duplicates.
+   * Work that can't start yet: a request is running for this file, or its quiet period or
+   * cooldown hasn't passed. Never starts or aborts a request. Content compares by hash, so
+   * `open` + `activate`, unchanged saves and an edit followed by its undo are all duplicates.
    */
   private hold(
     state: FileState,
