@@ -1608,4 +1608,82 @@ describe('debounce (card 06)', () => {
     expect(scheduler.fileState(W, A_URI)).toEqual(state);
     expect(clock.pendingCount).toBe(timers);
   });
+
+  it('starts nothing at a deadline passed while A runs, then C as soon as A settles (SC-004, US3-1, US3-2)', async () => {
+    const { scheduler, detector, clock, at } = debounced();
+    const c = rev('c', 2);
+    scheduler.submit(at(rev('a', 1)));
+    clock.advance(QUIET); // A starts
+    scheduler.submit(at(c));
+
+    expect(clock.pendingCount).toBe(1);
+    clock.advance(QUIET + 500);
+    expect(detector.outstanding).toBe(1);
+    expect(clock.pendingCount).toBe(0);
+
+    detector.calls[0].resolve(ok(1));
+    await settle();
+
+    expect(detector.outstanding).toBe(2);
+    expect(detector.calls[1].input.contentHash).toBe(sha256Hex(c.content));
+    expect(detector.calls[0].signal.aborted).toBe(false);
+  });
+
+  it('lets C wait out its quiet period when A settles first (US3-3)', async () => {
+    const { scheduler, detector, clock, at } = debounced();
+    scheduler.submit(at(rev('a', 1)));
+    clock.advance(QUIET); // A starts
+    scheduler.submit(at(rev('c', 2))); // T
+    clock.advance(1000);
+    detector.calls[0].resolve(ok(1));
+    await settle();
+
+    expect(detector.outstanding).toBe(1);
+    expect(clock.pendingCount).toBe(1);
+    clock.advance(QUIET - 1000 - 1); // T + 2999
+    expect(detector.outstanding).toBe(1);
+    clock.advance(1); // T + 3000
+    expect(detector.outstanding).toBe(2);
+  });
+
+  it('moves the deadline again on a change after A settled (US3-3)', async () => {
+    const { scheduler, detector, clock, at } = debounced();
+    scheduler.submit(at(rev('a', 1)));
+    clock.advance(QUIET); // A starts
+    scheduler.submit(at(rev('c', 2))); // T
+    clock.advance(1000);
+    detector.calls[0].resolve(ok(1));
+    await settle();
+    clock.advance(1000);
+    const d = at(rev('d', 3)); // T + 2000
+    scheduler.submit(d);
+
+    clock.advance(QUIET - 1); // T + 4999
+    expect(detector.outstanding).toBe(1);
+    clock.advance(1); // T + 5000
+    expect(detector.outstanding).toBe(2);
+    expect(detector.calls[1].input.contentHash).toBe(sha256Hex(d.content));
+  });
+
+  it('clears waiting work and its wake-up on a change back to the running content (US3-4)', async () => {
+    const { scheduler, detector, clock, at, lines } = debounced();
+    const a = rev('a', 1);
+    scheduler.submit(at(a));
+    clock.advance(QUIET); // A starts
+    scheduler.submit(at(rev('c', 2)));
+    clock.advance(500);
+
+    scheduler.submit(at({ ...a, version: 3 }));
+
+    expect(lines.at(-1)).toBe(
+      `1970-01-01T00:00:03.500Z pending cleared v3 sha ${sha8(a)} scripted@1 ${A_URI}`,
+    );
+    expect(clock.pendingCount).toBe(0);
+
+    detector.calls[0].resolve(ok(1));
+    await settle();
+    clock.advance(10_000);
+
+    expect(detector.outstanding).toBe(1);
+  });
 });

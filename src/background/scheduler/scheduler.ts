@@ -592,13 +592,17 @@ export class Scheduler implements SnapshotSink {
     });
 
     // Only the latest pending snapshot goes on, through the cache; the settled request itself
-    // is never retried here, even if it failed.
+    // is never retried here, even if it failed. Work still inside its quiet period keeps waiting.
     const next = state.pending;
-    if (next !== undefined) {
+    if (next !== undefined && this.isDue(state)) {
       state.pending = undefined;
       this.cancelWakeup(state);
       if (this.dispatch(state, next)) {
         this.counts.followUps++;
+      }
+    } else if (next !== undefined) {
+      if (state.wakeup === undefined) {
+        this.schedule(state, next);
       }
     } else if (!state.open) {
       this.files.delete(state.key);
