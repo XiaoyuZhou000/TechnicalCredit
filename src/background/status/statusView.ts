@@ -44,7 +44,11 @@ function versionCell(part?: {
     : escapeHtml(`v${part.version} ${part.contentHash.slice(0, 8)}`);
 }
 
-function waitingCell(file: FileStatus, time: (ms: number) => string): string {
+function waitingCell(
+  file: FileStatus,
+  takenAt: number,
+  time: (ms: number) => string,
+): string {
   if (file.keptUntil !== undefined) {
     return escapeHtml(`closed · cooldown until ${time(file.keptUntil)}`);
   }
@@ -54,6 +58,11 @@ function waitingCell(file: FileStatus, time: (ms: number) => string): string {
     file.eligibleAt === undefined
   ) {
     return '—';
+  }
+  // A passed deadline means the work now waits only for the running request to settle; showing
+  // the old time would report a deadline that is no longer what it waits for (PR #12 review).
+  if (file.active !== undefined && file.eligibleAt <= takenAt) {
+    return 'after running request';
   }
   return escapeHtml(`${file.waitingFor} until ${time(file.eligibleAt)}`);
 }
@@ -73,14 +82,18 @@ function latestCell(file: FileStatus): string {
   );
 }
 
-function row(file: FileStatus, time: (ms: number) => string): string {
+function row(
+  file: FileStatus,
+  takenAt: number,
+  time: (ms: number) => string,
+): string {
   const name = escapeHtml(basename(file.fileUri));
   const location = escapeHtml(file.fileUri);
   return `<tr>
 <td><span class="name">${name}</span><br><span class="uri">${location}</span></td>
 <td>${versionCell(file.active)}</td>
 <td>${versionCell(file.pending)}</td>
-<td>${waitingCell(file, time)}</td>
+<td>${waitingCell(file, takenAt, time)}</td>
 <td>${latestCell(file)}</td>
 </tr>`;
 }
@@ -110,7 +123,7 @@ export function renderStatusHtml(
       : `<table>
 <thead><tr><th>File</th><th>Running</th><th>Waiting</th><th>Waiting for</th><th>Latest result</th></tr></thead>
 <tbody>
-${snapshot.files.map((file) => row(file, time)).join('\n')}
+${snapshot.files.map((file) => row(file, snapshot.takenAt, time)).join('\n')}
 </tbody>
 </table>`;
   return `<!DOCTYPE html>

@@ -349,6 +349,8 @@ export class Scheduler implements SnapshotSink {
     state.open = false;
     // An active request is left to finish: a success is still worth caching for a reopen.
     this.forgetIfClosed(state);
+    // A close with nothing pending logs no decision, but the file did change (PR #12 review).
+    this.changed();
   }
 
   dispose(): void {
@@ -609,6 +611,8 @@ export class Scheduler implements SnapshotSink {
       cooldown > this.clock.now();
     if (!coolingDown) {
       this.states.delete(state.key);
+      // Also reached from reads such as `files()`: one extra render, and then nothing to drop.
+      this.changed();
     }
   }
 

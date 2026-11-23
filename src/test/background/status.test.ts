@@ -665,3 +665,83 @@ describe('status feed: observes only, leaves nothing behind (card 09 US5)', () =
     feed.dispose();
   });
 });
+
+describe('review fixes (PR #12)', () => {
+  it('notifies when a file closes with nothing waiting', async () => {
+    const { scheduler, detector } = harness();
+    scheduler.submit(snapshot(A_URI, 'class A {}'));
+    detector.calls[0].resolve(ok(1));
+    await settle();
+    let calls = 0;
+    scheduler.onChange(() => calls++);
+
+    scheduler.closed({ workspaceId: W, fileUri: A_URI, observedAt: 0 });
+    await settle();
+
+    expect(calls).toBe(1);
+    expect(scheduler.files()).toEqual([]);
+  });
+
+  it('notifies when a close keeps a cooldown record, so the page can show it', async () => {
+    const { scheduler, detector } = harness({ cooldownMs: 30_000 });
+    scheduler.submit(snapshot(A_URI, 'class A {}'));
+    detector.calls[0].resolve(ok(1));
+    await settle();
+    let calls = 0;
+    scheduler.onChange(() => calls++);
+
+    scheduler.closed({ workspaceId: W, fileUri: A_URI, observedAt: 0 });
+    await settle();
+
+    expect(calls).toBe(1);
+    expect(scheduler.files()[0]).toMatchObject({
+      open: false,
+      keptUntil: 30_000,
+    });
+  });
+
+  it('notifies when an expired kept record is swept or dropped on read', async () => {
+    const { scheduler, detector, clock } = harness({ cooldownMs: 30_000 });
+    scheduler.submit(snapshot(A_URI, 'class A {}'));
+    detector.calls[0].resolve(ok(1));
+    await settle();
+    scheduler.closed({ workspaceId: W, fileUri: A_URI, observedAt: 0 });
+    await settle();
+    let calls = 0;
+    scheduler.onChange(() => calls++);
+    clock.advance(30_000);
+
+    expect(scheduler.files()).toEqual([]); // the read drops the expired record
+    await settle();
+    expect(calls).toBe(1);
+    scheduler.files(); // nothing left to drop
+    await settle();
+    expect(calls).toBe(1);
+  });
+
+  it('says waiting work is behind the running request once its deadline has passed', async () => {
+    const { scheduler, clock, cache, detector } = harness({ quietMs: 3000 });
+    const status = new BackgroundStatus({
+      scheduler,
+      cache,
+      clock,
+      detector,
+      label: 'Sprint 1 mock detector',
+    });
+    scheduler.submit(snapshot(A_URI, 'class A {}'));
+    clock.advance(3000); // A starts
+    scheduler.submit(snapshot(A_URI, 'class A { int x; }', 2, 3000));
+    const render = (): string =>
+      renderStatusHtml(status.snapshot(), {
+        nonce: 'N',
+        formatTime: (ms) => `t+${ms}`,
+      });
+
+    expect(render()).toContain('quiet until t+6000');
+    clock.advance(6000); // 9 s: the quiet deadline has passed while A still runs
+
+    const html = render();
+    expect(html).toContain('after running request');
+    expect(html).not.toContain('until t+6000');
+  });
+});
