@@ -316,7 +316,13 @@ export class Scheduler implements SnapshotSink {
   }
 
   fileState(workspaceId: string, fileUri: string): FileStateView | undefined {
-    const state = this.files.get(keyOf(workspaceId, fileUri));
+    const key = keyOf(workspaceId, fileUri);
+    const kept = this.files.get(key);
+    // A closed file kept for its cooldown has no timer to drop it, so expiry is checked here too.
+    if (kept !== undefined) {
+      this.forgetIfClosed(kept);
+    }
+    const state = this.files.get(key);
     if (state === undefined) {
       return undefined;
     }

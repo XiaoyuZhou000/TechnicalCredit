@@ -2137,6 +2137,18 @@ describe('cooldown (card 07)', () => {
     expect(detector.outstanding).toBe(1);
   });
 
+  it('reports an expired kept record as absent even when no other file closes (review)', async () => {
+    const run = cooled();
+    const c = await completeFirst(run);
+    until(run, c + 5000);
+    run.scheduler.closed({ workspaceId: W, fileUri: A_URI, observedAt: 0 });
+    expect(run.scheduler.fileState(W, A_URI)?.open).toBe(false);
+
+    until(run, c + 5 * 60_000);
+
+    expect(run.scheduler.fileState(W, A_URI)).toBeUndefined();
+  });
+
   const B_URI = 'file:///w/B.java';
   const closeOf = (fileUri: string) => ({
     workspaceId: W,
