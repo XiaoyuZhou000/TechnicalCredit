@@ -1234,3 +1234,98 @@ describe('event coalescing (card 05)', () => {
     expect(detector.calls).toHaveLength(2);
   });
 });
+
+describe('event coalescing: newest unstarted content (card 05 US2)', () => {
+  const B_URI = 'file:///w/B.java';
+
+  it('keeps one pending snapshot, the newest, and runs only it after A (SC-002, US2-1)', async () => {
+    const { scheduler, detector } = scripted();
+    const c = rev('c', 3);
+
+    scheduler.submit(rev('a', 1));
+    scheduler.submit(rev('b', 2));
+    scheduler.submit(c);
+
+    expect(scheduler.pendingCount()).toBe(1);
+    expect(scheduler.fileState(W, A_URI)?.pending?.contentHash).toBe(
+      sha256Hex(c.content),
+    );
+
+    detector.calls[0].resolve(ok(1));
+    await settle();
+
+    expect(detector.outstanding).toBe(2);
+    expect(detector.calls[1].input.contentHash).toBe(sha256Hex(c.content));
+    expect(scheduler.pendingCount()).toBe(0);
+  });
+
+  it('makes no second call when the newest pending content is already cached (SC-002)', async () => {
+    const { scheduler, detector, cache } = scripted();
+    const c = rev('c', 3);
+    await cache.store(
+      {
+        workspaceId: W,
+        fileUri: A_URI,
+        contentHash: sha256Hex(c.content),
+        detectorId: 'scripted',
+        detectorVersion: '1',
+      },
+      ok(1),
+    );
+
+    scheduler.submit(rev('a', 1));
+    scheduler.submit(rev('b', 2));
+    scheduler.submit(c);
+    // A fails, so nothing is stored: storing A would replace C's entry (one entry per file, the
+    // open stale-result cache eviction decision).
+    detector.calls[0].resolve(fail('failed'));
+    await settle();
+
+    expect(detector.outstanding).toBe(1);
+    expect(scheduler.pendingCount()).toBe(0);
+  });
+
+  it('keeps pending on a repeat of it, and clears it on a change back to the running content (US2-2, US2-3)', () => {
+    const { scheduler, detector } = scripted();
+    const a = rev('a', 1);
+    const c = { ...rev('c', 2), observedAt: 10 };
+    scheduler.submit(a);
+    scheduler.submit(c);
+    const before = scheduler.fileState(W, A_URI);
+
+    scheduler.submit({ ...c, version: 3, trigger: 'activate', observedAt: 20 });
+
+    expect(scheduler.fileState(W, A_URI)).toEqual(before);
+
+    scheduler.submit({ ...a, version: 4, observedAt: 30 });
+
+    expect(scheduler.pendingCount()).toBe(0);
+    expect(scheduler.fileState(W, A_URI)).toMatchObject({ lastChangeAt: 30 });
+    expect(scheduler.fileState(W, A_URI)?.pending).toBeUndefined();
+    expect(detector.outstanding).toBe(1);
+  });
+
+  it('coalesces each file on its own (US2-4)', () => {
+    const { scheduler, detector } = scripted();
+    const a = rev('a', 1);
+    const b = snapshot({ fileUri: B_URI, content: 'class B { b }' });
+
+    scheduler.submit(a);
+    scheduler.submit(b);
+    for (let v = 2; v <= 4; v++) {
+      scheduler.submit(rev(`a${v}`, v));
+      scheduler.submit({ ...b, version: v, content: `class B { b${v} }` });
+    }
+    repeatBurst(scheduler, rev('a4', 4), 3); // repeats of A's pending content
+
+    expect(detector.outstanding).toBe(2);
+    expect(scheduler.pendingCount()).toBe(2);
+    expect(scheduler.fileState(W, B_URI)?.pending?.version).toBe(4);
+
+    // B's repeats never suppress a first report of another file.
+    repeatBurst(scheduler, { ...b, version: 4, content: 'class B { b4 }' }, 3);
+    scheduler.submit(snapshot({ fileUri: 'file:///w/C.java' }));
+
+    expect(detector.outstanding).toBe(3);
+  });
+});

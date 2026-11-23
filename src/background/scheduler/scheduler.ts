@@ -267,6 +267,17 @@ export class Scheduler implements SnapshotSink {
     return Object.freeze({ ...this.counts });
   }
 
+  /** Files currently holding a not-yet-started snapshot; never more than one each. */
+  pendingCount(): number {
+    let count = 0;
+    for (const state of this.files.values()) {
+      if (state.pending !== undefined) {
+        count++;
+      }
+    }
+    return count;
+  }
+
   private identityOf(
     item: PendingSnapshot,
     detectorVersion = this.detector.version,
