@@ -1897,3 +1897,73 @@ describe('debounce (card 06)', () => {
     },
   );
 });
+
+describe('cooldown (card 07)', () => {
+  const QUIET = 3000;
+  const COOL = 30_000;
+
+  /** A scripted scheduler with both deadlines on and one fake clock for every timestamp. */
+  function cooled() {
+    const clock = createFakeTimers();
+    const detector = new ScriptedDetector();
+    const run = setup({ detector, clock, quietMs: QUIET, cooldownMs: COOL });
+    const at = (s: FileSnapshot): FileSnapshot => ({
+      ...s,
+      observedAt: clock.now(),
+    });
+    return { ...run, detector, clock, at };
+  }
+
+  /** Runs `a` through its quiet period and settles it; returns C, the completion time. */
+  async function completeFirst(
+    run: ReturnType<typeof cooled>,
+    result: DetectorResult = ok(1),
+  ): Promise<number> {
+    run.scheduler.submit(run.at(rev('a', 1)));
+    run.clock.advance(QUIET);
+    run.detector.calls[0].resolve(result);
+    await settle();
+    return run.clock.now();
+  }
+
+  /** Advances the fake clock to absolute time `t`. */
+  function until(run: ReturnType<typeof cooled>, t: number): void {
+    run.clock.advance(t - run.clock.now());
+  }
+
+  it('starts nothing for 30 s after a completion, then the latest content once (SC-001, US1-1, US1-2)', async () => {
+    const run = cooled();
+    const { scheduler, detector, at } = run;
+    const c = await completeFirst(run);
+    until(run, c + 5000);
+    const b = at(rev('b', 2));
+    scheduler.submit(b);
+
+    until(run, c + COOL - 1);
+    expect(detector.outstanding).toBe(1);
+    until(run, c + COOL);
+
+    expect(detector.outstanding).toBe(2);
+    expect(detector.calls[1].input.contentHash).toBe(sha256Hex(b.content));
+  });
+
+  it('runs only the newest of several paused edits, once, after the cooldown (US1-3)', async () => {
+    const run = cooled();
+    const { scheduler, detector, at } = run;
+    const c = await completeFirst(run);
+    let last = rev('none', 1);
+    for (const t of [5000, 12_000, 20_000]) {
+      until(run, c + t);
+      last = at(rev(`e${t}`, t));
+      scheduler.submit(last);
+      run.clock.advance(3500); // a pause longer than the quiet period
+    }
+
+    expect(detector.outstanding).toBe(1);
+    until(run, c + COOL);
+    expect(detector.outstanding).toBe(2);
+    expect(detector.calls[1].input.contentHash).toBe(sha256Hex(last.content));
+    run.clock.advance(60_000);
+    expect(detector.outstanding).toBe(2);
+  });
+});

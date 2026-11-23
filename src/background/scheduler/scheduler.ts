@@ -371,17 +371,39 @@ export class Scheduler implements SnapshotSink {
     this.log(`${iso(this.clock.now())} ${text}`);
   }
 
-  /** When the file's pending work may start. Card 07 adds its cooldown here and nowhere else. */
-  private eligibleAt(state: FileState): number {
+  private quietDeadline(state: FileState): number {
     return state.lastChangeAt + this.quietMs;
   }
 
+  /** Only after a completion (card 07); a cache hit is never one, so it never cools a file. */
+  private cooldownDeadline(state: FileState): number | undefined {
+    return state.lastSettledAt === undefined
+      ? undefined
+      : state.lastSettledAt + this.cooldownMs;
+  }
+
   /**
-   * Without a quiet period nothing waits, whatever the event timestamps say; that keeps the
-   * card 08/05 behaviour exact (card 06 FR-010).
+   * When the file's pending work may start: the later of the quiet-period and cooldown
+   * deadlines. Every timing rule lives here and in `isDue`, nowhere else.
+   */
+  private eligibleAt(state: FileState): number {
+    return Math.max(
+      this.quietDeadline(state),
+      this.cooldownDeadline(state) ?? -Infinity,
+    );
+  }
+
+  /**
+   * A deadline whose setting is 0 never makes work wait, whatever the timestamps say; that
+   * keeps earlier cards' behaviour exact (card 06 FR-010, card 07 FR-011).
    */
   private isDue(state: FileState): boolean {
-    return this.quietMs === 0 || this.eligibleAt(state) <= this.clock.now();
+    const now = this.clock.now();
+    const quiet = this.quietMs === 0 || this.quietDeadline(state) <= now;
+    const cooldown = this.cooldownDeadline(state);
+    const cooled =
+      this.cooldownMs === 0 || cooldown === undefined || cooldown <= now;
+    return quiet && cooled;
   }
 
   /** At most one wake-up per file: a new deadline replaces the old timer rather than adding one. */
