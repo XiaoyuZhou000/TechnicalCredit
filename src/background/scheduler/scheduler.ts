@@ -147,8 +147,9 @@ function describeMiss(lookup: Exclude<CacheLookup, { hit: true }>): string {
  * The single owner of per-file Background Agent state (ARCHITECTURE.md). Card 08 adds in-flight
  * deduplication: at most one detector request per file, with the latest different content kept
  * as pending. Card 05 makes repeats of a file's latest content observation only, whether or not
- * a request is running. Cards 06–07 extend this class rather than adding their own state. Never logs file
- * text or findings.
+ * a request is running. Card 06 makes pending work wait for a quiet period after the last
+ * meaningful change, with at most one wake-up per file. Card 07 extends this class rather than
+ * adding its own state. Never logs file text or findings.
  */
 export class Scheduler implements SnapshotSink {
   private readonly inner: SnapshotSink;
