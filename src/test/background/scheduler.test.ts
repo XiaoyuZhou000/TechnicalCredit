@@ -163,6 +163,8 @@ interface SetupOptions {
   readonly clock?: FakeTimers;
   /** Defaults to 0, so card 08 and 05 tests keep their immediate starts (card 06 FR-010). */
   readonly quietMs?: number;
+  /** Defaults to 0, so earlier cards' tests keep their timing (card 07 FR-011). */
+  readonly cooldownMs?: number;
 }
 
 function setup(options: SetupOptions = {}) {
@@ -188,6 +190,7 @@ function setup(options: SetupOptions = {}) {
     },
     clock,
     quietMs: options.quietMs ?? 0,
+    cooldownMs: options.cooldownMs ?? 0,
     onSettled:
       options.onSettled ??
       ((event) => {
@@ -1482,7 +1485,14 @@ describe('debounce (card 06)', () => {
   function debounced(store?: CacheStore) {
     const clock = createFakeTimers();
     const detector = new ScriptedDetector();
-    const run = setup({ detector, store, clock, quietMs: QUIET });
+    // Pure debounce: card 07's cooldown is tested in its own block.
+    const run = setup({
+      detector,
+      store,
+      clock,
+      quietMs: QUIET,
+      cooldownMs: 0,
+    });
     const at = (s: FileSnapshot): FileSnapshot => ({
       ...s,
       observedAt: clock.now(),
@@ -1870,6 +1880,20 @@ describe('debounce (card 06)', () => {
     'accepts a quiet period of %p',
     (quietMs) => {
       expect(() => setup({ quietMs })).not.toThrow();
+    },
+  );
+
+  it.each([Infinity, NaN, -1, 2 ** 31])(
+    'rejects a cooldown of %p, which no timer can wait for (card 07 FR-012)',
+    (cooldownMs) => {
+      expect(() => setup({ cooldownMs })).toThrow(RangeError);
+    },
+  );
+
+  it.each([0, 30_000, 2 ** 31 - 1])(
+    'accepts a cooldown of %p',
+    (cooldownMs) => {
+      expect(() => setup({ cooldownMs })).not.toThrow();
     },
   );
 });

@@ -14,11 +14,24 @@ import type { Clock } from '@/background/scheduler/clock';
 /** Card 06's initial quiet period; tunable in code for Sprint 1. */
 export const DEFAULT_QUIET_MS = 3000;
 
+/** Card 07's initial cooldown after each detector completion; tunable in code for Sprint 1. */
+export const DEFAULT_COOLDOWN_MS = 30_000;
+
 /**
- * Node runs a timer with any longer delay after 1 ms, so a longer quiet period would make
- * `wake` reschedule itself in a tight loop.
+ * Node runs a timer with any longer delay after 1 ms, so a longer duration would make `wake`
+ * reschedule itself in a tight loop.
  */
 const MAX_TIMER_MS = 2 ** 31 - 1;
+
+/** One rule for every tunable duration, so a setting no timer can wait for fails loudly once. */
+function durationOption(name: string, value: number): number {
+  if (!Number.isFinite(value) || value < 0 || value > MAX_TIMER_MS) {
+    throw new RangeError(
+      `${name} must be between 0 and ${MAX_TIMER_MS} ms, got ${value}`,
+    );
+  }
+  return value;
+}
 
 export interface SchedulerOptions {
   /** Card 02's logging sink; always called first, so its lines stay unchanged. */
@@ -32,6 +45,8 @@ export interface SchedulerOptions {
   readonly clock: Clock;
   /** Quiet period after a file's last meaningful change (card 06); 0 starts work at once. */
   readonly quietMs?: number;
+  /** Pause after each detector completion, success or failure (card 07); 0 disables it. */
+  readonly cooldownMs?: number;
   /** Called once per released request, after its store; tests and the later display use it. */
   readonly onSettled?: (event: SettledRequest) => void;
 }
@@ -176,6 +191,7 @@ export class Scheduler implements SnapshotSink {
   private readonly log: (line: string) => void;
   private readonly clock: Clock;
   private readonly quietMs: number;
+  private readonly cooldownMs: number;
   private readonly onSettled?: (event: SettledRequest) => void;
   private readonly files = new Map<string, FileState>();
   private readonly counts: Record<keyof SchedulerStats, number> = {
@@ -198,16 +214,14 @@ export class Scheduler implements SnapshotSink {
     this.hash = options.hash;
     this.log = options.log;
     this.clock = options.clock;
-    this.quietMs = options.quietMs ?? DEFAULT_QUIET_MS;
-    if (
-      !Number.isFinite(this.quietMs) ||
-      this.quietMs < 0 ||
-      this.quietMs > MAX_TIMER_MS
-    ) {
-      throw new RangeError(
-        `quietMs must be between 0 and ${MAX_TIMER_MS} ms, got ${this.quietMs}`,
-      );
-    }
+    this.quietMs = durationOption(
+      'quietMs',
+      options.quietMs ?? DEFAULT_QUIET_MS,
+    );
+    this.cooldownMs = durationOption(
+      'cooldownMs',
+      options.cooldownMs ?? DEFAULT_COOLDOWN_MS,
+    );
     this.onSettled = options.onSettled;
   }
 
