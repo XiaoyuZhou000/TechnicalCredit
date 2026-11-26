@@ -185,7 +185,10 @@ For Background Agent integration points, constraints and the proposed `src/backg
 src/
 ├── extension.ts              # Entry point: init parser + register commands
 ├── registry.ts               # Wires up commands and CodeLens providers
-├── analyse.ts                # Orchestrator: runs all heuristics in parallel
+├── analyse.ts                # Manual command adapter: editor, progress, preview
+├── detection/                # Shared TC detection, used by both paths
+│   ├── detectTechnicalCredit.ts  # Heuristic + ADR calls → findings or a typed failure
+│   └── validateAnswer.ts     # Checks each model answer before it becomes a finding
 ├── context/                  # Cursor → AST → construct metrics
 │   ├── buildContext.ts
 │   ├── findAdrs.ts           # Scans docs/ for ADR markdown + tc-* frontmatter

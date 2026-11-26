@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import { analyseForTC } from '@/analyse';
 import { startBackgroundAgent } from '@/background/backgroundAgent';
 import { PendingAnnotation } from '@/comment/pendingAnnotation';
+import { callClaude } from '@/utils/claude';
 
 /** Registers all commands, providers, and subscriptions for the extension. */
 export function register(context: vscode.ExtensionContext): void {
@@ -35,7 +36,7 @@ export function register(context: vscode.ExtensionContext): void {
     // Analyses the active editor selection for Technical Credit patterns.
     vscode.commands.registerCommand(
       'technicalcredit.analyseForTC',
-      async () => await analyseForTC(annotationController),
+      async () => await analyseForTC(annotationController, callClaude),
     ),
   );
 
