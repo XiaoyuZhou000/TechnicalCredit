@@ -548,9 +548,9 @@ export function detectTechnicalCredit(
 4. **Validation**:
    - every heuristic answer needs a boolean `is_tc_candidate`;
    - a candidate also needs a valid `category`, string `benefit` and `conditions`, and string-array `signals`, and its `not_tc_reason` must be a string or null (missing becomes `null`);
-   - an ADR answer needs `adr` as a string or null.
+   - an ADR answer needs `adr` as a string or null; a top-level `null` answer also means no match.
 
-   These are the cache's read rules.
+   These are the cache's read rules. `resolveAdrId` then records the matched ADR's listed id, ignoring whitespace, case and zero padding and accepting a title only when it is that ADR's. An id not among the workspace's ADRs, or shared by several, becomes `null`.
 
 5. **Whole-run failure**: the first call that rejects, or answer that fails validation, ends the run as `failed` with `"<step>: <reason>"`, for example `heuristic "modularity": boom` or `ADR matching for "reusability": …`. The calls still in flight are aborted. A `SyntaxError` becomes "the answer is not valid JSON", because V8's message quotes the answer, so messages never contain file text.
 6. **Cancellation**:
@@ -559,7 +559,7 @@ export function detectTechnicalCredit(
    - the outcome is `cancelled`, or `timeout` when the abort reason is a `TimeoutError` (`failureFromAbort`);
    - partial findings are never a success.
 
-   `callClaude`'s own 30 s per-call timeout is not a caller abort, so it surfaces as `failed`.
+   `callClaude`'s own 30 s per-call timeout is not a caller abort, but it rejects with a `TimeoutError` DOMException, so it also gives `timeout`, not `failed`.
 
 7. **Never throws, no UI**: it never rejects, imports `vscode`, reads the editor, workspace or file system, shows notifications, or edits documents.
 8. **Injected client**: only composition roots bind the real `callClaude` (`registry.ts`). Offline tests use a fake client and never load `@/utils/claude`.
