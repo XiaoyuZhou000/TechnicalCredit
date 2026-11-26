@@ -4,6 +4,7 @@ import { ResultCache, sha256Hex } from '@/background/cache/resultCache';
 import {
   DEFAULT_MOCK_VERSION,
   MockDetector,
+  versionProblem,
 } from '@/background/detector/mockDetector';
 import { DetectorVersionTracker } from '@/background/detector/versionTracker';
 import { startFileEventMonitor } from '@/background/events/fileEventMonitor';
@@ -40,13 +41,11 @@ function readMockVersion():
   const value = vscode.workspace
     .getConfiguration(SETTINGS_SECTION)
     .get<unknown>(MOCK_VERSION_SETTING);
-  if (typeof value === 'string' && value !== '') {
-    return { version: value };
+  if (typeof value !== 'string') {
+    return { reason: `not a string (${typeof value})` };
   }
-  return {
-    reason:
-      typeof value === 'string' ? 'empty' : `not a string (${typeof value})`,
-  };
+  const problem = versionProblem(value);
+  return problem === undefined ? { version: value } : { reason: problem };
 }
 
 function settingIgnored(log: (line: string) => void, reason: string): void {

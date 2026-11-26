@@ -442,3 +442,27 @@ describe('US4: a version announced while running is handled like a startup chang
     expect(clock.pendingCount).toBe(0);
   });
 });
+
+describe('card 11: log wording', () => {
+  it('says "1 open file" for a single file, at startup and at runtime', () => {
+    const store = createMemoryCacheStore();
+    void store.update(ACTIVE_DETECTOR_KEY, identity('mock-1'));
+    const mock = new MockDetector({ version: 'mock-2' });
+    const lines: string[] = [];
+    const tracker = new DetectorVersionTracker({
+      detector: mock,
+      store,
+      clock: createFakeTimers(),
+      log: (line) => lines.push(line),
+      rescan: () => 1,
+    });
+    tracker.begin();
+    tracker.startupScheduled(1);
+    mock.setVersion('mock-3');
+
+    expect(texts(lines)).toEqual([
+      'detector version changed mock@mock-1 → mock@mock-2 (startup), 1 open file scheduled',
+      'detector version changed mock@mock-2 → mock@mock-3 (runtime), 1 open file scheduled',
+    ]);
+  });
+});

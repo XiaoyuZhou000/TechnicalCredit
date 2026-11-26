@@ -93,10 +93,29 @@ export function sampleFindings(content: string): readonly DetectorFinding[] {
   return findings;
 }
 
+/**
+ * Why a string can't be a version, or `undefined` if it can. Shared with the setting reader in
+ * the composition root, so a value the setting accepts is always one the mock accepts. A
+ * blank or padded version would read like no version at all in logs and on the status page.
+ */
+export function versionProblem(version: string): string | undefined {
+  if (version === '') {
+    return 'empty';
+  }
+  if (version.trim() === '') {
+    return 'blank';
+  }
+  if (version !== version.trim()) {
+    return 'padded with whitespace';
+  }
+  return undefined;
+}
+
 /** One rule for the constructor and `setVersion`. */
 function checkVersion(version: string, behaviour: MockBehaviour): void {
-  if (version === '') {
-    throw new Error('version must not be empty');
+  const problem = versionProblem(version);
+  if (problem !== undefined) {
+    throw new Error(`version must not be ${problem}`);
   }
   if (behaviour.kind !== 'sample' && version === DEFAULT_MOCK_VERSION) {
     throw new Error(

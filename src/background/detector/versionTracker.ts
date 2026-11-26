@@ -70,6 +70,8 @@ function messageOf(error: unknown): string {
 
 const iso = (ms: number): string => new Date(ms).toISOString();
 
+const openFiles = (n: number): string => `${n} open file${n === 1 ? '' : 's'}`;
+
 /**
  * Card 11: tells a restart under a different detector identity apart from an ordinary one,
  * handles a detector announcing a new version while it runs, and records the identity once the
@@ -149,7 +151,7 @@ export class DetectorVersionTracker {
     this.startup = { kind: 'changed', change };
     this.change = change;
     this.line(
-      `detector version changed ${formatIdentity(change.from)} → ${formatIdentity(change.to)} (startup), ${count} open files scheduled`,
+      `detector version changed ${formatIdentity(change.from)} → ${formatIdentity(change.to)} (startup), ${openFiles(count)} scheduled`,
     );
     this.changed();
   }
@@ -213,7 +215,7 @@ export class DetectorVersionTracker {
       scheduled,
     };
     this.line(
-      `detector version changed ${formatIdentity(from)} → ${formatIdentity(to)} (runtime), ${scheduled} open files scheduled`,
+      `detector version changed ${formatIdentity(from)} → ${formatIdentity(to)} (runtime), ${openFiles(scheduled)} scheduled`,
     );
     if (this.confirmed) {
       void this.record(to);
