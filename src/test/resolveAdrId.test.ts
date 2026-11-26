@@ -22,4 +22,3 @@ describe('resolveAdrId', () => {
     expect(resolveAdrId(1, adrs)).toBeNull();
   });
 });
-
