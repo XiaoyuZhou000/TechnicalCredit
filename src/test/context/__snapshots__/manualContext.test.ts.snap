@@ -1,0 +1,7715 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 0 col 0 1`] = `null`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 1 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "String",
+            "String",
+          ],
+        },
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "ContactCard",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "name",
+          "type": "String",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "phone",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class ContactCard {
+    private final String name;
+    private final String phone;
+
+    ContactCard(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+
+    ContactCard(ContactCard other) {
+        this.name = other.name;
+        this.phone = other.phone;
+    }
+
+    ContactCardSnapshot snapshot() {
+        return new ContactCardSnapshot(this.name, this.phone);
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "ContactCard",
+    "startRow": 1,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 1,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 1 col 6 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "String",
+            "String",
+          ],
+        },
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "ContactCard",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "name",
+          "type": "String",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "phone",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class ContactCard {
+    private final String name;
+    private final String phone;
+
+    ContactCard(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+
+    ContactCard(ContactCard other) {
+        this.name = other.name;
+        this.phone = other.phone;
+    }
+
+    ContactCardSnapshot snapshot() {
+        return new ContactCardSnapshot(this.name, this.phone);
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "ContactCard",
+    "startRow": 1,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 1,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 2 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class ContactCard {
+    private final String name;
+    private final String phone;
+
+    ContactCard(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+
+    ContactCard(ContactCard other) {
+        this.name = other.name;
+        this.phone = other.phone;
+    }
+
+    ContactCardSnapshot snapshot() {
+        return new ContactCardSnapshot(this.name, this.phone);
+    }
+}",
+    "constructType": "field",
+    "enclosingClassStartRow": 1,
+    "interfaceMetrics": null,
+    "name": null,
+    "startRow": 2,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 1,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 3 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class ContactCard {
+    private final String name;
+    private final String phone;
+
+    ContactCard(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+
+    ContactCard(ContactCard other) {
+        this.name = other.name;
+        this.phone = other.phone;
+    }
+
+    ContactCardSnapshot snapshot() {
+        return new ContactCardSnapshot(this.name, this.phone);
+    }
+}",
+    "constructType": "field",
+    "enclosingClassStartRow": 1,
+    "interfaceMetrics": null,
+    "name": null,
+    "startRow": 3,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 1,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 4 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "String",
+            "String",
+          ],
+        },
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "ContactCard",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "name",
+          "type": "String",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "phone",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class ContactCard {
+    private final String name;
+    private final String phone;
+
+    ContactCard(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+
+    ContactCard(ContactCard other) {
+        this.name = other.name;
+        this.phone = other.phone;
+    }
+
+    ContactCardSnapshot snapshot() {
+        return new ContactCardSnapshot(this.name, this.phone);
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "ContactCard",
+    "startRow": 1,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 1,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 5 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "String",
+            "String",
+          ],
+        },
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "ContactCard",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "name",
+          "type": "String",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "phone",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class ContactCard {
+    private final String name;
+    private final String phone;
+
+    ContactCard(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+
+    ContactCard(ContactCard other) {
+        this.name = other.name;
+        this.phone = other.phone;
+    }
+
+    ContactCardSnapshot snapshot() {
+        return new ContactCardSnapshot(this.name, this.phone);
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "ContactCard",
+    "startRow": 1,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 1,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 6 col 8 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "String",
+            "String",
+          ],
+        },
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "ContactCard",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "name",
+          "type": "String",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "phone",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class ContactCard {
+    private final String name;
+    private final String phone;
+
+    ContactCard(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+
+    ContactCard(ContactCard other) {
+        this.name = other.name;
+        this.phone = other.phone;
+    }
+
+    ContactCardSnapshot snapshot() {
+        return new ContactCardSnapshot(this.name, this.phone);
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "ContactCard",
+    "startRow": 1,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 1,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 7 col 8 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "String",
+            "String",
+          ],
+        },
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "ContactCard",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "name",
+          "type": "String",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "phone",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class ContactCard {
+    private final String name;
+    private final String phone;
+
+    ContactCard(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+
+    ContactCard(ContactCard other) {
+        this.name = other.name;
+        this.phone = other.phone;
+    }
+
+    ContactCardSnapshot snapshot() {
+        return new ContactCardSnapshot(this.name, this.phone);
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "ContactCard",
+    "startRow": 1,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 1,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 8 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "String",
+            "String",
+          ],
+        },
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "ContactCard",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "name",
+          "type": "String",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "phone",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class ContactCard {
+    private final String name;
+    private final String phone;
+
+    ContactCard(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+
+    ContactCard(ContactCard other) {
+        this.name = other.name;
+        this.phone = other.phone;
+    }
+
+    ContactCardSnapshot snapshot() {
+        return new ContactCardSnapshot(this.name, this.phone);
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "ContactCard",
+    "startRow": 1,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 1,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 9 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "String",
+            "String",
+          ],
+        },
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "ContactCard",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "name",
+          "type": "String",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "phone",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class ContactCard {
+    private final String name;
+    private final String phone;
+
+    ContactCard(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+
+    ContactCard(ContactCard other) {
+        this.name = other.name;
+        this.phone = other.phone;
+    }
+
+    ContactCardSnapshot snapshot() {
+        return new ContactCardSnapshot(this.name, this.phone);
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "ContactCard",
+    "startRow": 1,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 1,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 10 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "String",
+            "String",
+          ],
+        },
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "ContactCard",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "name",
+          "type": "String",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "phone",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class ContactCard {
+    private final String name;
+    private final String phone;
+
+    ContactCard(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+
+    ContactCard(ContactCard other) {
+        this.name = other.name;
+        this.phone = other.phone;
+    }
+
+    ContactCardSnapshot snapshot() {
+        return new ContactCardSnapshot(this.name, this.phone);
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "ContactCard",
+    "startRow": 1,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 1,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 11 col 8 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "String",
+            "String",
+          ],
+        },
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "ContactCard",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "name",
+          "type": "String",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "phone",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class ContactCard {
+    private final String name;
+    private final String phone;
+
+    ContactCard(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+
+    ContactCard(ContactCard other) {
+        this.name = other.name;
+        this.phone = other.phone;
+    }
+
+    ContactCardSnapshot snapshot() {
+        return new ContactCardSnapshot(this.name, this.phone);
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "ContactCard",
+    "startRow": 1,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 1,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 12 col 8 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "String",
+            "String",
+          ],
+        },
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "ContactCard",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "name",
+          "type": "String",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "phone",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class ContactCard {
+    private final String name;
+    private final String phone;
+
+    ContactCard(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+
+    ContactCard(ContactCard other) {
+        this.name = other.name;
+        this.phone = other.phone;
+    }
+
+    ContactCardSnapshot snapshot() {
+        return new ContactCardSnapshot(this.name, this.phone);
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "ContactCard",
+    "startRow": 1,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 1,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 13 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "String",
+            "String",
+          ],
+        },
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "ContactCard",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "name",
+          "type": "String",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "phone",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class ContactCard {
+    private final String name;
+    private final String phone;
+
+    ContactCard(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+
+    ContactCard(ContactCard other) {
+        this.name = other.name;
+        this.phone = other.phone;
+    }
+
+    ContactCardSnapshot snapshot() {
+        return new ContactCardSnapshot(this.name, this.phone);
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "ContactCard",
+    "startRow": 1,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 1,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 14 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "String",
+            "String",
+          ],
+        },
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "ContactCard",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "name",
+          "type": "String",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "phone",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class ContactCard {
+    private final String name;
+    private final String phone;
+
+    ContactCard(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+
+    ContactCard(ContactCard other) {
+        this.name = other.name;
+        this.phone = other.phone;
+    }
+
+    ContactCardSnapshot snapshot() {
+        return new ContactCardSnapshot(this.name, this.phone);
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "ContactCard",
+    "startRow": 1,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 1,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 15 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class ContactCard {
+    private final String name;
+    private final String phone;
+
+    ContactCard(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+
+    ContactCard(ContactCard other) {
+        this.name = other.name;
+        this.phone = other.phone;
+    }
+
+    ContactCardSnapshot snapshot() {
+        return new ContactCardSnapshot(this.name, this.phone);
+    }
+}",
+    "constructType": "method",
+    "enclosingClassStartRow": 1,
+    "interfaceMetrics": null,
+    "name": "snapshot",
+    "startRow": 15,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 1,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 16 col 8 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class ContactCard {
+    private final String name;
+    private final String phone;
+
+    ContactCard(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+
+    ContactCard(ContactCard other) {
+        this.name = other.name;
+        this.phone = other.phone;
+    }
+
+    ContactCardSnapshot snapshot() {
+        return new ContactCardSnapshot(this.name, this.phone);
+    }
+}",
+    "constructType": "method",
+    "enclosingClassStartRow": 1,
+    "interfaceMetrics": null,
+    "name": "snapshot",
+    "startRow": 15,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 1,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 17 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class ContactCard {
+    private final String name;
+    private final String phone;
+
+    ContactCard(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+
+    ContactCard(ContactCard other) {
+        this.name = other.name;
+        this.phone = other.phone;
+    }
+
+    ContactCardSnapshot snapshot() {
+        return new ContactCardSnapshot(this.name, this.phone);
+    }
+}",
+    "constructType": "method",
+    "enclosingClassStartRow": 1,
+    "interfaceMetrics": null,
+    "name": "snapshot",
+    "startRow": 15,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 1,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 18 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "String",
+            "String",
+          ],
+        },
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "ContactCard",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "name",
+          "type": "String",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "phone",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class ContactCard {
+    private final String name;
+    private final String phone;
+
+    ContactCard(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+
+    ContactCard(ContactCard other) {
+        this.name = other.name;
+        this.phone = other.phone;
+    }
+
+    ContactCardSnapshot snapshot() {
+        return new ContactCardSnapshot(this.name, this.phone);
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "ContactCard",
+    "startRow": 1,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 1,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 19 col 0 1`] = `null`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 20 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "String",
+            "String",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "name",
+          "type": "String",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "phone",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 0,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class ContactCardSnapshot {
+    private final String name;
+    private final String phone;
+
+    ContactCardSnapshot(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "ContactCardSnapshot",
+    "startRow": 20,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 20,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 20 col 6 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "String",
+            "String",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "name",
+          "type": "String",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "phone",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 0,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class ContactCardSnapshot {
+    private final String name;
+    private final String phone;
+
+    ContactCardSnapshot(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "ContactCardSnapshot",
+    "startRow": 20,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 20,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 21 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class ContactCardSnapshot {
+    private final String name;
+    private final String phone;
+
+    ContactCardSnapshot(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+}",
+    "constructType": "field",
+    "enclosingClassStartRow": 20,
+    "interfaceMetrics": null,
+    "name": null,
+    "startRow": 21,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 20,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 22 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class ContactCardSnapshot {
+    private final String name;
+    private final String phone;
+
+    ContactCardSnapshot(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+}",
+    "constructType": "field",
+    "enclosingClassStartRow": 20,
+    "interfaceMetrics": null,
+    "name": null,
+    "startRow": 22,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 20,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 23 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "String",
+            "String",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "name",
+          "type": "String",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "phone",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 0,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class ContactCardSnapshot {
+    private final String name;
+    private final String phone;
+
+    ContactCardSnapshot(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "ContactCardSnapshot",
+    "startRow": 20,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 20,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 24 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "String",
+            "String",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "name",
+          "type": "String",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "phone",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 0,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class ContactCardSnapshot {
+    private final String name;
+    private final String phone;
+
+    ContactCardSnapshot(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "ContactCardSnapshot",
+    "startRow": 20,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 20,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 25 col 8 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "String",
+            "String",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "name",
+          "type": "String",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "phone",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 0,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class ContactCardSnapshot {
+    private final String name;
+    private final String phone;
+
+    ContactCardSnapshot(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "ContactCardSnapshot",
+    "startRow": 20,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 20,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 26 col 8 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "String",
+            "String",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "name",
+          "type": "String",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "phone",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 0,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class ContactCardSnapshot {
+    private final String name;
+    private final String phone;
+
+    ContactCardSnapshot(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "ContactCardSnapshot",
+    "startRow": 20,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 20,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 27 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "String",
+            "String",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "name",
+          "type": "String",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "phone",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 0,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class ContactCardSnapshot {
+    private final String name;
+    private final String phone;
+
+    ContactCardSnapshot(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "ContactCardSnapshot",
+    "startRow": 20,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 20,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 28 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "String",
+            "String",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "name",
+          "type": "String",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "phone",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 0,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class ContactCardSnapshot {
+    private final String name;
+    private final String phone;
+
+    ContactCardSnapshot(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "ContactCardSnapshot",
+    "startRow": 20,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 20,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 29 col 0 1`] = `null`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 30 col 0 1`] = `null`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 31 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "double",
+            "String",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "amount",
+          "type": "double",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "currency",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "double",
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Invoice {
+    private final double amount;
+    private final String currency;
+
+    Invoice(double amount, String currency) {
+        this.amount = amount;
+        this.currency = currency;
+    }
+
+    Invoice copyWith(double amount) {
+        return new Invoice(amount, this.currency);
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Invoice",
+    "startRow": 31,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 31,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 31 col 6 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "double",
+            "String",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "amount",
+          "type": "double",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "currency",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "double",
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Invoice {
+    private final double amount;
+    private final String currency;
+
+    Invoice(double amount, String currency) {
+        this.amount = amount;
+        this.currency = currency;
+    }
+
+    Invoice copyWith(double amount) {
+        return new Invoice(amount, this.currency);
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Invoice",
+    "startRow": 31,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 31,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 32 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class Invoice {
+    private final double amount;
+    private final String currency;
+
+    Invoice(double amount, String currency) {
+        this.amount = amount;
+        this.currency = currency;
+    }
+
+    Invoice copyWith(double amount) {
+        return new Invoice(amount, this.currency);
+    }
+}",
+    "constructType": "field",
+    "enclosingClassStartRow": 31,
+    "interfaceMetrics": null,
+    "name": null,
+    "startRow": 32,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 31,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 33 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class Invoice {
+    private final double amount;
+    private final String currency;
+
+    Invoice(double amount, String currency) {
+        this.amount = amount;
+        this.currency = currency;
+    }
+
+    Invoice copyWith(double amount) {
+        return new Invoice(amount, this.currency);
+    }
+}",
+    "constructType": "field",
+    "enclosingClassStartRow": 31,
+    "interfaceMetrics": null,
+    "name": null,
+    "startRow": 33,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 31,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 34 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "double",
+            "String",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "amount",
+          "type": "double",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "currency",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "double",
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Invoice {
+    private final double amount;
+    private final String currency;
+
+    Invoice(double amount, String currency) {
+        this.amount = amount;
+        this.currency = currency;
+    }
+
+    Invoice copyWith(double amount) {
+        return new Invoice(amount, this.currency);
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Invoice",
+    "startRow": 31,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 31,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 35 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "double",
+            "String",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "amount",
+          "type": "double",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "currency",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "double",
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Invoice {
+    private final double amount;
+    private final String currency;
+
+    Invoice(double amount, String currency) {
+        this.amount = amount;
+        this.currency = currency;
+    }
+
+    Invoice copyWith(double amount) {
+        return new Invoice(amount, this.currency);
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Invoice",
+    "startRow": 31,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 31,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 36 col 8 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "double",
+            "String",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "amount",
+          "type": "double",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "currency",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "double",
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Invoice {
+    private final double amount;
+    private final String currency;
+
+    Invoice(double amount, String currency) {
+        this.amount = amount;
+        this.currency = currency;
+    }
+
+    Invoice copyWith(double amount) {
+        return new Invoice(amount, this.currency);
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Invoice",
+    "startRow": 31,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 31,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 37 col 8 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "double",
+            "String",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "amount",
+          "type": "double",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "currency",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "double",
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Invoice {
+    private final double amount;
+    private final String currency;
+
+    Invoice(double amount, String currency) {
+        this.amount = amount;
+        this.currency = currency;
+    }
+
+    Invoice copyWith(double amount) {
+        return new Invoice(amount, this.currency);
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Invoice",
+    "startRow": 31,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 31,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 38 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "double",
+            "String",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "amount",
+          "type": "double",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "currency",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "double",
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Invoice {
+    private final double amount;
+    private final String currency;
+
+    Invoice(double amount, String currency) {
+        this.amount = amount;
+        this.currency = currency;
+    }
+
+    Invoice copyWith(double amount) {
+        return new Invoice(amount, this.currency);
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Invoice",
+    "startRow": 31,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 31,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 39 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "double",
+            "String",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "amount",
+          "type": "double",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "currency",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "double",
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Invoice {
+    private final double amount;
+    private final String currency;
+
+    Invoice(double amount, String currency) {
+        this.amount = amount;
+        this.currency = currency;
+    }
+
+    Invoice copyWith(double amount) {
+        return new Invoice(amount, this.currency);
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Invoice",
+    "startRow": 31,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 31,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 40 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class Invoice {
+    private final double amount;
+    private final String currency;
+
+    Invoice(double amount, String currency) {
+        this.amount = amount;
+        this.currency = currency;
+    }
+
+    Invoice copyWith(double amount) {
+        return new Invoice(amount, this.currency);
+    }
+}",
+    "constructType": "method",
+    "enclosingClassStartRow": 31,
+    "interfaceMetrics": null,
+    "name": "copyWith",
+    "startRow": 40,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 31,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 41 col 8 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class Invoice {
+    private final double amount;
+    private final String currency;
+
+    Invoice(double amount, String currency) {
+        this.amount = amount;
+        this.currency = currency;
+    }
+
+    Invoice copyWith(double amount) {
+        return new Invoice(amount, this.currency);
+    }
+}",
+    "constructType": "method",
+    "enclosingClassStartRow": 31,
+    "interfaceMetrics": null,
+    "name": "copyWith",
+    "startRow": 40,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 31,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 42 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class Invoice {
+    private final double amount;
+    private final String currency;
+
+    Invoice(double amount, String currency) {
+        this.amount = amount;
+        this.currency = currency;
+    }
+
+    Invoice copyWith(double amount) {
+        return new Invoice(amount, this.currency);
+    }
+}",
+    "constructType": "method",
+    "enclosingClassStartRow": 31,
+    "interfaceMetrics": null,
+    "name": "copyWith",
+    "startRow": 40,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 31,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 43 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "double",
+            "String",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "amount",
+          "type": "double",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "currency",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "double",
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Invoice {
+    private final double amount;
+    private final String currency;
+
+    Invoice(double amount, String currency) {
+        this.amount = amount;
+        this.currency = currency;
+    }
+
+    Invoice copyWith(double amount) {
+        return new Invoice(amount, this.currency);
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Invoice",
+    "startRow": 31,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 31,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 44 col 0 1`] = `null`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 45 col 0 1`] = `null`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 46 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "int",
+            "int",
+          ],
+        },
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "Point",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "x",
+          "type": "int",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "y",
+          "type": "int",
+        },
+      ],
+      "finalFieldTypes": [
+        "int",
+        "int",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 0,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Point {
+    private final int x;
+    private final int y;
+
+    Point(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    private Point(Point other) {
+        this.x = other.x;
+        this.y = other.y;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Point",
+    "startRow": 46,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 46,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 46 col 6 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "int",
+            "int",
+          ],
+        },
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "Point",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "x",
+          "type": "int",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "y",
+          "type": "int",
+        },
+      ],
+      "finalFieldTypes": [
+        "int",
+        "int",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 0,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Point {
+    private final int x;
+    private final int y;
+
+    Point(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    private Point(Point other) {
+        this.x = other.x;
+        this.y = other.y;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Point",
+    "startRow": 46,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 46,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 47 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class Point {
+    private final int x;
+    private final int y;
+
+    Point(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    private Point(Point other) {
+        this.x = other.x;
+        this.y = other.y;
+    }
+}",
+    "constructType": "field",
+    "enclosingClassStartRow": 46,
+    "interfaceMetrics": null,
+    "name": null,
+    "startRow": 47,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 46,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 48 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class Point {
+    private final int x;
+    private final int y;
+
+    Point(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    private Point(Point other) {
+        this.x = other.x;
+        this.y = other.y;
+    }
+}",
+    "constructType": "field",
+    "enclosingClassStartRow": 46,
+    "interfaceMetrics": null,
+    "name": null,
+    "startRow": 48,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 46,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 49 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "int",
+            "int",
+          ],
+        },
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "Point",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "x",
+          "type": "int",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "y",
+          "type": "int",
+        },
+      ],
+      "finalFieldTypes": [
+        "int",
+        "int",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 0,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Point {
+    private final int x;
+    private final int y;
+
+    Point(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    private Point(Point other) {
+        this.x = other.x;
+        this.y = other.y;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Point",
+    "startRow": 46,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 46,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 50 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "int",
+            "int",
+          ],
+        },
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "Point",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "x",
+          "type": "int",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "y",
+          "type": "int",
+        },
+      ],
+      "finalFieldTypes": [
+        "int",
+        "int",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 0,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Point {
+    private final int x;
+    private final int y;
+
+    Point(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    private Point(Point other) {
+        this.x = other.x;
+        this.y = other.y;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Point",
+    "startRow": 46,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 46,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 51 col 8 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "int",
+            "int",
+          ],
+        },
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "Point",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "x",
+          "type": "int",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "y",
+          "type": "int",
+        },
+      ],
+      "finalFieldTypes": [
+        "int",
+        "int",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 0,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Point {
+    private final int x;
+    private final int y;
+
+    Point(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    private Point(Point other) {
+        this.x = other.x;
+        this.y = other.y;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Point",
+    "startRow": 46,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 46,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 52 col 8 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "int",
+            "int",
+          ],
+        },
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "Point",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "x",
+          "type": "int",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "y",
+          "type": "int",
+        },
+      ],
+      "finalFieldTypes": [
+        "int",
+        "int",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 0,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Point {
+    private final int x;
+    private final int y;
+
+    Point(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    private Point(Point other) {
+        this.x = other.x;
+        this.y = other.y;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Point",
+    "startRow": 46,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 46,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 53 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "int",
+            "int",
+          ],
+        },
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "Point",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "x",
+          "type": "int",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "y",
+          "type": "int",
+        },
+      ],
+      "finalFieldTypes": [
+        "int",
+        "int",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 0,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Point {
+    private final int x;
+    private final int y;
+
+    Point(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    private Point(Point other) {
+        this.x = other.x;
+        this.y = other.y;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Point",
+    "startRow": 46,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 46,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 54 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "int",
+            "int",
+          ],
+        },
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "Point",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "x",
+          "type": "int",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "y",
+          "type": "int",
+        },
+      ],
+      "finalFieldTypes": [
+        "int",
+        "int",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 0,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Point {
+    private final int x;
+    private final int y;
+
+    Point(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    private Point(Point other) {
+        this.x = other.x;
+        this.y = other.y;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Point",
+    "startRow": 46,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 46,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 55 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "int",
+            "int",
+          ],
+        },
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "Point",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "x",
+          "type": "int",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "y",
+          "type": "int",
+        },
+      ],
+      "finalFieldTypes": [
+        "int",
+        "int",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 0,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Point {
+    private final int x;
+    private final int y;
+
+    Point(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    private Point(Point other) {
+        this.x = other.x;
+        this.y = other.y;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Point",
+    "startRow": 46,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 46,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 56 col 8 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "int",
+            "int",
+          ],
+        },
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "Point",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "x",
+          "type": "int",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "y",
+          "type": "int",
+        },
+      ],
+      "finalFieldTypes": [
+        "int",
+        "int",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 0,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Point {
+    private final int x;
+    private final int y;
+
+    Point(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    private Point(Point other) {
+        this.x = other.x;
+        this.y = other.y;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Point",
+    "startRow": 46,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 46,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 57 col 8 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "int",
+            "int",
+          ],
+        },
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "Point",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "x",
+          "type": "int",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "y",
+          "type": "int",
+        },
+      ],
+      "finalFieldTypes": [
+        "int",
+        "int",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 0,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Point {
+    private final int x;
+    private final int y;
+
+    Point(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    private Point(Point other) {
+        this.x = other.x;
+        this.y = other.y;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Point",
+    "startRow": 46,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 46,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 58 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "int",
+            "int",
+          ],
+        },
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "Point",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "x",
+          "type": "int",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "y",
+          "type": "int",
+        },
+      ],
+      "finalFieldTypes": [
+        "int",
+        "int",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 0,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Point {
+    private final int x;
+    private final int y;
+
+    Point(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    private Point(Point other) {
+        this.x = other.x;
+        this.y = other.y;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Point",
+    "startRow": 46,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 46,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 59 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 2,
+          "paramTypes": [
+            "int",
+            "int",
+          ],
+        },
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "Point",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "x",
+          "type": "int",
+        },
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "y",
+          "type": "int",
+        },
+      ],
+      "finalFieldTypes": [
+        "int",
+        "int",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 0,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Point {
+    private final int x;
+    private final int y;
+
+    Point(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    private Point(Point other) {
+        this.x = other.x;
+        this.y = other.y;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Point",
+    "startRow": 46,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 46,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Negative.java: Negative.java line 60 col 0 1`] = `null`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 0 col 0 1`] = `null`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 0 col 13 1`] = `null`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 1 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "interface Shape {
+    Shape clone();
+    void draw();
+}",
+    "constructType": "interface",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": {
+      "extendedInterfaces": [],
+      "fieldCount": 0,
+      "methodCount": 2,
+    },
+    "name": "Shape",
+    "startRow": 1,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 1,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 1 col 10 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "interface Shape {
+    Shape clone();
+    void draw();
+}",
+    "constructType": "interface",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": {
+      "extendedInterfaces": [],
+      "fieldCount": 0,
+      "methodCount": 2,
+    },
+    "name": "Shape",
+    "startRow": 1,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 1,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 2 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "interface Shape {
+    Shape clone();
+    void draw();
+}",
+    "constructType": "method",
+    "enclosingClassStartRow": 1,
+    "interfaceMetrics": null,
+    "name": "clone",
+    "startRow": 2,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 1,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 3 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "interface Shape {
+    Shape clone();
+    void draw();
+}",
+    "constructType": "method",
+    "enclosingClassStartRow": 1,
+    "interfaceMetrics": null,
+    "name": "draw",
+    "startRow": 3,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 1,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 4 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "interface Shape {
+    Shape clone();
+    void draw();
+}",
+    "constructType": "interface",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": {
+      "extendedInterfaces": [],
+      "fieldCount": 0,
+      "methodCount": 2,
+    },
+    "name": "Shape",
+    "startRow": 1,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 1,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 5 col 0 1`] = `null`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 6 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "int",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "radius",
+          "type": "int",
+        },
+      ],
+      "finalFieldTypes": [
+        "int",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 2,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Circle implements Shape {
+    private final int radius;
+
+    Circle(int radius) {
+        this.radius = radius;
+    }
+
+    public Circle clone() {
+        return new Circle(this.radius);
+    }
+
+    public void draw() {
+        System.out.println("Circle r=" + radius);
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Circle",
+    "startRow": 6,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 6,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 6 col 6 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "int",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "radius",
+          "type": "int",
+        },
+      ],
+      "finalFieldTypes": [
+        "int",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 2,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Circle implements Shape {
+    private final int radius;
+
+    Circle(int radius) {
+        this.radius = radius;
+    }
+
+    public Circle clone() {
+        return new Circle(this.radius);
+    }
+
+    public void draw() {
+        System.out.println("Circle r=" + radius);
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Circle",
+    "startRow": 6,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 6,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 7 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class Circle implements Shape {
+    private final int radius;
+
+    Circle(int radius) {
+        this.radius = radius;
+    }
+
+    public Circle clone() {
+        return new Circle(this.radius);
+    }
+
+    public void draw() {
+        System.out.println("Circle r=" + radius);
+    }
+}",
+    "constructType": "field",
+    "enclosingClassStartRow": 6,
+    "interfaceMetrics": null,
+    "name": null,
+    "startRow": 7,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 6,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 8 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "int",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "radius",
+          "type": "int",
+        },
+      ],
+      "finalFieldTypes": [
+        "int",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 2,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Circle implements Shape {
+    private final int radius;
+
+    Circle(int radius) {
+        this.radius = radius;
+    }
+
+    public Circle clone() {
+        return new Circle(this.radius);
+    }
+
+    public void draw() {
+        System.out.println("Circle r=" + radius);
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Circle",
+    "startRow": 6,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 6,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 9 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "int",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "radius",
+          "type": "int",
+        },
+      ],
+      "finalFieldTypes": [
+        "int",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 2,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Circle implements Shape {
+    private final int radius;
+
+    Circle(int radius) {
+        this.radius = radius;
+    }
+
+    public Circle clone() {
+        return new Circle(this.radius);
+    }
+
+    public void draw() {
+        System.out.println("Circle r=" + radius);
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Circle",
+    "startRow": 6,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 6,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 10 col 8 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "int",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "radius",
+          "type": "int",
+        },
+      ],
+      "finalFieldTypes": [
+        "int",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 2,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Circle implements Shape {
+    private final int radius;
+
+    Circle(int radius) {
+        this.radius = radius;
+    }
+
+    public Circle clone() {
+        return new Circle(this.radius);
+    }
+
+    public void draw() {
+        System.out.println("Circle r=" + radius);
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Circle",
+    "startRow": 6,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 6,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 11 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "int",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "radius",
+          "type": "int",
+        },
+      ],
+      "finalFieldTypes": [
+        "int",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 2,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Circle implements Shape {
+    private final int radius;
+
+    Circle(int radius) {
+        this.radius = radius;
+    }
+
+    public Circle clone() {
+        return new Circle(this.radius);
+    }
+
+    public void draw() {
+        System.out.println("Circle r=" + radius);
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Circle",
+    "startRow": 6,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 6,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 12 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "int",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "radius",
+          "type": "int",
+        },
+      ],
+      "finalFieldTypes": [
+        "int",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 2,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Circle implements Shape {
+    private final int radius;
+
+    Circle(int radius) {
+        this.radius = radius;
+    }
+
+    public Circle clone() {
+        return new Circle(this.radius);
+    }
+
+    public void draw() {
+        System.out.println("Circle r=" + radius);
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Circle",
+    "startRow": 6,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 6,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 13 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class Circle implements Shape {
+    private final int radius;
+
+    Circle(int radius) {
+        this.radius = radius;
+    }
+
+    public Circle clone() {
+        return new Circle(this.radius);
+    }
+
+    public void draw() {
+        System.out.println("Circle r=" + radius);
+    }
+}",
+    "constructType": "method",
+    "enclosingClassStartRow": 6,
+    "interfaceMetrics": null,
+    "name": "clone",
+    "startRow": 13,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 6,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 14 col 8 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class Circle implements Shape {
+    private final int radius;
+
+    Circle(int radius) {
+        this.radius = radius;
+    }
+
+    public Circle clone() {
+        return new Circle(this.radius);
+    }
+
+    public void draw() {
+        System.out.println("Circle r=" + radius);
+    }
+}",
+    "constructType": "method",
+    "enclosingClassStartRow": 6,
+    "interfaceMetrics": null,
+    "name": "clone",
+    "startRow": 13,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 6,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 15 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class Circle implements Shape {
+    private final int radius;
+
+    Circle(int radius) {
+        this.radius = radius;
+    }
+
+    public Circle clone() {
+        return new Circle(this.radius);
+    }
+
+    public void draw() {
+        System.out.println("Circle r=" + radius);
+    }
+}",
+    "constructType": "method",
+    "enclosingClassStartRow": 6,
+    "interfaceMetrics": null,
+    "name": "clone",
+    "startRow": 13,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 6,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 16 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "int",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "radius",
+          "type": "int",
+        },
+      ],
+      "finalFieldTypes": [
+        "int",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 2,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Circle implements Shape {
+    private final int radius;
+
+    Circle(int radius) {
+        this.radius = radius;
+    }
+
+    public Circle clone() {
+        return new Circle(this.radius);
+    }
+
+    public void draw() {
+        System.out.println("Circle r=" + radius);
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Circle",
+    "startRow": 6,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 6,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 17 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class Circle implements Shape {
+    private final int radius;
+
+    Circle(int radius) {
+        this.radius = radius;
+    }
+
+    public Circle clone() {
+        return new Circle(this.radius);
+    }
+
+    public void draw() {
+        System.out.println("Circle r=" + radius);
+    }
+}",
+    "constructType": "method",
+    "enclosingClassStartRow": 6,
+    "interfaceMetrics": null,
+    "name": "draw",
+    "startRow": 17,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 6,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 18 col 8 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class Circle implements Shape {
+    private final int radius;
+
+    Circle(int radius) {
+        this.radius = radius;
+    }
+
+    public Circle clone() {
+        return new Circle(this.radius);
+    }
+
+    public void draw() {
+        System.out.println("Circle r=" + radius);
+    }
+}",
+    "constructType": "method",
+    "enclosingClassStartRow": 6,
+    "interfaceMetrics": null,
+    "name": "draw",
+    "startRow": 17,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 6,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 19 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class Circle implements Shape {
+    private final int radius;
+
+    Circle(int radius) {
+        this.radius = radius;
+    }
+
+    public Circle clone() {
+        return new Circle(this.radius);
+    }
+
+    public void draw() {
+        System.out.println("Circle r=" + radius);
+    }
+}",
+    "constructType": "method",
+    "enclosingClassStartRow": 6,
+    "interfaceMetrics": null,
+    "name": "draw",
+    "startRow": 17,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 6,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 20 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "int",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "radius",
+          "type": "int",
+        },
+      ],
+      "finalFieldTypes": [
+        "int",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 2,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Circle implements Shape {
+    private final int radius;
+
+    Circle(int radius) {
+        this.radius = radius;
+    }
+
+    public Circle clone() {
+        return new Circle(this.radius);
+    }
+
+    public void draw() {
+        System.out.println("Circle r=" + radius);
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Circle",
+    "startRow": 6,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 6,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 21 col 0 1`] = `null`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 22 col 0 1`] = `null`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 22 col 18 1`] = `null`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 23 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [],
+      "fields": [],
+      "finalFieldTypes": [],
+      "implementedInterfaces": [],
+      "methodCount": 2,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "abstract class Animal {
+    abstract Animal clone();
+    abstract String describe();
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Animal",
+    "startRow": 23,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 23,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 23 col 15 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [],
+      "fields": [],
+      "finalFieldTypes": [],
+      "implementedInterfaces": [],
+      "methodCount": 2,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "abstract class Animal {
+    abstract Animal clone();
+    abstract String describe();
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Animal",
+    "startRow": 23,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 23,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 24 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "abstract class Animal {
+    abstract Animal clone();
+    abstract String describe();
+}",
+    "constructType": "method",
+    "enclosingClassStartRow": 23,
+    "interfaceMetrics": null,
+    "name": "clone",
+    "startRow": 24,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 23,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 25 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "abstract class Animal {
+    abstract Animal clone();
+    abstract String describe();
+}",
+    "constructType": "method",
+    "enclosingClassStartRow": 23,
+    "interfaceMetrics": null,
+    "name": "describe",
+    "startRow": 25,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 23,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 26 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [],
+      "fields": [],
+      "finalFieldTypes": [],
+      "implementedInterfaces": [],
+      "methodCount": 2,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "abstract class Animal {
+    abstract Animal clone();
+    abstract String describe();
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Animal",
+    "startRow": 23,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 23,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 27 col 0 1`] = `null`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 28 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "String",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "name",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 2,
+      "nestedDeclarations": [],
+      "superclass": "Animal",
+    },
+    "classSource": "class Dog extends Animal {
+    private final String name;
+
+    Dog(String name) {
+        this.name = name;
+    }
+
+    public Dog clone() {
+        return new Dog(this.name);
+    }
+
+    public String describe() {
+        return "Dog: " + name;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Dog",
+    "startRow": 28,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 28,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 28 col 6 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "String",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "name",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 2,
+      "nestedDeclarations": [],
+      "superclass": "Animal",
+    },
+    "classSource": "class Dog extends Animal {
+    private final String name;
+
+    Dog(String name) {
+        this.name = name;
+    }
+
+    public Dog clone() {
+        return new Dog(this.name);
+    }
+
+    public String describe() {
+        return "Dog: " + name;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Dog",
+    "startRow": 28,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 28,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 29 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class Dog extends Animal {
+    private final String name;
+
+    Dog(String name) {
+        this.name = name;
+    }
+
+    public Dog clone() {
+        return new Dog(this.name);
+    }
+
+    public String describe() {
+        return "Dog: " + name;
+    }
+}",
+    "constructType": "field",
+    "enclosingClassStartRow": 28,
+    "interfaceMetrics": null,
+    "name": null,
+    "startRow": 29,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 28,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 30 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "String",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "name",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 2,
+      "nestedDeclarations": [],
+      "superclass": "Animal",
+    },
+    "classSource": "class Dog extends Animal {
+    private final String name;
+
+    Dog(String name) {
+        this.name = name;
+    }
+
+    public Dog clone() {
+        return new Dog(this.name);
+    }
+
+    public String describe() {
+        return "Dog: " + name;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Dog",
+    "startRow": 28,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 28,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 31 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "String",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "name",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 2,
+      "nestedDeclarations": [],
+      "superclass": "Animal",
+    },
+    "classSource": "class Dog extends Animal {
+    private final String name;
+
+    Dog(String name) {
+        this.name = name;
+    }
+
+    public Dog clone() {
+        return new Dog(this.name);
+    }
+
+    public String describe() {
+        return "Dog: " + name;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Dog",
+    "startRow": 28,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 28,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 32 col 8 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "String",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "name",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 2,
+      "nestedDeclarations": [],
+      "superclass": "Animal",
+    },
+    "classSource": "class Dog extends Animal {
+    private final String name;
+
+    Dog(String name) {
+        this.name = name;
+    }
+
+    public Dog clone() {
+        return new Dog(this.name);
+    }
+
+    public String describe() {
+        return "Dog: " + name;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Dog",
+    "startRow": 28,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 28,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 33 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "String",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "name",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 2,
+      "nestedDeclarations": [],
+      "superclass": "Animal",
+    },
+    "classSource": "class Dog extends Animal {
+    private final String name;
+
+    Dog(String name) {
+        this.name = name;
+    }
+
+    public Dog clone() {
+        return new Dog(this.name);
+    }
+
+    public String describe() {
+        return "Dog: " + name;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Dog",
+    "startRow": 28,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 28,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 34 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "String",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "name",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 2,
+      "nestedDeclarations": [],
+      "superclass": "Animal",
+    },
+    "classSource": "class Dog extends Animal {
+    private final String name;
+
+    Dog(String name) {
+        this.name = name;
+    }
+
+    public Dog clone() {
+        return new Dog(this.name);
+    }
+
+    public String describe() {
+        return "Dog: " + name;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Dog",
+    "startRow": 28,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 28,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 35 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class Dog extends Animal {
+    private final String name;
+
+    Dog(String name) {
+        this.name = name;
+    }
+
+    public Dog clone() {
+        return new Dog(this.name);
+    }
+
+    public String describe() {
+        return "Dog: " + name;
+    }
+}",
+    "constructType": "method",
+    "enclosingClassStartRow": 28,
+    "interfaceMetrics": null,
+    "name": "clone",
+    "startRow": 35,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 28,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 36 col 8 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class Dog extends Animal {
+    private final String name;
+
+    Dog(String name) {
+        this.name = name;
+    }
+
+    public Dog clone() {
+        return new Dog(this.name);
+    }
+
+    public String describe() {
+        return "Dog: " + name;
+    }
+}",
+    "constructType": "method",
+    "enclosingClassStartRow": 28,
+    "interfaceMetrics": null,
+    "name": "clone",
+    "startRow": 35,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 28,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 37 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class Dog extends Animal {
+    private final String name;
+
+    Dog(String name) {
+        this.name = name;
+    }
+
+    public Dog clone() {
+        return new Dog(this.name);
+    }
+
+    public String describe() {
+        return "Dog: " + name;
+    }
+}",
+    "constructType": "method",
+    "enclosingClassStartRow": 28,
+    "interfaceMetrics": null,
+    "name": "clone",
+    "startRow": 35,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 28,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 38 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "String",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "name",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 2,
+      "nestedDeclarations": [],
+      "superclass": "Animal",
+    },
+    "classSource": "class Dog extends Animal {
+    private final String name;
+
+    Dog(String name) {
+        this.name = name;
+    }
+
+    public Dog clone() {
+        return new Dog(this.name);
+    }
+
+    public String describe() {
+        return "Dog: " + name;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Dog",
+    "startRow": 28,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 28,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 39 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class Dog extends Animal {
+    private final String name;
+
+    Dog(String name) {
+        this.name = name;
+    }
+
+    public Dog clone() {
+        return new Dog(this.name);
+    }
+
+    public String describe() {
+        return "Dog: " + name;
+    }
+}",
+    "constructType": "method",
+    "enclosingClassStartRow": 28,
+    "interfaceMetrics": null,
+    "name": "describe",
+    "startRow": 39,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 28,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 40 col 8 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class Dog extends Animal {
+    private final String name;
+
+    Dog(String name) {
+        this.name = name;
+    }
+
+    public Dog clone() {
+        return new Dog(this.name);
+    }
+
+    public String describe() {
+        return "Dog: " + name;
+    }
+}",
+    "constructType": "method",
+    "enclosingClassStartRow": 28,
+    "interfaceMetrics": null,
+    "name": "describe",
+    "startRow": 39,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 28,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 41 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class Dog extends Animal {
+    private final String name;
+
+    Dog(String name) {
+        this.name = name;
+    }
+
+    public Dog clone() {
+        return new Dog(this.name);
+    }
+
+    public String describe() {
+        return "Dog: " + name;
+    }
+}",
+    "constructType": "method",
+    "enclosingClassStartRow": 28,
+    "interfaceMetrics": null,
+    "name": "describe",
+    "startRow": 39,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 28,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 42 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "String",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "name",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 2,
+      "nestedDeclarations": [],
+      "superclass": "Animal",
+    },
+    "classSource": "class Dog extends Animal {
+    private final String name;
+
+    Dog(String name) {
+        this.name = name;
+    }
+
+    public Dog clone() {
+        return new Dog(this.name);
+    }
+
+    public String describe() {
+        return "Dog: " + name;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Dog",
+    "startRow": 28,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 28,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 43 col 0 1`] = `null`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 44 col 0 1`] = `null`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 45 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "interface Document {
+    Document clone();
+    String save();
+}",
+    "constructType": "interface",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": {
+      "extendedInterfaces": [],
+      "fieldCount": 0,
+      "methodCount": 2,
+    },
+    "name": "Document",
+    "startRow": 45,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 45,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 45 col 10 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "interface Document {
+    Document clone();
+    String save();
+}",
+    "constructType": "interface",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": {
+      "extendedInterfaces": [],
+      "fieldCount": 0,
+      "methodCount": 2,
+    },
+    "name": "Document",
+    "startRow": 45,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 45,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 46 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "interface Document {
+    Document clone();
+    String save();
+}",
+    "constructType": "method",
+    "enclosingClassStartRow": 45,
+    "interfaceMetrics": null,
+    "name": "clone",
+    "startRow": 46,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 45,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 47 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "interface Document {
+    Document clone();
+    String save();
+}",
+    "constructType": "method",
+    "enclosingClassStartRow": 45,
+    "interfaceMetrics": null,
+    "name": "save",
+    "startRow": 47,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 45,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 48 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "interface Document {
+    Document clone();
+    String save();
+}",
+    "constructType": "interface",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": {
+      "extendedInterfaces": [],
+      "fieldCount": 0,
+      "methodCount": 2,
+    },
+    "name": "Document",
+    "startRow": 45,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 45,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 49 col 0 1`] = `null`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 50 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "String",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "content",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 2,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class TextDocument implements Document {
+    private final String content;
+
+    TextDocument(String content) {
+        this.content = content;
+    }
+
+    public TextDocument clone() {
+        return new TextDocument(this.content);
+    }
+
+    public String save() {
+        return "Saved: " + content;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "TextDocument",
+    "startRow": 50,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 50,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 50 col 6 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "String",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "content",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 2,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class TextDocument implements Document {
+    private final String content;
+
+    TextDocument(String content) {
+        this.content = content;
+    }
+
+    public TextDocument clone() {
+        return new TextDocument(this.content);
+    }
+
+    public String save() {
+        return "Saved: " + content;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "TextDocument",
+    "startRow": 50,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 50,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 51 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class TextDocument implements Document {
+    private final String content;
+
+    TextDocument(String content) {
+        this.content = content;
+    }
+
+    public TextDocument clone() {
+        return new TextDocument(this.content);
+    }
+
+    public String save() {
+        return "Saved: " + content;
+    }
+}",
+    "constructType": "field",
+    "enclosingClassStartRow": 50,
+    "interfaceMetrics": null,
+    "name": null,
+    "startRow": 51,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 50,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 52 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "String",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "content",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 2,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class TextDocument implements Document {
+    private final String content;
+
+    TextDocument(String content) {
+        this.content = content;
+    }
+
+    public TextDocument clone() {
+        return new TextDocument(this.content);
+    }
+
+    public String save() {
+        return "Saved: " + content;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "TextDocument",
+    "startRow": 50,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 50,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 53 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "String",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "content",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 2,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class TextDocument implements Document {
+    private final String content;
+
+    TextDocument(String content) {
+        this.content = content;
+    }
+
+    public TextDocument clone() {
+        return new TextDocument(this.content);
+    }
+
+    public String save() {
+        return "Saved: " + content;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "TextDocument",
+    "startRow": 50,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 50,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 54 col 8 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "String",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "content",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 2,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class TextDocument implements Document {
+    private final String content;
+
+    TextDocument(String content) {
+        this.content = content;
+    }
+
+    public TextDocument clone() {
+        return new TextDocument(this.content);
+    }
+
+    public String save() {
+        return "Saved: " + content;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "TextDocument",
+    "startRow": 50,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 50,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 55 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "String",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "content",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 2,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class TextDocument implements Document {
+    private final String content;
+
+    TextDocument(String content) {
+        this.content = content;
+    }
+
+    public TextDocument clone() {
+        return new TextDocument(this.content);
+    }
+
+    public String save() {
+        return "Saved: " + content;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "TextDocument",
+    "startRow": 50,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 50,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 56 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "String",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "content",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 2,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class TextDocument implements Document {
+    private final String content;
+
+    TextDocument(String content) {
+        this.content = content;
+    }
+
+    public TextDocument clone() {
+        return new TextDocument(this.content);
+    }
+
+    public String save() {
+        return "Saved: " + content;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "TextDocument",
+    "startRow": 50,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 50,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 57 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class TextDocument implements Document {
+    private final String content;
+
+    TextDocument(String content) {
+        this.content = content;
+    }
+
+    public TextDocument clone() {
+        return new TextDocument(this.content);
+    }
+
+    public String save() {
+        return "Saved: " + content;
+    }
+}",
+    "constructType": "method",
+    "enclosingClassStartRow": 50,
+    "interfaceMetrics": null,
+    "name": "clone",
+    "startRow": 57,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 50,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 58 col 8 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class TextDocument implements Document {
+    private final String content;
+
+    TextDocument(String content) {
+        this.content = content;
+    }
+
+    public TextDocument clone() {
+        return new TextDocument(this.content);
+    }
+
+    public String save() {
+        return "Saved: " + content;
+    }
+}",
+    "constructType": "method",
+    "enclosingClassStartRow": 50,
+    "interfaceMetrics": null,
+    "name": "clone",
+    "startRow": 57,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 50,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 59 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class TextDocument implements Document {
+    private final String content;
+
+    TextDocument(String content) {
+        this.content = content;
+    }
+
+    public TextDocument clone() {
+        return new TextDocument(this.content);
+    }
+
+    public String save() {
+        return "Saved: " + content;
+    }
+}",
+    "constructType": "method",
+    "enclosingClassStartRow": 50,
+    "interfaceMetrics": null,
+    "name": "clone",
+    "startRow": 57,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 50,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 60 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "String",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "content",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 2,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class TextDocument implements Document {
+    private final String content;
+
+    TextDocument(String content) {
+        this.content = content;
+    }
+
+    public TextDocument clone() {
+        return new TextDocument(this.content);
+    }
+
+    public String save() {
+        return "Saved: " + content;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "TextDocument",
+    "startRow": 50,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 50,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 61 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class TextDocument implements Document {
+    private final String content;
+
+    TextDocument(String content) {
+        this.content = content;
+    }
+
+    public TextDocument clone() {
+        return new TextDocument(this.content);
+    }
+
+    public String save() {
+        return "Saved: " + content;
+    }
+}",
+    "constructType": "method",
+    "enclosingClassStartRow": 50,
+    "interfaceMetrics": null,
+    "name": "save",
+    "startRow": 61,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 50,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 62 col 8 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class TextDocument implements Document {
+    private final String content;
+
+    TextDocument(String content) {
+        this.content = content;
+    }
+
+    public TextDocument clone() {
+        return new TextDocument(this.content);
+    }
+
+    public String save() {
+        return "Saved: " + content;
+    }
+}",
+    "constructType": "method",
+    "enclosingClassStartRow": 50,
+    "interfaceMetrics": null,
+    "name": "save",
+    "startRow": 61,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 50,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 63 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class TextDocument implements Document {
+    private final String content;
+
+    TextDocument(String content) {
+        this.content = content;
+    }
+
+    public TextDocument clone() {
+        return new TextDocument(this.content);
+    }
+
+    public String save() {
+        return "Saved: " + content;
+    }
+}",
+    "constructType": "method",
+    "enclosingClassStartRow": 50,
+    "interfaceMetrics": null,
+    "name": "save",
+    "startRow": 61,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 50,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 64 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "String",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "content",
+          "type": "String",
+        },
+      ],
+      "finalFieldTypes": [
+        "String",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 2,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class TextDocument implements Document {
+    private final String content;
+
+    TextDocument(String content) {
+        this.content = content;
+    }
+
+    public TextDocument clone() {
+        return new TextDocument(this.content);
+    }
+
+    public String save() {
+        return "Saved: " + content;
+    }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "TextDocument",
+    "startRow": 50,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 50,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 Positive.java: Positive.java line 65 col 0 1`] = `null`;
+
+exports[`manual context, pinned before card 12 broken file: broken file line 0 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [],
+      "fields": [],
+      "finalFieldTypes": [],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Fine { void ok() {} }",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Fine",
+    "startRow": 0,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 0,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 broken file: broken file line 0 col 6 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [],
+      "fields": [],
+      "finalFieldTypes": [],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Fine { void ok() {} }",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Fine",
+    "startRow": 0,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 0,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 broken file: broken file line 1 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [],
+      "fields": [],
+      "finalFieldTypes": [],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Broken {
+  void half() {",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Broken",
+    "startRow": 1,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 1,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 broken file: broken file line 1 col 6 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [],
+      "fields": [],
+      "finalFieldTypes": [],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Broken {
+  void half() {",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Broken",
+    "startRow": 1,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 1,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 broken file: broken file line 2 col 2 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class Broken {
+  void half() {",
+    "constructType": "method",
+    "enclosingClassStartRow": 1,
+    "interfaceMetrics": null,
+    "name": "half",
+    "startRow": 2,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 1,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 class with annotation, extends and implements: class with annotation, extends and implements line 0 col 0 1`] = `null`;
+
+exports[`manual context, pinned before card 12 class with annotation, extends and implements: class with annotation, extends and implements line 1 col 0 1`] = `null`;
+
+exports[`manual context, pinned before card 12 class with annotation, extends and implements: class with annotation, extends and implements line 2 col 0 1`] = `null`;
+
+exports[`manual context, pinned before card 12 class with annotation, extends and implements: class with annotation, extends and implements line 3 col 0 1`] = `null`;
+
+exports[`manual context, pinned before card 12 class with annotation, extends and implements: class with annotation, extends and implements line 4 col 0 1`] = `null`;
+
+exports[`manual context, pinned before card 12 class with annotation, extends and implements: class with annotation, extends and implements line 5 col 0 1`] = `null`;
+
+exports[`manual context, pinned before card 12 class with annotation, extends and implements: class with annotation, extends and implements line 6 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [
+      "Deprecated",
+    ],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "List<String>",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "names",
+          "type": "List<String>",
+        },
+      ],
+      "finalFieldTypes": [
+        "List<String>",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": "Base",
+    },
+    "classSource": "@Deprecated
+public class A extends Base implements Runnable {
+  private final List<String> names;
+
+  public A(List<String> names) {
+    this.names = names;
+  }
+
+  public void run() {}
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "A",
+    "startRow": 6,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [
+    "package com.example.app;",
+    "import java.util.List;",
+    "import com.example.base.Base;",
+  ],
+  "insertIndent": "",
+  "insertLine": 6,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 class with annotation, extends and implements: class with annotation, extends and implements line 7 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [
+      "Deprecated",
+    ],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "List<String>",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "names",
+          "type": "List<String>",
+        },
+      ],
+      "finalFieldTypes": [
+        "List<String>",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": "Base",
+    },
+    "classSource": "@Deprecated
+public class A extends Base implements Runnable {
+  private final List<String> names;
+
+  public A(List<String> names) {
+    this.names = names;
+  }
+
+  public void run() {}
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "A",
+    "startRow": 6,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [
+    "package com.example.app;",
+    "import java.util.List;",
+    "import com.example.base.Base;",
+  ],
+  "insertIndent": "",
+  "insertLine": 6,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 class with annotation, extends and implements: class with annotation, extends and implements line 7 col 13 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [
+      "Deprecated",
+    ],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "List<String>",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "names",
+          "type": "List<String>",
+        },
+      ],
+      "finalFieldTypes": [
+        "List<String>",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": "Base",
+    },
+    "classSource": "@Deprecated
+public class A extends Base implements Runnable {
+  private final List<String> names;
+
+  public A(List<String> names) {
+    this.names = names;
+  }
+
+  public void run() {}
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "A",
+    "startRow": 6,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [
+    "package com.example.app;",
+    "import java.util.List;",
+    "import com.example.base.Base;",
+  ],
+  "insertIndent": "",
+  "insertLine": 6,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 class with annotation, extends and implements: class with annotation, extends and implements line 8 col 2 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "@Deprecated
+public class A extends Base implements Runnable {
+  private final List<String> names;
+
+  public A(List<String> names) {
+    this.names = names;
+  }
+
+  public void run() {}
+}",
+    "constructType": "field",
+    "enclosingClassStartRow": 6,
+    "interfaceMetrics": null,
+    "name": null,
+    "startRow": 8,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [
+    "package com.example.app;",
+    "import java.util.List;",
+    "import com.example.base.Base;",
+  ],
+  "insertIndent": "",
+  "insertLine": 6,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 class with annotation, extends and implements: class with annotation, extends and implements line 9 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [
+      "Deprecated",
+    ],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "List<String>",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "names",
+          "type": "List<String>",
+        },
+      ],
+      "finalFieldTypes": [
+        "List<String>",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": "Base",
+    },
+    "classSource": "@Deprecated
+public class A extends Base implements Runnable {
+  private final List<String> names;
+
+  public A(List<String> names) {
+    this.names = names;
+  }
+
+  public void run() {}
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "A",
+    "startRow": 6,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [
+    "package com.example.app;",
+    "import java.util.List;",
+    "import com.example.base.Base;",
+  ],
+  "insertIndent": "",
+  "insertLine": 6,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 class with annotation, extends and implements: class with annotation, extends and implements line 10 col 2 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [
+      "Deprecated",
+    ],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "List<String>",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "names",
+          "type": "List<String>",
+        },
+      ],
+      "finalFieldTypes": [
+        "List<String>",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": "Base",
+    },
+    "classSource": "@Deprecated
+public class A extends Base implements Runnable {
+  private final List<String> names;
+
+  public A(List<String> names) {
+    this.names = names;
+  }
+
+  public void run() {}
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "A",
+    "startRow": 6,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [
+    "package com.example.app;",
+    "import java.util.List;",
+    "import com.example.base.Base;",
+  ],
+  "insertIndent": "",
+  "insertLine": 6,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 class with annotation, extends and implements: class with annotation, extends and implements line 11 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [
+      "Deprecated",
+    ],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "List<String>",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "names",
+          "type": "List<String>",
+        },
+      ],
+      "finalFieldTypes": [
+        "List<String>",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": "Base",
+    },
+    "classSource": "@Deprecated
+public class A extends Base implements Runnable {
+  private final List<String> names;
+
+  public A(List<String> names) {
+    this.names = names;
+  }
+
+  public void run() {}
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "A",
+    "startRow": 6,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [
+    "package com.example.app;",
+    "import java.util.List;",
+    "import com.example.base.Base;",
+  ],
+  "insertIndent": "",
+  "insertLine": 6,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 class with annotation, extends and implements: class with annotation, extends and implements line 12 col 2 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [
+      "Deprecated",
+    ],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "List<String>",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "names",
+          "type": "List<String>",
+        },
+      ],
+      "finalFieldTypes": [
+        "List<String>",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": "Base",
+    },
+    "classSource": "@Deprecated
+public class A extends Base implements Runnable {
+  private final List<String> names;
+
+  public A(List<String> names) {
+    this.names = names;
+  }
+
+  public void run() {}
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "A",
+    "startRow": 6,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [
+    "package com.example.app;",
+    "import java.util.List;",
+    "import com.example.base.Base;",
+  ],
+  "insertIndent": "",
+  "insertLine": 6,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 class with annotation, extends and implements: class with annotation, extends and implements line 13 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [
+      "Deprecated",
+    ],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "List<String>",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "names",
+          "type": "List<String>",
+        },
+      ],
+      "finalFieldTypes": [
+        "List<String>",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": "Base",
+    },
+    "classSource": "@Deprecated
+public class A extends Base implements Runnable {
+  private final List<String> names;
+
+  public A(List<String> names) {
+    this.names = names;
+  }
+
+  public void run() {}
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "A",
+    "startRow": 6,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [
+    "package com.example.app;",
+    "import java.util.List;",
+    "import com.example.base.Base;",
+  ],
+  "insertIndent": "",
+  "insertLine": 6,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 class with annotation, extends and implements: class with annotation, extends and implements line 14 col 2 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "@Deprecated
+public class A extends Base implements Runnable {
+  private final List<String> names;
+
+  public A(List<String> names) {
+    this.names = names;
+  }
+
+  public void run() {}
+}",
+    "constructType": "method",
+    "enclosingClassStartRow": 6,
+    "interfaceMetrics": null,
+    "name": "run",
+    "startRow": 14,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [
+    "package com.example.app;",
+    "import java.util.List;",
+    "import com.example.base.Base;",
+  ],
+  "insertIndent": "",
+  "insertLine": 6,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 class with annotation, extends and implements: class with annotation, extends and implements line 15 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [
+      "Deprecated",
+    ],
+    "classMetrics": {
+      "constructors": [
+        {
+          "hasAutowired": false,
+          "paramCount": 1,
+          "paramTypes": [
+            "List<String>",
+          ],
+        },
+      ],
+      "fields": [
+        {
+          "annotations": [],
+          "isFinal": true,
+          "name": "names",
+          "type": "List<String>",
+        },
+      ],
+      "finalFieldTypes": [
+        "List<String>",
+      ],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": "Base",
+    },
+    "classSource": "@Deprecated
+public class A extends Base implements Runnable {
+  private final List<String> names;
+
+  public A(List<String> names) {
+    this.names = names;
+  }
+
+  public void run() {}
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "A",
+    "startRow": 6,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [
+    "package com.example.app;",
+    "import java.util.List;",
+    "import com.example.base.Base;",
+  ],
+  "insertIndent": "",
+  "insertLine": 6,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 class with nested types: class with nested types line 0 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [],
+      "fields": [],
+      "finalFieldTypes": [],
+      "implementedInterfaces": [],
+      "methodCount": 0,
+      "nestedDeclarations": [
+        {
+          "annotations": [],
+          "implementedInterfaces": [],
+          "name": "Inner",
+          "type": "class",
+        },
+        {
+          "annotations": [],
+          "implementedInterfaces": [],
+          "name": "Nested",
+          "type": "interface",
+        },
+        {
+          "annotations": [],
+          "implementedInterfaces": [],
+          "name": "Mode",
+          "type": "enum",
+        },
+      ],
+      "superclass": null,
+    },
+    "classSource": "class Outer {
+  class Inner {
+    void work() {}
+  }
+
+  static interface Nested {}
+
+  enum Mode { ON, OFF }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Outer",
+    "startRow": 0,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 0,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 class with nested types: class with nested types line 0 col 6 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [],
+      "fields": [],
+      "finalFieldTypes": [],
+      "implementedInterfaces": [],
+      "methodCount": 0,
+      "nestedDeclarations": [
+        {
+          "annotations": [],
+          "implementedInterfaces": [],
+          "name": "Inner",
+          "type": "class",
+        },
+        {
+          "annotations": [],
+          "implementedInterfaces": [],
+          "name": "Nested",
+          "type": "interface",
+        },
+        {
+          "annotations": [],
+          "implementedInterfaces": [],
+          "name": "Mode",
+          "type": "enum",
+        },
+      ],
+      "superclass": null,
+    },
+    "classSource": "class Outer {
+  class Inner {
+    void work() {}
+  }
+
+  static interface Nested {}
+
+  enum Mode { ON, OFF }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Outer",
+    "startRow": 0,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 0,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 class with nested types: class with nested types line 1 col 2 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [],
+      "fields": [],
+      "finalFieldTypes": [],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Inner {
+    void work() {}
+  }",
+    "constructType": "class",
+    "enclosingClassStartRow": 0,
+    "interfaceMetrics": null,
+    "name": "Inner",
+    "startRow": 1,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "  ",
+  "insertLine": 1,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 class with nested types: class with nested types line 1 col 8 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [],
+      "fields": [],
+      "finalFieldTypes": [],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Inner {
+    void work() {}
+  }",
+    "constructType": "class",
+    "enclosingClassStartRow": 0,
+    "interfaceMetrics": null,
+    "name": "Inner",
+    "startRow": 1,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "  ",
+  "insertLine": 1,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 class with nested types: class with nested types line 2 col 4 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class Inner {
+    void work() {}
+  }",
+    "constructType": "method",
+    "enclosingClassStartRow": 1,
+    "interfaceMetrics": null,
+    "name": "work",
+    "startRow": 2,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "  ",
+  "insertLine": 1,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 class with nested types: class with nested types line 3 col 2 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [],
+      "fields": [],
+      "finalFieldTypes": [],
+      "implementedInterfaces": [],
+      "methodCount": 1,
+      "nestedDeclarations": [],
+      "superclass": null,
+    },
+    "classSource": "class Inner {
+    void work() {}
+  }",
+    "constructType": "class",
+    "enclosingClassStartRow": 0,
+    "interfaceMetrics": null,
+    "name": "Inner",
+    "startRow": 1,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "  ",
+  "insertLine": 1,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 class with nested types: class with nested types line 4 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [],
+      "fields": [],
+      "finalFieldTypes": [],
+      "implementedInterfaces": [],
+      "methodCount": 0,
+      "nestedDeclarations": [
+        {
+          "annotations": [],
+          "implementedInterfaces": [],
+          "name": "Inner",
+          "type": "class",
+        },
+        {
+          "annotations": [],
+          "implementedInterfaces": [],
+          "name": "Nested",
+          "type": "interface",
+        },
+        {
+          "annotations": [],
+          "implementedInterfaces": [],
+          "name": "Mode",
+          "type": "enum",
+        },
+      ],
+      "superclass": null,
+    },
+    "classSource": "class Outer {
+  class Inner {
+    void work() {}
+  }
+
+  static interface Nested {}
+
+  enum Mode { ON, OFF }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Outer",
+    "startRow": 0,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 0,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 class with nested types: class with nested types line 5 col 2 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "static interface Nested {}",
+    "constructType": "interface",
+    "enclosingClassStartRow": 0,
+    "interfaceMetrics": {
+      "extendedInterfaces": [],
+      "fieldCount": 0,
+      "methodCount": 0,
+    },
+    "name": "Nested",
+    "startRow": 5,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "  ",
+  "insertLine": 5,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 class with nested types: class with nested types line 5 col 19 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "static interface Nested {}",
+    "constructType": "interface",
+    "enclosingClassStartRow": 0,
+    "interfaceMetrics": {
+      "extendedInterfaces": [],
+      "fieldCount": 0,
+      "methodCount": 0,
+    },
+    "name": "Nested",
+    "startRow": 5,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "  ",
+  "insertLine": 5,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 class with nested types: class with nested types line 6 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [],
+      "fields": [],
+      "finalFieldTypes": [],
+      "implementedInterfaces": [],
+      "methodCount": 0,
+      "nestedDeclarations": [
+        {
+          "annotations": [],
+          "implementedInterfaces": [],
+          "name": "Inner",
+          "type": "class",
+        },
+        {
+          "annotations": [],
+          "implementedInterfaces": [],
+          "name": "Nested",
+          "type": "interface",
+        },
+        {
+          "annotations": [],
+          "implementedInterfaces": [],
+          "name": "Mode",
+          "type": "enum",
+        },
+      ],
+      "superclass": null,
+    },
+    "classSource": "class Outer {
+  class Inner {
+    void work() {}
+  }
+
+  static interface Nested {}
+
+  enum Mode { ON, OFF }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Outer",
+    "startRow": 0,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 0,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 class with nested types: class with nested types line 7 col 2 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class Outer {
+  class Inner {
+    void work() {}
+  }
+
+  static interface Nested {}
+
+  enum Mode { ON, OFF }
+}",
+    "constructType": "enum",
+    "enclosingClassStartRow": 0,
+    "interfaceMetrics": null,
+    "name": "Mode",
+    "startRow": 7,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 0,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 class with nested types: class with nested types line 7 col 7 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "class Outer {
+  class Inner {
+    void work() {}
+  }
+
+  static interface Nested {}
+
+  enum Mode { ON, OFF }
+}",
+    "constructType": "enum",
+    "enclosingClassStartRow": 0,
+    "interfaceMetrics": null,
+    "name": "Mode",
+    "startRow": 7,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 0,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 class with nested types: class with nested types line 8 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": {
+      "constructors": [],
+      "fields": [],
+      "finalFieldTypes": [],
+      "implementedInterfaces": [],
+      "methodCount": 0,
+      "nestedDeclarations": [
+        {
+          "annotations": [],
+          "implementedInterfaces": [],
+          "name": "Inner",
+          "type": "class",
+        },
+        {
+          "annotations": [],
+          "implementedInterfaces": [],
+          "name": "Nested",
+          "type": "interface",
+        },
+        {
+          "annotations": [],
+          "implementedInterfaces": [],
+          "name": "Mode",
+          "type": "enum",
+        },
+      ],
+      "superclass": null,
+    },
+    "classSource": "class Outer {
+  class Inner {
+    void work() {}
+  }
+
+  static interface Nested {}
+
+  enum Mode { ON, OFF }
+}",
+    "constructType": "class",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": null,
+    "name": "Outer",
+    "startRow": 0,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [],
+  "insertIndent": "",
+  "insertLine": 0,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 empty file: empty file line 0 col 0 1`] = `null`;
+
+exports[`manual context, pinned before card 12 interface extending another: interface extending another line 0 col 0 1`] = `null`;
+
+exports[`manual context, pinned before card 12 interface extending another: interface extending another line 1 col 0 1`] = `null`;
+
+exports[`manual context, pinned before card 12 interface extending another: interface extending another line 2 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "interface Port extends Closeable {
+  int LIMIT = 3;
+  void open();
+}",
+    "constructType": "interface",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": {
+      "extendedInterfaces": [],
+      "fieldCount": 1,
+      "methodCount": 1,
+    },
+    "name": "Port",
+    "startRow": 2,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [
+    "import java.io.Closeable;",
+  ],
+  "insertIndent": "",
+  "insertLine": 2,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 interface extending another: interface extending another line 2 col 10 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "interface Port extends Closeable {
+  int LIMIT = 3;
+  void open();
+}",
+    "constructType": "interface",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": {
+      "extendedInterfaces": [],
+      "fieldCount": 1,
+      "methodCount": 1,
+    },
+    "name": "Port",
+    "startRow": 2,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [
+    "import java.io.Closeable;",
+  ],
+  "insertIndent": "",
+  "insertLine": 2,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 interface extending another: interface extending another line 3 col 2 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "interface Port extends Closeable {
+  int LIMIT = 3;
+  void open();
+}",
+    "constructType": "interface",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": {
+      "extendedInterfaces": [],
+      "fieldCount": 1,
+      "methodCount": 1,
+    },
+    "name": "Port",
+    "startRow": 2,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [
+    "import java.io.Closeable;",
+  ],
+  "insertIndent": "",
+  "insertLine": 2,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 interface extending another: interface extending another line 4 col 2 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "interface Port extends Closeable {
+  int LIMIT = 3;
+  void open();
+}",
+    "constructType": "method",
+    "enclosingClassStartRow": 2,
+    "interfaceMetrics": null,
+    "name": "open",
+    "startRow": 4,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [
+    "import java.io.Closeable;",
+  ],
+  "insertIndent": "",
+  "insertLine": 2,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 interface extending another: interface extending another line 5 col 0 1`] = `
+{
+  "constructMetrics": {
+    "annotations": [],
+    "classMetrics": null,
+    "classSource": "interface Port extends Closeable {
+  int LIMIT = 3;
+  void open();
+}",
+    "constructType": "interface",
+    "enclosingClassStartRow": null,
+    "interfaceMetrics": {
+      "extendedInterfaces": [],
+      "fieldCount": 1,
+      "methodCount": 1,
+    },
+    "name": "Port",
+    "startRow": 2,
+  },
+  "fileName": "Fixture.java",
+  "importLines": [
+    "import java.io.Closeable;",
+  ],
+  "insertIndent": "",
+  "insertLine": 2,
+  "language": "java",
+}
+`;
+
+exports[`manual context, pinned before card 12 top-level enum: top-level enum line 0 col 0 1`] = `null`;
+
+exports[`manual context, pinned before card 12 top-level enum: top-level enum line 0 col 5 1`] = `null`;
+
+exports[`manual context, pinned before card 12 top-level enum: top-level enum line 1 col 2 1`] = `null`;
+
+exports[`manual context, pinned before card 12 top-level enum: top-level enum line 2 col 0 1`] = `null`;
+
+exports[`manual context, pinned before card 12 top-level enum: top-level enum line 3 col 2 1`] = `null`;
+
+exports[`manual context, pinned before card 12 top-level enum: top-level enum line 4 col 0 1`] = `null`;
+
+exports[`manual context, pinned before card 12 top-level enum: top-level enum line 5 col 2 1`] = `null`;
+
+exports[`manual context, pinned before card 12 top-level enum: top-level enum line 6 col 0 1`] = `null`;
+
+exports[`manual context, pinned before card 12 top-level enum: top-level enum line 7 col 2 1`] = `null`;
+
+exports[`manual context, pinned before card 12 top-level enum: top-level enum line 8 col 0 1`] = `null`;

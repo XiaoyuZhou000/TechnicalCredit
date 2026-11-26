@@ -1,5 +1,10 @@
 import { Node } from 'web-tree-sitter';
-import { ConstructMetrics, NestedDeclaration, NESTED_TYPE_MAP } from './types';
+import {
+  ConstructMetrics,
+  EnumMetrics,
+  NestedDeclaration,
+  NESTED_TYPE_MAP,
+} from './types';
 import {
   getModifiers,
   getTypeNode,
@@ -20,10 +25,26 @@ export function extractClassMetrics(
       ?.namedChildren.find((c) => c.type === 'type_identifier')?.text ?? null;
   const implementedInterfaces = resolveInterfaceNames(decl, importLines);
 
+  // Key order is part of the prompt (JSON.stringify keeps it), so it stays as it always was.
+  return { superclass, implementedInterfaces, ...memberMetrics(body) };
+}
+
+type MemberMetrics = Pick<
+  EnumMetrics,
+  | 'fields'
+  | 'finalFieldTypes'
+  | 'constructors'
+  | 'methodCount'
+  | 'nestedDeclarations'
+>;
+
+/**
+ * Fields, constructors, method count and nested declarations of a class body, or of an enum's
+ * `enum_body_declarations` (card 12). `null` (no body) gives empty members.
+ */
+function memberMetrics(body: Node | null): MemberMetrics {
   if (!body) {
     return {
-      superclass,
-      implementedInterfaces,
       fields: [],
       finalFieldTypes: [],
       constructors: [],
@@ -76,13 +97,34 @@ export function extractClassMetrics(
     }));
 
   return {
-    superclass,
-    implementedInterfaces,
     fields,
     finalFieldTypes,
     constructors,
     methodCount,
     nestedDeclarations,
+  };
+}
+
+/**
+ * The enum counterpart of `extractClassMetrics`, for construct enumeration only (card 12).
+ * Interfaces go through the same `resolveInterfaceNames` as classes, so the two kinds agree.
+ */
+export function extractEnumMetrics(
+  decl: Node,
+  importLines: string[],
+): EnumMetrics {
+  const body = decl.childForFieldName('body');
+  const constants =
+    body?.namedChildren
+      .filter((c) => c.type === 'enum_constant')
+      .map((c) => c.childForFieldName('name')?.text ?? '') ?? [];
+  const declarations =
+    body?.namedChildren.find((c) => c.type === 'enum_body_declarations') ??
+    null;
+  return {
+    constants,
+    implementedInterfaces: resolveInterfaceNames(decl, importLines),
+    ...memberMetrics(declarations),
   };
 }
 

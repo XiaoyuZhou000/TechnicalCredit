@@ -42,6 +42,31 @@ export interface ConstructMetrics {
     methodCount: number;
     extendedInterfaces: string[];
   } | null;
+  /**
+   * Card 12: present only on top-level enums from construct enumeration; absent (not null)
+   * elsewhere, so the manual path's prompt JSON for classes and interfaces is unchanged.
+   */
+  enumMetrics?: EnumMetrics;
+}
+
+/** The enum counterpart of `classMetrics` (card 12). */
+export interface EnumMetrics {
+  constants: string[];
+  implementedInterfaces: { name: string; resolvedImport: string | null }[];
+  fields: {
+    name: string;
+    type: string;
+    isFinal: boolean;
+    annotations: string[];
+  }[];
+  finalFieldTypes: string[];
+  constructors: {
+    paramCount: number;
+    paramTypes: string[];
+    hasAutowired: boolean;
+  }[];
+  methodCount: number;
+  nestedDeclarations: NestedDeclaration[];
 }
 
 // Node types that mark a meaningful declaration boundary when walking up the AST.
