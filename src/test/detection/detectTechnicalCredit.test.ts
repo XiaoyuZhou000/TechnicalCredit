@@ -226,6 +226,69 @@ describe('US1: detection runs without an editor', () => {
     });
   });
 
+  it('records the listed id for an answer that varies it or adds its title', async () => {
+    const claude = createFakeClaude({
+      ...TWO_CANDIDATES,
+      'adr:modularity': answer({ adr: ' adr-1 — plugin  registry ' }),
+      'adr:reusability': answer({ adr: 'ADR-2' }),
+    });
+    const outcome = await detectTechnicalCredit(
+      { context, adrs: ADRS },
+      claude.client,
+      signal(),
+    );
+
+    expect(outcome).toEqual({
+      ok: true,
+      findings: [
+        { ...candidateResult('modularity'), adr: 'ADR-0001' },
+        { ...candidateResult('reusability'), adr: 'ADR-0002' },
+      ],
+    });
+  });
+
+  it('drops an answer with another ADR title, or an id two records share', async () => {
+    const adrs: readonly AdrSummary[] = [
+      ...ADRS,
+      { id: 'ADR-0002', title: 'Second config record', tcContext: '' },
+    ];
+    const claude = createFakeClaude({
+      ...TWO_CANDIDATES,
+      'adr:modularity': answer({ adr: 'ADR-0001 — Config loading' }),
+      'adr:reusability': answer({ adr: 'ADR-0002' }),
+    });
+    const outcome = await detectTechnicalCredit(
+      { context, adrs },
+      claude.client,
+      signal(),
+    );
+
+    expect(outcome).toEqual({
+      ok: true,
+      findings: [
+        { ...candidateResult('modularity'), adr: null },
+        { ...candidateResult('reusability'), adr: null },
+      ],
+    });
+  });
+
+  it('reads a top-level null ADR answer as no match', async () => {
+    const claude = createFakeClaude({
+      modularity: answer(candidate('modularity')),
+      'adr:modularity': answer(null),
+    });
+    const outcome = await detectTechnicalCredit(
+      { context, adrs: ADRS },
+      claude.client,
+      signal(),
+    );
+
+    expect(outcome).toEqual({
+      ok: true,
+      findings: [{ ...candidateResult('modularity'), adr: null }],
+    });
+  });
+
   it('makes no ADR call without ADRs, and the findings carry no adr key', async () => {
     const claude = createFakeClaude(TWO_CANDIDATES);
     const outcome = await detectTechnicalCredit(
