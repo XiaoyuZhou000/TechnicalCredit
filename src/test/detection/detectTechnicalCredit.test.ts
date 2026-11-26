@@ -195,6 +195,37 @@ describe('US1: detection runs without an editor', () => {
     });
   });
 
+  it('keeps the id of an ADR with a nonnumeric filename, as listed', async () => {
+    const adrs: readonly AdrSummary[] = [
+      ...ADRS,
+      {
+        id: 'architecture-record',
+        title: 'Architecture record',
+        tcContext: '',
+      },
+    ];
+    const claude = createFakeClaude({
+      modularity: answer(candidate('modularity')),
+      'adr:modularity': answer({ adr: 'architecture-record' }),
+    });
+    const outcome = await detectTechnicalCredit(
+      { context, adrs },
+      claude.client,
+      signal(),
+    );
+
+    const [adrCall] = claude.calls.filter((c) => c.kind === 'adr');
+    expect(adrCall.user.split('\n')).toContain(
+      'architecture-record — Architecture record',
+    );
+    expect(outcome).toEqual({
+      ok: true,
+      findings: [
+        { ...candidateResult('modularity'), adr: 'architecture-record' },
+      ],
+    });
+  });
+
   it('makes no ADR call without ADRs, and the findings carry no adr key', async () => {
     const claude = createFakeClaude(TWO_CANDIDATES);
     const outcome = await detectTechnicalCredit(
