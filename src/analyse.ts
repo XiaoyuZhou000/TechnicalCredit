@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 
 import { buildContext } from '@/context/buildContext';
 import { findAdrs } from '@/context/findAdrs';
+import { resolveAdrId } from '@/context/resolveAdrId';
 import { SYSTEM_PROMPT } from '@/prompts/systemPrompt';
 import { callClaude } from '@/utils/claude';
 import { formatTCComment } from '@/comment/formatComment';
@@ -69,7 +70,7 @@ export async function analyseForTC(controller: PendingAnnotation) {
                   ADR_SYSTEM_PROMPT,
                   createAdrUserPrompt(r, adrs),
                 );
-                r.adr = match.adr;
+                r.adr = resolveAdrId(match.adr, adrs);
               }),
             );
           }
