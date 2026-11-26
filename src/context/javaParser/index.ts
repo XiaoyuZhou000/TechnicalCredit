@@ -66,6 +66,96 @@ const CONSTRUCT_TYPE_MAP: Record<string, ConstructMetrics['constructType']> = {
   field_declaration: 'field',
 };
 
+/** Kinds construct enumeration returns (card 12); records and annotation types are not among them. */
+export type ConstructKind = 'class' | 'interface' | 'enum';
+
+/** Zero-based; columns count UTF-16 code units, as the parser does over a JS string. */
+export interface Position {
+  readonly line: number;
+  readonly column: number;
+}
+
+/** One top-level declaration from a single parse, with everything copied out of the tree. */
+export interface TopLevelNode {
+  readonly kind: ConstructKind;
+  readonly name: string | null;
+  readonly start: Position;
+  readonly end: Position;
+  readonly nameStart: Position | null;
+  readonly source: string;
+  /** The declaration contains a syntax error or a missing token. */
+  readonly hasError: boolean;
+  readonly metrics: ConstructMetrics;
+}
+
+export type TopLevelResult =
+  | { readonly ok: true; readonly nodes: readonly TopLevelNode[] }
+  | { readonly ok: false };
+
+const TOP_LEVEL_KINDS = new Map<string, ConstructKind>([
+  ['class_declaration', 'class'],
+  ['interface_declaration', 'interface'],
+  ['enum_declaration', 'enum'],
+]);
+
+function positionOf(point: { row: number; column: number }): Position {
+  return { line: point.row, column: point.column };
+}
+
+/**
+ * Parses the file once and returns every top-level class, interface and enum, in source order,
+ * with the same metrics the cursor path builds (card 12). Only direct children of the root
+ * count: nested, local and anonymous types stay inside their outer declaration, and top-level
+ * `ERROR` nodes are skipped. Never throws; a parser problem gives `{ ok: false }`.
+ */
+export async function extractTopLevel(
+  source: string,
+  importLines: string[],
+): Promise<TopLevelResult> {
+  try {
+    const parser = await getParser();
+    const tree = parser.parse(source);
+    if (!tree) {
+      return { ok: false };
+    }
+    try {
+      const nodes = tree.rootNode.namedChildren.flatMap(
+        (node): TopLevelNode[] => {
+          const kind = TOP_LEVEL_KINDS.get(node.type);
+          if (kind === undefined) {
+            return [];
+          }
+          const nameNode = node.childForFieldName('name');
+          return [
+            {
+              kind,
+              name: nameNode?.text ?? null,
+              start: positionOf(node.startPosition),
+              end: positionOf(node.endPosition),
+              nameStart: nameNode ? positionOf(nameNode.startPosition) : null,
+              source: node.text,
+              hasError: node.hasError,
+              // A top-level declaration has no enclosing class, as the cursor walk finds too.
+              metrics: metricsFor(node, null, node, importLines),
+            },
+          ];
+        },
+      );
+      return { ok: true, nodes };
+    } finally {
+      // Everything above is copied into plain values; background analysis enumerates on every
+      // edit, so the tree's wasm memory is freed rather than left to the collector.
+      tree.delete();
+    }
+  } catch (e) {
+    console.error(
+      'construct enumeration failed:',
+      e instanceof Error ? e.message : String(e),
+    );
+    return { ok: false };
+  }
+}
+
 /** Parses the Java source, walks the AST from the cursor position to the nearest declaration, and returns structural metrics for that construct and its enclosing class. */
 export async function extractMetrics(
   source: string,
