@@ -4,8 +4,8 @@ import type { TCResult } from '@/comment/tcResult';
 export const ADR_SYSTEM_PROMPT = `You match a detected Technical Credit pattern to a repository's Architecture Decision Records (ADRs). Return JSON only, no prose.
 
 Response format:
-{ "adr": "ADR-nnnn" }  — the id of the ADR that clearly documents this pattern
-{ "adr": null }        — if no ADR clearly documents this pattern`;
+{ "adr": "<id>" }  — the id of the ADR that clearly documents this pattern, exactly as listed at the start of its line under "Repository ADRs"
+{ "adr": null }    — if no ADR clearly documents this pattern`;
 
 export function createAdrUserPrompt(
   result: TCResult,

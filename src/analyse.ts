@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 
 import { buildContext } from '@/context/buildContext';
 import { findAdrs } from '@/context/findAdrs';
+import { resolveAdrId } from '@/context/resolveAdrId';
 import { SYSTEM_PROMPT } from '@/prompts/systemPrompt';
 import { callClaude } from '@/utils/claude';
 import { formatTCComment } from '@/comment/formatComment';
@@ -65,11 +66,19 @@ export async function analyseForTC(controller: PendingAnnotation) {
           if (adrs.length > 0) {
             await Promise.all(
               candidates.map(async (r) => {
-                const match = await callClaude<{ adr: string | null }>(
+                const answer = await callClaude<unknown>(
                   ADR_SYSTEM_PROMPT,
                   createAdrUserPrompt(r, adrs),
                 );
-                r.adr = match.adr;
+                // A top-level null, like any answer without an adr, is no match.
+                r.adr = resolveAdrId(
+                  typeof answer === 'object' &&
+                    answer !== null &&
+                    'adr' in answer
+                    ? answer.adr
+                    : null,
+                  adrs,
+                );
               }),
             );
           }
