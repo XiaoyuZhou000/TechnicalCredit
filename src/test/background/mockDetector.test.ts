@@ -13,6 +13,7 @@ import {
   MOCK_DETECTOR_ID,
   MockDetector,
   sampleFindings,
+  versionProblem,
 } from '@/background/detector/mockDetector';
 import { createFakeTimers } from '@/test/background/fakeTimers';
 
@@ -394,5 +395,127 @@ describe('US3 the mock can be configured per scenario', () => {
           version: DEFAULT_MOCK_VERSION,
         }),
     ).toThrow(Error);
+  });
+});
+
+describe('card 11: the version can change while the mock lives', () => {
+  it('updates the version before telling listeners, in subscription order', () => {
+    const mock = new MockDetector();
+    const heard: string[] = [];
+    mock.onVersionChange((version) =>
+      heard.push(`1:${version}:${mock.version}`),
+    );
+    mock.onVersionChange((version) => heard.push(`2:${version}`));
+
+    mock.setVersion('mock-2');
+
+    expect(mock.version).toBe('mock-2');
+    expect(heard).toEqual(['1:mock-2:mock-2', '2:mock-2']);
+  });
+
+  it('does nothing when the version is unchanged', () => {
+    const mock = new MockDetector({ version: 'mock-2' });
+    const heard: string[] = [];
+    mock.onVersionChange((version) => heard.push(version));
+
+    mock.setVersion('mock-2');
+
+    expect(heard).toEqual([]);
+  });
+
+  it('rejects an empty version and keeps the current one', () => {
+    const mock = new MockDetector();
+
+    expect(() => mock.setVersion('')).toThrow('version must not be empty');
+    expect(mock.version).toBe(DEFAULT_MOCK_VERSION);
+  });
+
+  it('refuses the default version for a mock that changes results', () => {
+    const mock = new MockDetector({
+      behaviour: { kind: 'fail', message: 'nope' },
+      version: 'fail-1',
+    });
+
+    expect(() => mock.setVersion(DEFAULT_MOCK_VERSION)).toThrow(
+      /needs a version other than/,
+    );
+    expect(mock.version).toBe('fail-1');
+  });
+
+  it('keeps telling the other listeners when one throws, and never rethrows', () => {
+    const mock = new MockDetector();
+    const heard: string[] = [];
+    mock.onVersionChange(() => {
+      throw new Error('listener bug');
+    });
+    mock.onVersionChange((version) => heard.push(version));
+
+    expect(() => mock.setVersion('mock-2')).not.toThrow();
+    expect(heard).toEqual(['mock-2']);
+  });
+
+  it('stops telling a listener once it unsubscribes', () => {
+    const mock = new MockDetector();
+    const heard: string[] = [];
+    const unsubscribe = mock.onVersionChange((version) => heard.push(version));
+
+    mock.setVersion('mock-2');
+    unsubscribe();
+    mock.setVersion('mock-3');
+
+    expect(heard).toEqual(['mock-2']);
+  });
+
+  it('labels a call with the version it started under, even if the version changes first', async () => {
+    const timers = createFakeTimers();
+    const mock = new MockDetector({ timers, delayMs: 100 });
+    const call = mock.analyse(INPUT, new AbortController().signal);
+    await flush();
+
+    mock.setVersion('mock-2');
+    timers.advance(100);
+    const result = await call;
+
+    expect(result.ok && result.output.detectorVersion).toBe('mock-1');
+    const next = await new MockDetector({
+      version: 'mock-2',
+      delayMs: 0,
+    }).analyse(INPUT, new AbortController().signal);
+    expect(next.ok && next.output.detectorVersion).toBe('mock-2');
+  });
+});
+
+describe('card 11: blank and padded versions are rejected (F5 finding)', () => {
+  it.each([
+    ['', 'empty'],
+    [' ', 'blank'],
+    ['\t', 'blank'],
+    [' mock-2', 'padded with whitespace'],
+    ['mock-2 ', 'padded with whitespace'],
+  ])('reports %j as %s', (version, problem) => {
+    expect(versionProblem(version)).toBe(problem);
+  });
+
+  it.each(['mock-2', 'm', 'mock 2'])('accepts %j', (version) => {
+    expect(versionProblem(version)).toBeUndefined();
+  });
+
+  it('rejects a blank version in the constructor', () => {
+    expect(() => new MockDetector({ version: ' ' })).toThrow(
+      'version must not be blank',
+    );
+  });
+
+  it('rejects a blank or padded version in setVersion, and keeps the current one', () => {
+    const mock = new MockDetector({ version: 'mock-2' });
+    const heard: string[] = [];
+    mock.onVersionChange((version) => heard.push(version));
+
+    expect(() => mock.setVersion(' ')).toThrow('version must not be blank');
+    expect(() => mock.setVersion(' mock-3')).toThrow(
+      'version must not be padded with whitespace',
+    );
+    expect(mock.version).toBe('mock-2');
+    expect(heard).toEqual([]);
   });
 });

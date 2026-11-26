@@ -1,5 +1,11 @@
-/** Why a snapshot was taken. */
-export type TriggerKind = 'open' | 'activate' | 'edit' | 'startup' | 'save';
+/** Why a snapshot was taken; `'version'` re-reports open files after a detector version change. */
+export type TriggerKind =
+  | 'open'
+  | 'activate'
+  | 'edit'
+  | 'startup'
+  | 'save'
+  | 'version';
 
 /** Workspace id for files outside every workspace folder; can't collide with a URI (no ':'). */
 export const NO_WORKSPACE_ID = 'no-workspace';
@@ -49,6 +55,32 @@ export function isSupported(doc: MonitoredDocument): boolean {
   return doc.languageId === 'java' && doc.uri.scheme === 'file';
 }
 
+/**
+ * Which loaded documents a runtime rescan reports, and in what order (card 11): only those shown
+ * in an editor tab, so a closed tab whose document is still loaded and documents other
+ * extensions load are skipped; the `preferred` ones (active editor, then visible editors)
+ * first, then the rest in their loaded order, each once.
+ */
+export function rescanOrder<D extends MonitoredDocument>(
+  loaded: readonly D[],
+  tabbedUris: ReadonlySet<string>,
+  preferred: readonly (D | undefined)[],
+): D[] {
+  const ordered: D[] = [];
+  const seen = new Set<string>();
+  for (const doc of [...preferred, ...loaded]) {
+    if (doc === undefined) {
+      continue;
+    }
+    const uri = doc.uri.toString();
+    if (tabbedUris.has(uri) && !seen.has(uri)) {
+      seen.add(uri);
+      ordered.push(doc);
+    }
+  }
+  return ordered;
+}
+
 export interface FileEventHandlerOptions<D extends MonitoredDocument> {
   readonly sink: SnapshotSink;
   readonly now: () => number;
@@ -58,7 +90,8 @@ export interface FileEventHandlerOptions<D extends MonitoredDocument> {
 
 /**
  * Turns editor document events into snapshots. It reports and never decides: no
- * remembered versions, no merging, delaying or hashing (cards 04–08 do that).
+ * remembered versions, no merging, delaying or hashing (cards 04–08 do that). A rescan after
+ * a detector version change (card 11) is one more reason to report.
  */
 export class FileEventHandler<D extends MonitoredDocument> {
   private stopped = false;
@@ -84,10 +117,14 @@ export class FileEventHandler<D extends MonitoredDocument> {
     this.forward(doc, 'edit');
   }
 
-  startup(docs: readonly D[]): void {
-    for (const doc of docs) {
-      this.forward(doc, 'startup');
-    }
+  /** Returns how many documents were forwarded, for card 11's version-change report. */
+  startup(docs: readonly D[]): number {
+    return this.forwardAll(docs, 'startup');
+  }
+
+  /** Re-reports open documents, in the given order, after a detector version change (card 11). */
+  rescan(docs: readonly D[]): number {
+    return this.forwardAll(docs, 'version');
   }
 
   /**
@@ -115,9 +152,20 @@ export class FileEventHandler<D extends MonitoredDocument> {
     this.stopped = true;
   }
 
-  private forward(doc: D, trigger: TriggerKind): void {
+  private forwardAll(docs: readonly D[], trigger: TriggerKind): number {
+    let count = 0;
+    for (const doc of docs) {
+      if (this.forward(doc, trigger)) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  /** True when the document passed the filter, even if the sink then threw. */
+  private forward(doc: D, trigger: TriggerKind): boolean {
     if (this.stopped || !isSupported(doc)) {
-      return;
+      return false;
     }
     const snapshot: FileSnapshot = {
       workspaceId: this.workspaceIdFor(doc),
@@ -129,6 +177,7 @@ export class FileEventHandler<D extends MonitoredDocument> {
       observedAt: this.options.now(),
     };
     this.deliver(() => this.options.sink.submit(snapshot));
+    return true;
   }
 
   private workspaceIdFor(doc: D): string {

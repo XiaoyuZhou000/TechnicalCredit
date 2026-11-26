@@ -50,6 +50,20 @@
           "when": "false"
         }
       ]
+    },
+    "configuration": {
+      "title": "Technical Credit",
+      "properties": {
+        "technicalcredit.background.mockDetectorVersion": {
+          "type": "string",
+          "scope": "application",
+          "default": "mock-1",
+          "minLength": 1,
+          "pattern": "^\\S(.*\\S)?$",
+          "patternErrorMessage": "Must not be blank or start or end with whitespace.",
+          "description": "Version reported by the background mock detector. Changing it makes open Java files re-analyse under the new version (testing and demos only)."
+        }
+      }
     }
   },
   "scripts": {

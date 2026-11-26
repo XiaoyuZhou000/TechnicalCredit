@@ -1,5 +1,9 @@
 import type { ResultCache } from '@/background/cache/resultCache';
 import type { Detector } from '@/background/detector/detector';
+import type {
+  DetectorVersionTracker,
+  VersionChange,
+} from '@/background/detector/versionTracker';
 import type { Clock } from '@/background/scheduler/clock';
 import type { FileStatus, Scheduler } from '@/background/scheduler/scheduler';
 
@@ -20,6 +24,10 @@ export interface StatusSnapshot {
   readonly detector: string;
   readonly takenAt: number;
   readonly session: SessionCounts;
+  /** The session's last detector version change, if any (card 11). */
+  readonly versionChange?: VersionChange;
+  /** Background calls running now, and the limit on them; `limit: 0` means no limit (card 11). */
+  readonly concurrency: { readonly running: number; readonly limit: number };
   readonly files: readonly FileStatus[];
   /**
    * The earliest future time this snapshot would change with no scheduler event: a waiting
@@ -41,6 +49,10 @@ export interface BackgroundStatusOptions {
   readonly detector: Pick<Detector, 'id' | 'version'>;
   /** "Sprint 1 mock detector" while the mock is in use (constitution VIII). */
   readonly label: string;
+  /** Card 11's version tracker, for the last change and its notifications. */
+  readonly tracker: Pick<DetectorVersionTracker, 'lastChange' | 'onChange'>;
+  /** The scheduler's `maxConcurrent`, shown next to the running count. */
+  readonly limit: number;
 }
 
 /** Composes the scheduler and cache into snapshots for card 09's status page. Vscode-free. */
@@ -48,7 +60,9 @@ export class BackgroundStatus implements StatusSource {
   constructor(private readonly options: BackgroundStatusOptions) {}
 
   snapshot(): StatusSnapshot {
-    const { scheduler, cache, clock, detector, label } = this.options;
+    const { scheduler, cache, clock, detector, label, tracker, limit } =
+      this.options;
+    const versionChange = tracker.lastChange();
     const takenAt = clock.now();
     const files = scheduler.files();
     const stats = scheduler.stats();
@@ -73,12 +87,21 @@ export class BackgroundStatus implements StatusSource {
         cacheMisses: cached.misses,
         cacheStored: cached.stored,
       }),
+      ...(versionChange !== undefined && {
+        versionChange: Object.freeze({ ...versionChange }),
+      }),
+      concurrency: Object.freeze({ running: scheduler.running(), limit }),
       files,
       ...(nextChangeAt !== undefined && { nextChangeAt }),
     });
   }
 
   subscribe(listener: () => void): () => void {
-    return this.options.scheduler.onChange(listener);
+    const fromScheduler = this.options.scheduler.onChange(listener);
+    const fromTracker = this.options.tracker.onChange(listener);
+    return () => {
+      fromScheduler();
+      fromTracker();
+    };
   }
 }

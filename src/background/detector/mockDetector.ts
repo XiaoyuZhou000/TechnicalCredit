@@ -93,6 +93,37 @@ export function sampleFindings(content: string): readonly DetectorFinding[] {
   return findings;
 }
 
+/**
+ * Why a string can't be a version, or `undefined` if it can. Shared with the setting reader in
+ * the composition root, so a value the setting accepts is always one the mock accepts. A
+ * blank or padded version would read like no version at all in logs and on the status page.
+ */
+export function versionProblem(version: string): string | undefined {
+  if (version === '') {
+    return 'empty';
+  }
+  if (version.trim() === '') {
+    return 'blank';
+  }
+  if (version !== version.trim()) {
+    return 'padded with whitespace';
+  }
+  return undefined;
+}
+
+/** One rule for the constructor and `setVersion`. */
+function checkVersion(version: string, behaviour: MockBehaviour): void {
+  const problem = versionProblem(version);
+  if (problem !== undefined) {
+    throw new Error(`version must not be ${problem}`);
+  }
+  if (behaviour.kind !== 'sample' && version === DEFAULT_MOCK_VERSION) {
+    throw new Error(
+      `a '${behaviour.kind}' mock changes results, so it needs a version other than ${DEFAULT_MOCK_VERSION}`,
+    );
+  }
+}
+
 const realTimers: MockTimers = {
   setTimeout: (callback, ms) => setTimeout(callback, ms),
   // Handles only ever come from `setTimeout` above, so the narrowing is safe.
@@ -112,11 +143,12 @@ function outcomeOf(result: DetectorResult): MockOutcome {
  */
 export class MockDetector implements Detector {
   readonly id = MOCK_DETECTOR_ID;
-  readonly version: string;
   readonly delayMs: number;
+  private currentVersion: string;
   private readonly behaviour: MockBehaviour;
   private readonly timers: MockTimers;
   private readonly records: MockCallRecord[] = [];
+  private readonly versionListeners = new Set<(version: string) => void>();
 
   constructor(options: MockDetectorOptions = {}) {
     const delayMs = options.delayMs ?? DEFAULT_MOCK_DELAY_MS;
@@ -124,19 +156,44 @@ export class MockDetector implements Detector {
       throw new Error(`delayMs must be a finite number >= 0, got ${delayMs}`);
     }
     const version = options.version ?? DEFAULT_MOCK_VERSION;
-    if (version === '') {
-      throw new Error('version must not be empty');
-    }
     const behaviour = options.behaviour ?? { kind: 'sample' };
-    if (behaviour.kind !== 'sample' && version === DEFAULT_MOCK_VERSION) {
-      throw new Error(
-        `a '${behaviour.kind}' mock changes results, so it needs a version other than ${DEFAULT_MOCK_VERSION}`,
-      );
-    }
+    checkVersion(version, behaviour);
     this.delayMs = delayMs;
-    this.version = version;
+    this.currentVersion = version;
     this.behaviour = behaviour;
     this.timers = options.timers ?? realTimers;
+  }
+
+  /** Set from configuration in the extension (card 11); timing is never part of it. */
+  get version(): string {
+    return this.currentVersion;
+  }
+
+  /**
+   * Changes the version and then announces it (card 11). Same rules as the constructor, so a
+   * results-changing mock still can't claim the default version. Calls already started keep
+   * the version they started under.
+   */
+  setVersion(version: string): void {
+    checkVersion(version, this.behaviour);
+    if (version === this.currentVersion) {
+      return;
+    }
+    this.currentVersion = version;
+    for (const listener of [...this.versionListeners]) {
+      try {
+        listener(version);
+      } catch {
+        // A subscriber's failure is its own to report; the others still hear the change.
+      }
+    }
+  }
+
+  onVersionChange(listener: (version: string) => void): () => void {
+    this.versionListeners.add(listener);
+    return () => {
+      this.versionListeners.delete(listener);
+    };
   }
 
   /** Every call, counted on entry, so cancelled and failed calls count too. */
@@ -160,7 +217,9 @@ export class MockDetector implements Detector {
       outcome: { status: 'pending' },
     };
     const index = this.records.push(record) - 1;
-    const result = await this.respond(input, signal);
+    // Captured at entry: a later `setVersion` must not relabel this call's output (rule 14).
+    const version = this.currentVersion;
+    const result = await this.respond(input, signal, version);
     this.records[index] = { ...record, outcome: outcomeOf(result) };
     return result;
   }
@@ -168,6 +227,7 @@ export class MockDetector implements Detector {
   private async respond(
     input: DetectorInput,
     signal: AbortSignal,
+    version: string,
   ): Promise<DetectorResult> {
     if (signal.aborted) {
       // Still answer on a later tick, as the contract requires.
@@ -184,9 +244,9 @@ export class MockDetector implements Detector {
     }
     switch (this.behaviour.kind) {
       case 'sample':
-        return this.success(sampleFindings(input.content));
+        return this.success(sampleFindings(input.content), version);
       case 'findings':
-        return this.success(this.behaviour.findings(input.content));
+        return this.success(this.behaviour.findings(input.content), version);
       case 'fail':
         return {
           ok: false,
@@ -195,12 +255,15 @@ export class MockDetector implements Detector {
     }
   }
 
-  private success(findings: readonly DetectorFinding[]): DetectorResult {
+  private success(
+    findings: readonly DetectorFinding[],
+    detectorVersion: string,
+  ): DetectorResult {
     return {
       ok: true,
       output: {
         detectorId: this.id,
-        detectorVersion: this.version,
+        detectorVersion,
         findings,
       },
     };

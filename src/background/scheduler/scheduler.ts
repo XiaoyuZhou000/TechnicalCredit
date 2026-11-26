@@ -17,6 +17,9 @@ export const DEFAULT_QUIET_MS = 3000;
 /** Card 07's initial cooldown after each detector completion; tunable in code for Sprint 1. */
 export const DEFAULT_COOLDOWN_MS = 30_000;
 
+/** Card 11's limit on background detector calls running at once, across all files. */
+export const DEFAULT_MAX_CONCURRENT = 2;
+
 /**
  * Node runs a timer with any longer delay after 1 ms, so a longer duration would make `wake`
  * reschedule itself in a tight loop.
@@ -28,6 +31,15 @@ function durationOption(name: string, value: number): number {
   if (!Number.isFinite(value) || value < 0 || value > MAX_TIMER_MS) {
     throw new RangeError(
       `${name} must be between 0 and ${MAX_TIMER_MS} ms, got ${value}`,
+    );
+  }
+  return value;
+}
+
+function concurrencyOption(value: number): number {
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new RangeError(
+      `maxConcurrent must be a non-negative integer, got ${value}`,
     );
   }
   return value;
@@ -47,6 +59,8 @@ export interface SchedulerOptions {
   readonly quietMs?: number;
   /** Pause after each detector completion, success or failure (card 07); 0 disables it. */
   readonly cooldownMs?: number;
+  /** Most detector calls running at once across all files (card 11); 0 = no limit. */
+  readonly maxConcurrent?: number;
   /** Called once per released request, after its store; tests and the later display use it. */
   readonly onSettled?: (event: SettledRequest) => void;
 }
@@ -85,8 +99,11 @@ export interface FileStateView {
    * and `lastSettledAt` + the cooldown (card 07).
    */
   readonly eligibleAt?: number;
-  /** While work is pending: which of the two deadlines sets `eligibleAt`. */
-  readonly waitingFor?: 'quiet' | 'cooldown';
+  /**
+   * While work is pending: which of the two deadlines sets `eligibleAt`, or `'slot'` when both
+   * have passed and the work waits for a free call slot (card 11).
+   */
+  readonly waitingFor?: 'quiet' | 'cooldown' | 'slot';
   /**
    * `false` after close: while the closed file's request still runs, or (card 07) while its
    * cooldown does, so a reopen still waits for it. Closed files never receive results.
@@ -103,7 +120,10 @@ export interface FileStateView {
  */
 export interface SchedulerStats {
   readonly started: number;
-  /** Calls started for pending work when the file's running request settled. */
+  /**
+   * Calls started for pending work when the file's running request settled: at once, or
+   * (card 11) once a slot frees, if it went straight from that settlement into the slot queue.
+   */
   readonly followUps: number;
   /** Repeats (card 05), idle or not. */
   readonly duplicates: number;
@@ -115,6 +135,8 @@ export interface SchedulerStats {
   readonly pendingCleared: number;
   /** Pending work dropped on close. */
   readonly pendingDropped: number;
+  /** Due work that missed the cache and queued for a free call slot (card 11). */
+  readonly slotWaits: number;
 }
 
 /**
@@ -163,6 +185,8 @@ interface ActiveRequest {
 interface PendingSnapshot {
   readonly snapshot: FileSnapshot;
   readonly contentHash: string;
+  /** Detector version when it was observed: the same content under another version is new work. */
+  readonly detectorVersion: string;
 }
 
 /** The file's single scheduled check; `token` tells a superseded callback apart from the current one. */
@@ -189,6 +213,17 @@ interface FileState {
   lastSettledAt?: number;
   /** For card 09's status page; set on every settle and every cache hit. */
   lastOutcome?: LastOutcome;
+  /** Only in the slot queue: due, missed the cache, waiting for a free call slot (card 11). */
+  slotWait?: SlotWait;
+}
+
+/** Why a file is in the slot queue, carried to the check made when a slot frees (card 11). */
+interface SlotWait {
+  /** Queued straight from its own request's settlement, so it counts as a follow-up on start. */
+  followUp: boolean;
+  /** The lookup that queued the current pending work; its miss is already counted. */
+  missedHash: string;
+  missedVersion: string;
 }
 
 /** JSON encoding keeps two URIs from colliding the way plain concatenation could. */
@@ -243,6 +278,7 @@ export class Scheduler implements SnapshotSink {
   private readonly clock: Clock;
   private readonly quietMs: number;
   private readonly cooldownMs: number;
+  private readonly maxConcurrent: number;
   private readonly onSettled?: (event: SettledRequest) => void;
   private readonly states = new Map<string, FileState>();
   private readonly listeners = new Set<() => void>();
@@ -255,7 +291,11 @@ export class Scheduler implements SnapshotSink {
     pendingReplaced: 0,
     pendingCleared: 0,
     pendingDropped: 0,
+    slotWaits: 0,
   };
+  private runningCount = 0;
+  /** Files whose due work waits for a free slot, oldest first (card 11). */
+  private slotQueue: FileState[] = [];
   private requests = 0;
   private wakeups = 0;
   private disposed = false;
@@ -275,6 +315,9 @@ export class Scheduler implements SnapshotSink {
       'cooldownMs',
       options.cooldownMs ?? DEFAULT_COOLDOWN_MS,
     );
+    this.maxConcurrent = concurrencyOption(
+      options.maxConcurrent ?? DEFAULT_MAX_CONCURRENT,
+    );
     this.onSettled = options.onSettled;
   }
 
@@ -286,7 +329,7 @@ export class Scheduler implements SnapshotSink {
     const contentHash = this.hash(snapshot.content);
     const detectorVersion = this.detector.version;
     const key = keyOf(snapshot.workspaceId, snapshot.fileUri);
-    const item: PendingSnapshot = { snapshot, contentHash };
+    const item: PendingSnapshot = { snapshot, contentHash, detectorVersion };
     let state = this.states.get(key);
     // A closed file's state survives only until its request settles, so a reopen is a first
     // report rather than a repeat.
@@ -345,6 +388,7 @@ export class Scheduler implements SnapshotSink {
       this.line(`pending dropped (closed) ${this.suffix(state.pending)}`);
       state.pending = undefined;
     }
+    this.dequeue(state);
     this.cancelWakeup(state);
     state.open = false;
     // An active request is left to finish: a success is still worth caching for a reopen.
@@ -361,6 +405,8 @@ export class Scheduler implements SnapshotSink {
       state.active?.controller.abort();
     }
     this.states.clear();
+    this.slotQueue = [];
+    this.runningCount = 0;
   }
 
   fileState(workspaceId: string, fileUri: string): FileStateView | undefined {
@@ -455,7 +501,8 @@ export class Scheduler implements SnapshotSink {
       lastChangeAt: state.lastChangeAt,
       ...(pending && {
         eligibleAt: this.eligibleAt(state),
-        waitingFor: this.waitingFor(state),
+        waitingFor:
+          state.slotWait !== undefined ? 'slot' : this.waitingFor(state),
       }),
       open: state.open,
       ...(state.lastSettledAt !== undefined && {
@@ -466,6 +513,11 @@ export class Scheduler implements SnapshotSink {
 
   stats(): SchedulerStats {
     return Object.freeze({ ...this.counts });
+  }
+
+  /** Detector calls started and not yet settled, across all files (card 11). */
+  running(): number {
+    return this.runningCount;
   }
 
   /** Files currently holding a not-yet-started snapshot; never more than one each. */
@@ -492,9 +544,13 @@ export class Scheduler implements SnapshotSink {
     };
   }
 
-  private suffix(item: PendingSnapshot): string {
+  /** Lines about a running or settled request pass the version it ran under (card 11). */
+  private suffix(
+    item: PendingSnapshot,
+    detectorVersion = this.detector.version,
+  ): string {
     const { snapshot, contentHash } = item;
-    return `v${snapshot.version} sha ${contentHash.slice(0, 8)} ${this.detector.id}@${this.detector.version} ${snapshot.fileUri}`;
+    return `v${snapshot.version} sha ${contentHash.slice(0, 8)} ${this.detector.id}@${detectorVersion} ${snapshot.fileUri}`;
   }
 
   /** Every decision is logged here, so this is also the one place that marks a change. */
@@ -644,7 +700,7 @@ export class Scheduler implements SnapshotSink {
    * which limits calls, doesn't hold it back. A miss waits out the cooldown, and `dispatch`
    * checks the cache again right before the call.
    */
-  private advance(state: FileState): boolean {
+  private advance(state: FileState, fromQueue?: SlotWait): boolean {
     const next = state.pending;
     if (next === undefined || state.active !== undefined || !state.open) {
       return false;
@@ -652,8 +708,10 @@ export class Scheduler implements SnapshotSink {
     if (this.isDue(state)) {
       state.pending = undefined;
       this.cancelWakeup(state);
-      return this.dispatch(state, next);
+      return this.dispatch(state, next, fromQueue);
     }
+    // A newer change moved the deadline: no longer due, so it gives up its place (rule 11).
+    this.dequeue(state);
     if (this.isQuiet(state) && this.lookup(state, next)) {
       state.pending = undefined;
       this.cancelWakeup(state);
@@ -713,26 +771,37 @@ export class Scheduler implements SnapshotSink {
    * Work that can't start yet: a request is running for this file, or its quiet period or
    * cooldown hasn't passed. Never starts or aborts a request. Content compares by hash, so
    * `open` + `activate`, unchanged saves and an edit followed by its undo are all duplicates.
+   * The running request or the pending snapshot covers a snapshot only under its own detector
+   * version: after a version change the same content is new work (card 11, rule 3), so a queued
+   * file's replacement is re-checked against its quiet period and the slot queue.
    */
   private hold(
     state: FileState,
     active: ActiveRequest | undefined,
     item: PendingSnapshot,
   ): void {
-    if (active !== undefined && item.contentHash === active.contentHash) {
+    if (
+      active !== undefined &&
+      item.contentHash === active.contentHash &&
+      item.detectorVersion === active.detectorVersion
+    ) {
       if (state.pending === undefined) {
         this.counts.duplicates++;
         this.line(`duplicate of running ${this.suffix(item)}`);
       } else {
         // Back to the running content, which the active request already covers.
         state.pending = undefined;
+        this.dequeue(state);
         this.cancelWakeup(state);
         this.counts.pendingCleared++;
         this.line(`pending cleared ${this.suffix(item)}`);
       }
       return;
     }
-    if (item.contentHash === state.pending?.contentHash) {
+    if (
+      item.contentHash === state.pending?.contentHash &&
+      item.detectorVersion === state.pending.detectorVersion
+    ) {
       this.counts.duplicates++;
       this.line(`duplicate of pending ${this.suffix(item)}`);
       return;
@@ -756,8 +825,12 @@ export class Scheduler implements SnapshotSink {
   }
 
   /** Looks the content up and logs the outcome; true on a hit. */
-  private lookup(state: FileState, item: PendingSnapshot): boolean {
-    const lookup = this.cache.lookup(this.identityOf(item));
+  private lookup(
+    state: FileState,
+    item: PendingSnapshot,
+    recheck = false,
+  ): boolean {
+    const lookup = this.cache.lookup(this.identityOf(item), { recheck });
     if (lookup.hit) {
       const findings = lookup.entry.output.findings.length;
       state.lastOutcome = {
@@ -776,13 +849,85 @@ export class Scheduler implements SnapshotSink {
     return false;
   }
 
-  /** Only for a file with no active request: the cache decides whether a request starts. */
-  private dispatch(state: FileState, item: PendingSnapshot): boolean {
-    if (this.lookup(state, item)) {
+  /**
+   * Only for a file with no active request: the cache decides whether a request starts, then
+   * the global limit whether it starts now (rule 11). Only queued work may take a slot while
+   * others wait, so a freed slot always goes to the file that has waited longest.
+   */
+  private dispatch(
+    state: FileState,
+    item: PendingSnapshot,
+    fromQueue?: SlotWait,
+  ): boolean {
+    // Looked up again because another window may have stored it meanwhile, but a miss that
+    // queued this same work was already counted.
+    const recheck =
+      fromQueue !== undefined &&
+      fromQueue.missedHash === item.contentHash &&
+      fromQueue.missedVersion === this.detector.version;
+    if (this.lookup(state, item, recheck)) {
+      this.dequeue(state);
+      return false;
+    }
+    if (
+      !this.hasSlot() ||
+      (fromQueue === undefined && this.slotQueue.length > 0)
+    ) {
+      this.enqueue(state, item);
       return false;
     }
     this.start(state, item);
     return true;
+  }
+
+  private hasSlot(): boolean {
+    return this.maxConcurrent === 0 || this.runningCount < this.maxConcurrent;
+  }
+
+  /** Keeps the work pending with no timer; a still-due replacement keeps its place. */
+  private enqueue(state: FileState, item: PendingSnapshot): void {
+    state.pending = item;
+    this.cancelWakeup(state);
+    const missed = {
+      missedHash: item.contentHash,
+      missedVersion: this.detector.version,
+    };
+    if (state.slotWait !== undefined) {
+      Object.assign(state.slotWait, missed);
+      return;
+    }
+    state.slotWait = { followUp: false, ...missed };
+    this.slotQueue.push(state);
+    this.counts.slotWaits++;
+    this.line(
+      `waiting for slot (${this.runningCount} running) ${this.suffix(item)}`,
+    );
+  }
+
+  private dequeue(state: FileState): void {
+    if (state.slotWait === undefined) {
+      return;
+    }
+    state.slotWait = undefined;
+    this.slotQueue = this.slotQueue.filter((queued) => queued !== state);
+  }
+
+  /** Gives freed slots to queued files in order; each is re-checked before its call. */
+  private drain(): void {
+    while (this.hasSlot() && this.slotQueue.length > 0) {
+      const [state, ...rest] = this.slotQueue;
+      this.slotQueue = rest;
+      const wait = state.slotWait;
+      state.slotWait = undefined;
+      if (
+        wait !== undefined &&
+        this.states.get(state.key) === state &&
+        this.advance(state, wait) &&
+        wait.followUp
+      ) {
+        this.counts.followUps++;
+      }
+    }
   }
 
   private start(state: FileState, item: PendingSnapshot): void {
@@ -795,6 +940,7 @@ export class Scheduler implements SnapshotSink {
       controller: new AbortController(),
     };
     state.active = active;
+    this.runningCount++;
     this.counts.started++;
     this.line(
       `${this.detector.id} start #${active.n} v${snapshot.version} ${snapshot.fileUri}`,
@@ -877,11 +1023,11 @@ export class Scheduler implements SnapshotSink {
       stored = outcome.status === 'stored';
       if (outcome.status === 'stored') {
         this.line(
-          `cache stored ${result.output.findings.length} findings ${this.suffix(active)}`,
+          `cache stored ${result.output.findings.length} findings ${this.suffix(active, active.detectorVersion)}`,
         );
       } else if (outcome.status === 'failed') {
         this.line(
-          `cache store failed: ${outcome.message} ${this.suffix(active)}`,
+          `cache store failed: ${outcome.message} ${this.suffix(active, active.detectorVersion)}`,
         );
       }
       // Decided after the store, so snapshots that arrived while storing count too. Caching and
@@ -896,6 +1042,7 @@ export class Scheduler implements SnapshotSink {
     }
 
     state.active = undefined;
+    this.runningCount--;
     state.lastSettledAt = this.clock.now();
     state.lastOutcome = {
       source: 'detector',
@@ -921,13 +1068,17 @@ export class Scheduler implements SnapshotSink {
 
     // Only the latest pending snapshot goes on, through the cache; the settled request itself
     // is never retried here, even if it failed. This completion starts a cooldown, so work that
-    // isn't due keeps waiting, its wake-up moved to its next check if that changed.
+    // isn't due keeps waiting, its wake-up moved to its next check if that changed. While other
+    // files wait for a slot, due follow-up work joins the back of their queue (rule 11).
     if (state.pending !== undefined) {
       if (this.advance(state)) {
         this.counts.followUps++;
+      } else if (state.slotWait !== undefined) {
+        state.slotWait.followUp = true;
       }
     } else {
       this.forgetIfClosed(state);
     }
+    this.drain();
   }
 }

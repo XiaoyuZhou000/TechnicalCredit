@@ -9,6 +9,7 @@ import {
   type DetectorInput,
   type DetectorResult,
 } from '@/background/detector/detector';
+import type { VersionChange } from '@/background/detector/versionTracker';
 import type { FileSnapshot } from '@/background/events/fileEvents';
 import { Scheduler } from '@/background/scheduler/scheduler';
 import { BackgroundStatus } from '@/background/status/backgroundStatus';
@@ -103,6 +104,12 @@ function identity(s: FileSnapshot): CacheIdentity {
 function settle(): Promise<void> {
   return new Promise((resolve) => setImmediate(resolve));
 }
+
+/** Card 11: a version tracker that never reports a change, for status tests about other things. */
+const STILL_TRACKER = {
+  lastChange: (): VersionChange | undefined => undefined,
+  onChange: (): (() => void) => () => undefined,
+};
 
 function harness(options: { quietMs?: number; cooldownMs?: number } = {}) {
   const clock = createFakeTimers();
@@ -285,6 +292,8 @@ describe('background status model (card 09 US3)', () => {
       clock: run.clock,
       detector: run.detector,
       label: LABEL,
+      tracker: STILL_TRACKER,
+      limit: 2,
     });
     return { ...run, status };
   }
@@ -373,6 +382,8 @@ describe('status page rendering (card 09 US3)', () => {
       clock: run.clock,
       detector: run.detector,
       label: 'Sprint 1 mock detector',
+      tracker: STILL_TRACKER,
+      limit: 2,
     });
     return { ...run, status };
   }
@@ -459,6 +470,8 @@ describe('status feed: live and truthful (card 09 US4)', () => {
       clock: run.clock,
       detector: run.detector,
       label: 'Sprint 1 mock detector',
+      tracker: STILL_TRACKER,
+      limit: 2,
     });
     const renders: string[] = [];
     const feed = new StatusFeed({
@@ -545,6 +558,8 @@ describe('status feed: observes only, leaves nothing behind (card 09 US5)', () =
       clock: run.clock,
       detector: run.detector,
       label: 'Sprint 1 mock detector',
+      tracker: STILL_TRACKER,
+      limit: 2,
     });
   }
 
@@ -727,6 +742,8 @@ describe('review fixes (PR #12)', () => {
       clock,
       detector,
       label: 'Sprint 1 mock detector',
+      tracker: STILL_TRACKER,
+      limit: 2,
     });
     scheduler.submit(snapshot(A_URI, 'class A {}'));
     clock.advance(3000); // A starts
@@ -743,5 +760,143 @@ describe('review fixes (PR #12)', () => {
     const html = render();
     expect(html).toContain('after running request');
     expect(html).not.toContain('until t+6000');
+  });
+});
+
+describe('detector version change and call limit on the status page (card 11 US5)', () => {
+  const CHANGE: VersionChange = {
+    from: { detectorId: 'mock', detectorVersion: 'mock-1' },
+    to: { detectorId: 'mock', detectorVersion: 'mock-2' },
+    source: 'startup',
+    at: 5000,
+    scheduled: 3,
+  };
+
+  /** A tracker stub whose last change the test sets, and whose listeners it can fire. */
+  function stubTracker() {
+    let change: VersionChange | undefined;
+    const listeners = new Set<() => void>();
+    return {
+      lastChange: () => change,
+      onChange: (listener: () => void) => {
+        listeners.add(listener);
+        return () => {
+          listeners.delete(listener);
+        };
+      },
+      set: (next: VersionChange | undefined) => {
+        change = next;
+      },
+      fire: () => listeners.forEach((listener) => listener()),
+      listenerCount: () => listeners.size,
+    };
+  }
+
+  function withTracker(limit = 2) {
+    const clock = createFakeTimers();
+    const detector = new ScriptedDetector();
+    const cache = new ResultCache({
+      store: createMemoryCacheStore(),
+      now: () => clock.now(),
+    });
+    const scheduler = new Scheduler({
+      inner: { submit: () => undefined, closed: () => undefined },
+      detector,
+      cache,
+      hash: sha256Hex,
+      log: () => undefined,
+      clock,
+      quietMs: 0,
+      cooldownMs: 0,
+      maxConcurrent: limit,
+    });
+    const tracker = stubTracker();
+    const status = new BackgroundStatus({
+      scheduler,
+      cache,
+      clock,
+      detector,
+      label: 'Sprint 1 mock detector',
+      tracker,
+      limit,
+    });
+    const page = (): string =>
+      renderStatusHtml(status.snapshot(), {
+        nonce: 'n0nce',
+        formatTime: (ms) => `t+${ms}`,
+      });
+    return { scheduler, detector, tracker, status, page };
+  }
+
+  it('has no version change until the tracker reports one, then shows it frozen', () => {
+    const { status, tracker } = withTracker();
+    expect(status.snapshot().versionChange).toBeUndefined();
+
+    tracker.set(CHANGE);
+    const shown = status.snapshot().versionChange;
+
+    expect(shown).toEqual(CHANGE);
+    expect(Object.isFrozen(shown)).toBe(true);
+  });
+
+  it('reports the running count and the limit', () => {
+    const { scheduler, status } = withTracker(2);
+    expect(status.snapshot().concurrency).toEqual({ running: 0, limit: 2 });
+
+    scheduler.submit(snapshot(A_URI, 'class A {}'));
+    scheduler.submit(snapshot(B_URI, 'class B {}'));
+    scheduler.submit(snapshot('file:///w/C.java', 'class C {}'));
+
+    expect(status.snapshot().concurrency).toEqual({ running: 2, limit: 2 });
+  });
+
+  it('notifies subscribers on a tracker change, and unsubscribes from both sources', () => {
+    const { status, tracker } = withTracker();
+    let calls = 0;
+    const unsubscribe = status.subscribe(() => calls++);
+
+    tracker.fire();
+    expect(calls).toBe(1);
+
+    unsubscribe();
+    expect(tracker.listenerCount()).toBe(0);
+  });
+
+  it('renders the change row, the running line and the slot wait', () => {
+    const { scheduler, tracker, page } = withTracker(2);
+    tracker.set(CHANGE);
+    scheduler.submit(snapshot(A_URI, 'class A {}'));
+    scheduler.submit(snapshot(B_URI, 'class B {}'));
+    scheduler.submit(snapshot('file:///w/C.java', 'class C {}'));
+
+    const html = page();
+
+    expect(html).toContain(
+      'Detector version changed: mock@mock-1 → mock@mock-2 (startup), 3 files scheduled, t+5000',
+    );
+    expect(html).toContain('Running: 2 / 2');
+    expect(html).toContain('waiting for a free slot');
+  });
+
+  it('shows no change row without a change, and "no limit" for 0', () => {
+    const { page } = withTracker(0);
+    const html = page();
+
+    expect(html).not.toContain('Detector version changed');
+    expect(html).toContain('Running: 0 / no limit');
+  });
+
+  it('escapes a version string from the setting', () => {
+    const { tracker, page } = withTracker();
+    tracker.set({
+      ...CHANGE,
+      to: { detectorId: 'mock', detectorVersion: '<script>x</script>' },
+      scheduled: 1,
+    });
+    const html = page();
+
+    expect(html).not.toContain('<script>');
+    expect(html).toContain('&lt;script&gt;x&lt;/script&gt;');
+    expect(html).toContain('1 file scheduled');
   });
 });

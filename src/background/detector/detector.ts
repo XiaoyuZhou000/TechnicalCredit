@@ -25,7 +25,10 @@ export interface DetectorFinding {
 
 export interface DetectorOutput {
   readonly detectorId: string;
-  /** Covers code and configuration; part of the cache identity. */
+  /**
+   * Covers code and configuration; part of the cache identity. The `version` in effect when the
+   * call started, which a later version change doesn't alter.
+   */
   readonly detectorVersion: string;
   /** May be empty: finding nothing is a valid, cacheable success. */
   readonly findings: readonly DetectorFinding[];
@@ -47,13 +50,26 @@ export type DetectorResult =
 export interface Detector {
   /** Stable name, e.g. 'mock'. */
   readonly id: string;
-  /** Known before any call, so a valid cached result can be reused without calling. */
+  /**
+   * Known before any call, so a valid cached result can be reused without calling. Changes
+   * whenever prompts, model, model configuration or detection logic change in a way that can
+   * change findings; never for timing-only settings. It may change during the detector's life
+   * only if the detector implements `onVersionChange`.
+   */
   readonly version: string;
   /**
    * Resolves with a result and never rejects. Must not block the editor and must never
    * edit documents. Once `signal` aborts, resolves promptly with `failureFromAbort(signal)`.
+   * A version change never alters a call already started: its output keeps the version it
+   * started under.
    */
   analyse(input: DetectorInput, signal: AbortSignal): Promise<DetectorResult>;
+  /**
+   * Optional: only for a detector whose version can change while it lives. Listeners run
+   * synchronously, in subscription order, after `version` already returns the new value, and
+   * are never called when the version did not change. Returns the unsubscribe.
+   */
+  onVersionChange?(listener: (version: string) => void): () => void;
 }
 
 /** Only successful results, including empty ones, may be cached; failures are always retried. */
