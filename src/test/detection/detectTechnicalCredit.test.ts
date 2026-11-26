@@ -17,6 +17,7 @@ import {
   heuristicSystemPrompt,
   hold,
   notCandidate,
+  type Behaviour,
   type FakeClient,
   type Script,
 } from './fakeClaude';
@@ -227,6 +228,12 @@ function allHeld(ignoreSignal: boolean, overrides: Script = {}): Script {
     ...overrides,
   };
 }
+
+/** A call that ends on the client's own deadline, as `callClaude` reports it. */
+const timedOut: Behaviour = {
+  kind: 'reject',
+  error: new DOMException('The operation timed out.', 'TimeoutError'),
+};
 
 async function failureOf(script: Script, adrs: readonly AdrSummary[] = []) {
   const claude = createFakeClaude(script);
@@ -445,4 +452,22 @@ describe('US3: failures are typed, whole-run and safe', () => {
       },
     });
   });
+
+  it.each([
+    ['a heuristic call', { abstraction: timedOut }],
+    [
+      'an ADR-matching call',
+      {
+        modularity: answer(candidate('modularity')),
+        'adr:modularity': timedOut,
+      },
+    ],
+  ])(
+    "reports the client's own timeout in %s as a timeout, not a failure",
+    async (_label, script) => {
+      const { outcome } = await failureOf(script, ADRS);
+
+      expect(outcome).toEqual({ ok: false, failure: { kind: 'timeout' } });
+    },
+  );
 });

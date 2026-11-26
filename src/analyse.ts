@@ -54,9 +54,13 @@ export async function analyseForTC(
 
       if (!outcome.ok) {
         const { failure } = outcome;
-        vscode.window.showErrorMessage(
-          `Analyse for TC failed: ${failure.kind === 'failed' ? failure.message : failure.kind}`,
-        );
+        const reason =
+          failure.kind === 'failed'
+            ? failure.message
+            : failure.kind === 'timeout'
+              ? 'a Claude call timed out'
+              : 'cancelled';
+        vscode.window.showErrorMessage(`Analyse for TC failed: ${reason}`);
         return;
       }
 

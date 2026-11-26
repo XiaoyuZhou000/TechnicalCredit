@@ -20,7 +20,8 @@ import { createUserPrompt } from '@/prompts/userPrompts';
 
 /**
  * Sends one prompt and resolves with the parsed JSON answer. Injected, so the core never loads
- * the SDK: the extension binds `callClaude`, and tests bind a fake.
+ * the SDK: the extension binds `callClaude`, and tests bind a fake. A client that gives up on its
+ * own deadline rejects with a `TimeoutError` DOMException, as `AbortSignal.timeout` does.
  */
 export type ClaudeClient = (
   systemPrompt: string,
@@ -54,6 +55,11 @@ function reasonOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+/** How a client reports its own per-call timeout: the reason of an `AbortSignal.timeout`. */
+function isTimeoutError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === 'TimeoutError';
+}
+
 const ABORTED = Symbol('aborted');
 
 /** The caller's abort as an outcome: `timeout` when the reason is a timeout, else `cancelled`. */
@@ -76,6 +82,9 @@ async function ask<T>(
     // The executor turns a client that throws synchronously into a rejected call.
     answer = await new Promise<unknown>((resolve) => resolve(call()));
   } catch (e) {
+    if (isTimeoutError(e)) {
+      throw e;
+    }
     throw new StepFailure(step, reasonOf(e));
   }
   const check = parse(answer);
@@ -92,8 +101,9 @@ async function ask<T>(
  * failed call fails the whole run. Findings follow `HEURISTIC_CATEGORIES` order.
  *
  * Once `signal` aborts, no further call starts and the outcome is `cancelled` or `timeout`, even
- * if the client ignores the signal: each phase races the abort. A failure aborts the calls still
- * in flight, since the run has already failed.
+ * if the client ignores the signal: each phase races the abort. A call that rejects with a
+ * `TimeoutError` DOMException (the client's own per-call timeout) makes the outcome `timeout`. A
+ * failure aborts the calls still in flight, since the run has already failed.
  */
 export async function detectTechnicalCredit(
   request: DetectionRequest,
@@ -169,6 +179,9 @@ export async function detectTechnicalCredit(
     // A call that honoured the caller's abort rejects; that is a cancellation, not a failure.
     if (signal.aborted) {
       return abortOutcome(signal);
+    }
+    if (isTimeoutError(e)) {
+      return { ok: false, failure: { kind: 'timeout' } };
     }
     const message =
       e instanceof StepFailure ? e.message : `detection: ${reasonOf(e)}`;

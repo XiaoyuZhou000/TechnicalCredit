@@ -283,6 +283,26 @@ describe('manual Analyse for TC: card 13 differences and guarantees', () => {
     ]);
   });
 
+  it("reports the client's own timeout as a timeout", async () => {
+    await run(
+      firstPositive(),
+      {
+        abstraction: {
+          kind: 'reject',
+          error: new DOMException('The operation timed out.', 'TimeoutError'),
+        },
+      },
+      true,
+    );
+
+    expect(fake.state.messages).toEqual([
+      {
+        level: 'error',
+        text: 'Analyse for TC failed: a Claude call timed out',
+      },
+    ]);
+  });
+
   it('waits for no timer: no quiet period or cooldown delays a manual run', async () => {
     jest.useFakeTimers({
       doNotFake: ['nextTick', 'queueMicrotask', 'setImmediate'],
