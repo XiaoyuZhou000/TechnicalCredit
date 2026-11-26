@@ -15,13 +15,19 @@ export type FileEventMonitor = vscode.Disposable & {
   rescan(): number;
 };
 
-/** URIs shown in a text editor tab; unloaded background tabs are listed but never loaded. */
+/**
+ * URIs shown in a text tab or either side of a text diff tab, since both are editors a user
+ * looks at; unloaded background tabs are listed but never loaded.
+ */
 function tabbedUris(): Set<string> {
   const uris = new Set<string>();
   for (const group of vscode.window.tabGroups.all) {
     for (const tab of group.tabs) {
       if (tab.input instanceof vscode.TabInputText) {
         uris.add(tab.input.uri.toString());
+      } else if (tab.input instanceof vscode.TabInputTextDiff) {
+        uris.add(tab.input.original.toString());
+        uris.add(tab.input.modified.toString());
       }
     }
   }

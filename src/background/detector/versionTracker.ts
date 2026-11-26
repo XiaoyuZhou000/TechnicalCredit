@@ -70,7 +70,8 @@ function messageOf(error: unknown): string {
 
 const iso = (ms: number): string => new Date(ms).toISOString();
 
-const openFiles = (n: number): string => `${n} open file${n === 1 ? '' : 's'}`;
+// "files", not "open files": the startup scan also forwards loaded documents with no tab.
+const files = (n: number): string => `${n} file${n === 1 ? '' : 's'}`;
 
 /**
  * Card 11: tells a restart under a different detector identity apart from an ordinary one,
@@ -151,7 +152,7 @@ export class DetectorVersionTracker {
     this.startup = { kind: 'changed', change };
     this.change = change;
     this.line(
-      `detector version changed ${formatIdentity(change.from)} → ${formatIdentity(change.to)} (startup), ${openFiles(count)} scheduled`,
+      `detector version changed ${formatIdentity(change.from)} → ${formatIdentity(change.to)} (startup), ${files(count)} scheduled`,
     );
     this.changed();
   }
@@ -215,7 +216,7 @@ export class DetectorVersionTracker {
       scheduled,
     };
     this.line(
-      `detector version changed ${formatIdentity(from)} → ${formatIdentity(to)} (runtime), ${openFiles(scheduled)} scheduled`,
+      `detector version changed ${formatIdentity(from)} → ${formatIdentity(to)} (runtime), ${files(scheduled)} scheduled`,
     );
     if (this.confirmed) {
       void this.record(to);

@@ -90,7 +90,7 @@ describe('US1: a new detector version is reported at startup', () => {
     tracker.startupScheduled(3);
 
     expect(texts(lines)).toEqual([
-      'detector version changed mock@mock-1 → mock@mock-2 (startup), 3 open files scheduled',
+      'detector version changed mock@mock-1 → mock@mock-2 (startup), 3 files scheduled',
     ]);
     expect(tracker.lastChange()).toMatchObject({
       from: identity('mock-1'),
@@ -305,7 +305,7 @@ describe('US4: a version announced while running is handled like a startup chang
 
     expect(rescans()).toBe(1);
     expect(texts(lines)).toEqual([
-      'detector version changed mock@mock-1 → mock@mock-2 (runtime), 3 open files scheduled',
+      'detector version changed mock@mock-1 → mock@mock-2 (runtime), 3 files scheduled',
     ]);
     expect(tracker.lastChange()).toMatchObject({
       from: identity('mock-1'),
@@ -396,7 +396,7 @@ describe('US4: a version announced while running is handled like a startup chang
     expect(() => mock.setVersion('mock-2')).not.toThrow();
     expect(texts(lines)).toEqual([
       'detector rescan failed: no editor',
-      'detector version changed mock@mock-1 → mock@mock-2 (runtime), 0 open files scheduled',
+      'detector version changed mock@mock-1 → mock@mock-2 (runtime), 0 files scheduled',
     ]);
   });
 
@@ -444,7 +444,7 @@ describe('US4: a version announced while running is handled like a startup chang
 });
 
 describe('card 11: log wording', () => {
-  it('says "1 open file" for a single file, at startup and at runtime', () => {
+  it('says "1 file" for a single file, at startup and at runtime', () => {
     const store = createMemoryCacheStore();
     void store.update(ACTIVE_DETECTOR_KEY, identity('mock-1'));
     const mock = new MockDetector({ version: 'mock-2' });
@@ -461,8 +461,8 @@ describe('card 11: log wording', () => {
     mock.setVersion('mock-3');
 
     expect(texts(lines)).toEqual([
-      'detector version changed mock@mock-1 → mock@mock-2 (startup), 1 open file scheduled',
-      'detector version changed mock@mock-2 → mock@mock-3 (runtime), 1 open file scheduled',
+      'detector version changed mock@mock-1 → mock@mock-2 (startup), 1 file scheduled',
+      'detector version changed mock@mock-2 → mock@mock-3 (runtime), 1 file scheduled',
     ]);
   });
 });

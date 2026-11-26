@@ -380,7 +380,7 @@ describe('functional suite: detector version change at restart (card 11 US1)', (
       second.lines.filter((line) => line.includes('detector version')),
     ).toEqual([
       expect.stringContaining(
-        'detector version changed mock@mock-1 → mock@mock-2 (startup), 3 open files scheduled',
+        'detector version changed mock@mock-1 → mock@mock-2 (startup), 3 files scheduled',
       ),
     ]);
     expect(second.tracker.lastChange()).toMatchObject({ scheduled: 3 });
@@ -610,7 +610,7 @@ describe('functional suite: detector version change at runtime (card 11 US4)', (
 
     expect(p.lines.filter((line) => line.includes('(runtime)'))).toEqual([
       expect.stringContaining(
-        'detector version changed mock@mock-1 → mock@mock-2 (runtime), 3 open files scheduled',
+        'detector version changed mock@mock-1 → mock@mock-2 (runtime), 3 files scheduled',
       ),
     ]);
     // The files finished less than a cooldown ago, so the new calls wait it out first.
