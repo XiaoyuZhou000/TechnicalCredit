@@ -2401,3 +2401,99 @@ describe('cooldown (card 07)', () => {
     expect(detector.calls.length).toBeGreaterThan(10);
   });
 });
+
+describe('version-aware running duplicates (card 11 US3, rule 3 amended)', () => {
+  /** `ok()` under a given detector version, so the cache accepts the store (cache rule 3). */
+  function okAt(findings: number, detectorVersion: string): DetectorResult {
+    const result = ok(findings);
+    return result.ok
+      ? { ok: true, output: { ...result.output, detectorVersion } }
+      : result;
+  }
+
+  it('keeps the running content as new work after a version change, and runs it once V1 settles (US3-4)', async () => {
+    const detector = new VersionedDetector();
+    const { scheduler, lines, events } = setup({ detector });
+    const a = rev('a', 1);
+    scheduler.submit(a);
+
+    detector.version = '2';
+    scheduler.submit({ ...a, trigger: 'version' });
+
+    expect(lines).toContain(
+      `${T0} pending v1 sha ${sha8(a)} scripted@2 ${A_URI}`,
+    );
+    expect(lines.some((line) => line.includes('duplicate of running'))).toBe(
+      false,
+    );
+    expect(scheduler.fileState(W, A_URI)?.pending?.contentHash).toBe(
+      sha256Hex(a.content),
+    );
+    expect(detector.calls).toHaveLength(1);
+
+    detector.calls[0].resolve(okAt(1, '1'));
+    await settle();
+
+    expect(events[0]).toMatchObject({
+      detectorVersion: '1',
+      stored: true,
+      eligible: false,
+    });
+    expect(lines).toContain(`${T0} result stale #1 v1 ${A_URI}`);
+    expect(lines).toContain(
+      `${T0} cache miss (absent) v1 sha ${sha8(a)} scripted@2 ${A_URI}`,
+    );
+    expect(detector.calls).toHaveLength(2);
+    expect(scheduler.fileState(W, A_URI)?.active?.detectorVersion).toBe('2');
+  });
+
+  it('still treats the running content as a duplicate while the version is unchanged', () => {
+    const detector = new VersionedDetector();
+    const { scheduler, lines } = setup({ detector });
+    const a = rev('a', 1);
+    scheduler.submit(a);
+    scheduler.submit({ ...a, trigger: 'activate', version: 2 });
+
+    expect(lines).toContain(
+      `${T0} duplicate of running v2 sha ${sha8(a)} scripted@1 ${A_URI}`,
+    );
+    expect(scheduler.fileState(W, A_URI)?.pending).toBeUndefined();
+  });
+
+  it('does not clear pending on a change back to the running content under a new version', async () => {
+    const detector = new VersionedDetector();
+    const { scheduler, lines } = setup({ detector });
+    const a = rev('a', 1);
+    const b = rev('b', 2);
+    scheduler.submit(a);
+    scheduler.submit(b);
+
+    detector.version = '2';
+    scheduler.submit({ ...a, version: 3 });
+
+    expect(lines.some((line) => line.includes('pending cleared'))).toBe(false);
+    expect(lines).toContain(
+      `${T0} pending replaced v3 sha ${sha8(a)} scripted@2 ${A_URI}`,
+    );
+
+    detector.calls[0].resolve(okAt(0, '1'));
+    await settle();
+    expect(detector.calls).toHaveLength(2);
+    expect(detector.calls[1].input.contentHash).toBe(sha256Hex(a.content));
+  });
+
+  it('names the version a request ran under in its store line (R7)', async () => {
+    const detector = new VersionedDetector();
+    const { scheduler, lines } = setup({ detector });
+    const a = rev('a', 1);
+    scheduler.submit(a);
+    detector.version = '2';
+
+    detector.calls[0].resolve(okAt(2, '1'));
+    await settle();
+
+    expect(lines).toContain(
+      `${T0} cache stored 2 findings v1 sha ${sha8(a)} scripted@1 ${A_URI}`,
+    );
+  });
+});

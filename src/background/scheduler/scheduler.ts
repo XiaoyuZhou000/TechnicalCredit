@@ -492,9 +492,13 @@ export class Scheduler implements SnapshotSink {
     };
   }
 
-  private suffix(item: PendingSnapshot): string {
+  /** Lines about a running or settled request pass the version it ran under (card 11). */
+  private suffix(
+    item: PendingSnapshot,
+    detectorVersion = this.detector.version,
+  ): string {
     const { snapshot, contentHash } = item;
-    return `v${snapshot.version} sha ${contentHash.slice(0, 8)} ${this.detector.id}@${this.detector.version} ${snapshot.fileUri}`;
+    return `v${snapshot.version} sha ${contentHash.slice(0, 8)} ${this.detector.id}@${detectorVersion} ${snapshot.fileUri}`;
   }
 
   /** Every decision is logged here, so this is also the one place that marks a change. */
@@ -713,13 +717,19 @@ export class Scheduler implements SnapshotSink {
    * Work that can't start yet: a request is running for this file, or its quiet period or
    * cooldown hasn't passed. Never starts or aborts a request. Content compares by hash, so
    * `open` + `activate`, unchanged saves and an edit followed by its undo are all duplicates.
+   * The running request covers a snapshot only under the version it runs with: after a version
+   * change the same content is new work (card 11, rule 3).
    */
   private hold(
     state: FileState,
     active: ActiveRequest | undefined,
     item: PendingSnapshot,
   ): void {
-    if (active !== undefined && item.contentHash === active.contentHash) {
+    if (
+      active !== undefined &&
+      item.contentHash === active.contentHash &&
+      this.detector.version === active.detectorVersion
+    ) {
       if (state.pending === undefined) {
         this.counts.duplicates++;
         this.line(`duplicate of running ${this.suffix(item)}`);
@@ -877,11 +887,11 @@ export class Scheduler implements SnapshotSink {
       stored = outcome.status === 'stored';
       if (outcome.status === 'stored') {
         this.line(
-          `cache stored ${result.output.findings.length} findings ${this.suffix(active)}`,
+          `cache stored ${result.output.findings.length} findings ${this.suffix(active, active.detectorVersion)}`,
         );
       } else if (outcome.status === 'failed') {
         this.line(
-          `cache store failed: ${outcome.message} ${this.suffix(active)}`,
+          `cache store failed: ${outcome.message} ${this.suffix(active, active.detectorVersion)}`,
         );
       }
       // Decided after the store, so snapshots that arrived while storing count too. Caching and
