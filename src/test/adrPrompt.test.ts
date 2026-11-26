@@ -56,4 +56,27 @@ describe('ADR prompt', () => {
     // The answer the old ADR-nnnn format invited for this ADR never matches.
     expect(resolveAdrId('ADR-architecture-record', adrs)).toBeNull();
   });
+
+  it('resolves no id that findAdrs gives to two files', () => {
+    const shared = fs.mkdtempSync(path.join(os.tmpdir(), 'tc-adr-shared-'));
+    try {
+      const docs = path.join(shared, 'docs');
+      fs.mkdirSync(docs);
+      fs.writeFileSync(path.join(docs, '0007-cache.md'), '# Cache\n');
+      fs.writeFileSync(path.join(docs, '7-registry.md'), '# Registry\n');
+      fs.writeFileSync(path.join(docs, '0008-logging.md'), '# Logging\n');
+
+      const adrs = findAdrs(shared);
+      expect(adrs.map((a) => a.id)).toEqual([
+        'ADR-0007',
+        'ADR-0008',
+        'ADR-0007',
+      ]);
+      expect(resolveAdrId('ADR-0007', adrs)).toBeNull();
+      expect(resolveAdrId('ADR-0007 — Registry', adrs)).toBeNull();
+      expect(resolveAdrId('ADR-8', adrs)).toBe('ADR-0008');
+    } finally {
+      fs.rmSync(shared, { recursive: true, force: true });
+    }
+  });
 });
