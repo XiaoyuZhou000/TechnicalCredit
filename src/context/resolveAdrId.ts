@@ -10,4 +10,3 @@ export function resolveAdrId(
     ? candidate
     : null;
 }
-
