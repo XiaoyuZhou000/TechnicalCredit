@@ -2,20 +2,22 @@ import * as vscode from 'vscode';
 
 import { buildContext } from '@/context/buildContext';
 import { findAdrs } from '@/context/findAdrs';
-import { SYSTEM_PROMPT } from '@/prompts/systemPrompt';
-import { callClaude } from '@/utils/claude';
 import { formatTCComment } from '@/comment/formatComment';
-import { TCResult } from '@/comment/tcResult';
-import { PendingAnnotation } from '@/comment/pendingAnnotation';
-import { createUserPrompt } from '@/prompts/userPrompts';
-import { ADR_SYSTEM_PROMPT, createAdrUserPrompt } from '@/prompts/adrPrompt';
+import type { PendingAnnotation } from '@/comment/pendingAnnotation';
 import {
-  createHeuristicPrompt,
-  HEURISTIC_CATEGORIES,
-} from '@/prompts/heuristics';
+  detectTechnicalCredit,
+  type ClaudeClient,
+} from '@/detection/detectTechnicalCredit';
 
-/** Analyses the active editor selection for Technical Credit patterns and previews an annotation if found. */
-export async function analyseForTC(controller: PendingAnnotation) {
+/**
+ * Analyses the construct at the cursor for Technical Credit and previews an annotation for each
+ * finding. Detection itself is the shared service; this adapter owns the editor, progress,
+ * messages and preview. It deliberately bypasses the background cache and scheduler.
+ */
+export async function analyseForTC(
+  controller: Pick<PendingAnnotation, 'previewAll'>,
+  client: ClaudeClient,
+) {
   // Check for active editor
   const editor = vscode.window.activeTextEditor;
   if (!editor) {
@@ -35,7 +37,6 @@ export async function analyseForTC(controller: PendingAnnotation) {
   const workspaceRoot =
     vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '';
   const adrs = workspaceRoot ? findAdrs(workspaceRoot) : [];
-  const userPrompt = createUserPrompt(context);
 
   await vscode.window.withProgress(
     {
@@ -44,43 +45,31 @@ export async function analyseForTC(controller: PendingAnnotation) {
       cancellable: false,
     },
     async () => {
-      try {
-        const results: TCResult[] = [];
+      // The command offers no cancel button, so this signal never aborts.
+      const outcome = await detectTechnicalCredit(
+        { context, adrs },
+        client,
+        new AbortController().signal,
+      );
 
-        // Create claude calls for all heuristics
-        await Promise.all(
-          HEURISTIC_CATEGORIES.map(async (heuristic) => {
-            const heuristicPrompt = createHeuristicPrompt(heuristic);
-            const result = await callClaude<TCResult>(
-              SYSTEM_PROMPT + '\n\n' + heuristicPrompt,
-              userPrompt,
-            );
-            results.push(result);
-          }),
+      if (!outcome.ok) {
+        const { failure } = outcome;
+        vscode.window.showErrorMessage(
+          `Analyse for TC failed: ${failure.kind === 'failed' ? failure.message : failure.kind}`,
         );
+        return;
+      }
 
-        const candidates = results.filter((r) => r.is_tc_candidate);
+      if (outcome.findings.length === 0) {
+        vscode.window.showInformationMessage('No TC detected in this class.');
+        return;
+      }
 
-        if (candidates.length > 0) {
-          if (adrs.length > 0) {
-            await Promise.all(
-              candidates.map(async (r) => {
-                const match = await callClaude<{ adr: string | null }>(
-                  ADR_SYSTEM_PROMPT,
-                  createAdrUserPrompt(r, adrs),
-                );
-                r.adr = match.adr;
-              }),
-            );
-          }
-
-          const comments = candidates.map((r) =>
-            formatTCComment(r, context.insertIndent),
-          );
-          await controller.previewAll(editor, comments, context.insertLine);
-        } else {
-          vscode.window.showInformationMessage('No TC detected in this class.');
-        }
+      try {
+        const comments = outcome.findings.map((r) =>
+          formatTCComment(r, context.insertIndent),
+        );
+        await controller.previewAll(editor, comments, context.insertLine);
       } catch (e) {
         vscode.window.showErrorMessage(`Analyse for TC failed: ${e}`);
       }

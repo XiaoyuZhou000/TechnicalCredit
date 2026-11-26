@@ -4,7 +4,6 @@ import * as os from 'os';
 import * as path from 'path';
 
 import { analyseForTC } from '@/analyse';
-import type { PendingAnnotation } from '@/comment/pendingAnnotation';
 import { setExtensionPath } from '@/context/javaParser';
 import { HEURISTIC_CATEGORIES } from '@/prompts/heuristics';
 
@@ -12,6 +11,7 @@ import {
   answer,
   candidate,
   createFakeClaude,
+  hold,
   type FakeClaude,
   type Script,
 } from './fakeClaude';
@@ -23,18 +23,18 @@ jest.mock(
   { virtual: true },
 );
 
-const mockClaude: { current: FakeClaude } = { current: createFakeClaude() };
-jest.mock('@/utils/claude', () => ({
-  callClaude: (system: string, user: string) =>
-    mockClaude.current.client(system, user, new AbortController().signal),
-}));
+jest.mock('@/utils/claude', () => {
+  throw new Error('@/utils/claude must not be loaded by offline tests');
+});
 
 /*
  * Pins what the manual "Analyse for TC" command sends and previews, so card 13's refactor can
- * prove it unchanged. Written against the code before the refactor; afterwards only the way the
- * fake client reaches the command may change. Run with --ci: a snapshot diff is a regression.
+ * prove it unchanged. The snapshots were written against the code before the refactor (commit
+ * c61328d); since then only the way the fake client reaches the command has changed. Run with
+ * --ci: a snapshot diff is a regression.
  *
- * Previews are sorted because, before card 13, their order followed call completion.
+ * Previews are sorted in the snapshots because, before card 13, their order followed call
+ * completion. Card 13's intended differences are asserted separately, at the end.
  */
 
 const REPO_ROOT = path.resolve(__dirname, '../../..');
@@ -98,15 +98,21 @@ async function run(
   script: Script,
   withAdrs: boolean,
   controller = fake.fakeController(),
+  release?: 'reverse',
 ): Promise<Run> {
   fake.resetVscodeFake();
   fake.state.activeTextEditor = editor;
   fake.state.workspaceFolders = withAdrs
     ? [{ uri: { fsPath: adrRoot } }]
     : undefined;
-  mockClaude.current = createFakeClaude(script);
-  await analyseForTC(controller as unknown as PendingAnnotation);
-  return { claude: mockClaude.current, controller };
+  const claude = createFakeClaude(script);
+  const pending = analyseForTC(controller, claude.client);
+  if (release) {
+    await new Promise((resolve) => setImmediate(resolve));
+    claude.releaseAll(release);
+  }
+  await pending;
+  return { claude, controller };
 }
 
 const sha16 = (text: string): string =>
@@ -201,17 +207,21 @@ describe('manual Analyse for TC: no analysis', () => {
   }
 });
 
+function firstPositive(): fake.FakeEditor {
+  const [positive] = FIXTURES;
+  const [first] = declarations(positive.source);
+  return fake.fakeEditor(
+    positive.source,
+    first.line,
+    first.column,
+    positive.fileName,
+  );
+}
+
 describe('manual Analyse for TC: failure', () => {
   it('shows a failure, previews nothing, after the 8 heuristic calls', async () => {
-    const [positive] = FIXTURES;
-    const [first] = declarations(positive.source);
     const result = await run(
-      fake.fakeEditor(
-        positive.source,
-        first.line,
-        first.column,
-        positive.fileName,
-      ),
+      firstPositive(),
       {
         ...CANDIDATES,
         abstraction: { kind: 'reject', error: new Error('boom') },
@@ -224,5 +234,68 @@ describe('manual Analyse for TC: failure', () => {
     const errors = fake.state.messages.filter((m) => m.level === 'error');
     expect(errors).toHaveLength(1);
     expect(errors[0].text.startsWith('Analyse for TC failed: ')).toBe(true);
+  });
+});
+
+describe('manual Analyse for TC: card 13 differences and guarantees', () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('previews findings in heuristic-category order, whatever order the calls finish in', async () => {
+    const result = await run(
+      firstPositive(),
+      {
+        reusability: hold(candidate('reusability')),
+        modularity: hold(candidate('modularity')),
+        abstraction: hold(candidate('abstraction')),
+      },
+      false,
+      fake.fakeController(),
+      'reverse',
+    );
+
+    const [preview] = result.controller.previews;
+    expect(
+      preview.texts.map((t) => /category: '([\w-]+)'/.exec(t)?.[1]),
+    ).toEqual(['abstraction', 'modularity', 'reusability']);
+  });
+
+  it('names the failed step after the failure prefix', async () => {
+    await run(
+      firstPositive(),
+      { abstraction: { kind: 'reject', error: new Error('boom') } },
+      true,
+    );
+
+    expect(fake.state.messages).toEqual([
+      {
+        level: 'error',
+        text: 'Analyse for TC failed: heuristic "abstraction": boom',
+      },
+    ]);
+  });
+
+  it('waits for no timer: no quiet period or cooldown delays a manual run', async () => {
+    jest.useFakeTimers({
+      doNotFake: ['nextTick', 'queueMicrotask', 'setImmediate'],
+    });
+    const result = await run(firstPositive(), CANDIDATES, true);
+
+    expect(jest.getTimerCount()).toBe(0);
+    expect(result.controller.previews).toHaveLength(1);
+  });
+
+  it('shows a preview failure with the failure prefix, as before', async () => {
+    await run(
+      firstPositive(),
+      CANDIDATES,
+      true,
+      fake.fakeController(new Error('edit refused')),
+    );
+
+    expect(fake.state.messages).toEqual([
+      { level: 'error', text: 'Analyse for TC failed: Error: edit refused' },
+    ]);
   });
 });
