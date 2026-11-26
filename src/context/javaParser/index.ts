@@ -110,24 +110,37 @@ export async function extractMetrics(
       return null;
     }
 
-    return {
-      constructType: CONSTRUCT_TYPE_MAP[node.type] ?? 'unknown',
-      name: node.childForFieldName('name')?.text ?? null,
-      annotations: nodeAnnotations(node),
-      startRow: node.startPosition.row,
-      enclosingClassStartRow: enclosingClass?.startPosition.row ?? null,
-      classSource: classNode.text,
-      classMetrics:
-        node.type === 'class_declaration'
-          ? extractClassMetrics(node, importLines)
-          : null,
-      interfaceMetrics:
-        node.type === 'interface_declaration'
-          ? extractInterfaceMetrics(node)
-          : null,
-    };
+    return metricsFor(node, enclosingClass, classNode, importLines);
   } catch (e) {
     console.error('extractMetrics failed:', e);
     return null;
   }
+}
+
+/**
+ * Structural metrics for one declaration node. Shared by the cursor path above and by
+ * construct enumeration (card 12), so both build exactly the same object.
+ */
+function metricsFor(
+  node: Node,
+  enclosingClass: Node | null,
+  classNode: Node,
+  importLines: string[],
+): ConstructMetrics {
+  return {
+    constructType: CONSTRUCT_TYPE_MAP[node.type] ?? 'unknown',
+    name: node.childForFieldName('name')?.text ?? null,
+    annotations: nodeAnnotations(node),
+    startRow: node.startPosition.row,
+    enclosingClassStartRow: enclosingClass?.startPosition.row ?? null,
+    classSource: classNode.text,
+    classMetrics:
+      node.type === 'class_declaration'
+        ? extractClassMetrics(node, importLines)
+        : null,
+    interfaceMetrics:
+      node.type === 'interface_declaration'
+        ? extractInterfaceMetrics(node)
+        : null,
+  };
 }

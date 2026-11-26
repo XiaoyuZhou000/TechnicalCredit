@@ -1,4 +1,4 @@
-import * as vscode from 'vscode';
+import type * as vscode from 'vscode';
 
 import { extractMetrics, type ConstructMetrics } from '@/context/javaParser';
 
@@ -34,7 +34,28 @@ export async function buildContextFromSource(
     return null;
   }
 
-  const insertLine = resolveInsertLine(constructMetrics, anchorLine);
+  return assembleContext(
+    source,
+    importLines,
+    constructMetrics,
+    resolveInsertLine(constructMetrics, anchorLine),
+    languageId,
+    fileName,
+  );
+}
+
+/**
+ * The part of context building shared by the manual path and construct enumeration (card 12),
+ * so both produce the same shape. Callers choose the insert line.
+ */
+export function assembleContext(
+  source: string,
+  importLines: string[],
+  constructMetrics: ConstructMetrics,
+  insertLine: number,
+  languageId: string,
+  fileName: string,
+): TcContext {
   const insertIndent = source.split('\n')[insertLine]?.match(/^\s*/)?.[0] ?? '';
 
   return {
