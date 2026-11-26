@@ -106,9 +106,16 @@ async function run(
     ? [{ uri: { fsPath: adrRoot } }]
     : undefined;
   const claude = createFakeClaude(script);
-  const pending = analyseForTC(controller, claude.client);
+  let settled = false;
+  const pending = analyseForTC(controller, claude.client).finally(() => {
+    settled = true;
+  });
   if (release) {
-    await new Promise((resolve) => setImmediate(resolve));
+    // The first buildContext loads the WASM parser, which takes many ticks; a fixed wait would
+    // release before the calls start, and the held calls would then never settle.
+    while (!settled && claude.calls.length < HEURISTIC_CATEGORIES.length) {
+      await new Promise((resolve) => setImmediate(resolve));
+    }
     claude.releaseAll(release);
   }
   await pending;
