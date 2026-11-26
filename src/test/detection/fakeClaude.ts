@@ -1,3 +1,4 @@
+import type { TCResult } from '@/comment/tcResult';
 import { ADR_SYSTEM_PROMPT } from '@/prompts/adrPrompt';
 import {
   createHeuristicPrompt,
@@ -52,10 +53,8 @@ const HEURISTIC_BY_PROMPT = new Map<string, HeuristicCategory>(
   HEURISTIC_CATEGORIES.map((c) => [heuristicSystemPrompt(c), c]),
 );
 
-export function candidate(
-  category: HeuristicCategory,
-  overrides: Readonly<Record<string, unknown>> = {},
-): Record<string, unknown> {
+/** The finding a valid `candidate(category)` answer becomes. */
+export function candidateResult(category: HeuristicCategory): TCResult {
   return {
     is_tc_candidate: true,
     category,
@@ -63,8 +62,14 @@ export function candidate(
     conditions: `${category} conditions`,
     signals: [`${category}-signal`],
     not_tc_reason: null,
-    ...overrides,
   };
+}
+
+export function candidate(
+  category: HeuristicCategory,
+  overrides: Readonly<Record<string, unknown>> = {},
+): Record<string, unknown> {
+  return { ...candidateResult(category), ...overrides };
 }
 
 export function notCandidate(): Record<string, unknown> {
