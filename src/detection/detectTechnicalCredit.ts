@@ -5,6 +5,7 @@ import {
 import type { TCResult } from '@/comment/tcResult';
 import type { TcContext } from '@/context/buildContext';
 import type { AdrSummary } from '@/context/findAdrs';
+import { resolveAdrId } from '@/context/resolveAdrId';
 import {
   parseAdrAnswer,
   parseHeuristicAnswer,
@@ -158,15 +159,19 @@ export async function detectTechnicalCredit(
       Promise.all(
         candidates.map(async (finding) => ({
           ...finding,
-          adr: await ask(
-            `ADR matching for "${finding.category}"`,
-            () =>
-              client(
-                ADR_SYSTEM_PROMPT,
-                createAdrUserPrompt(finding, adrs),
-                callSignal,
-              ),
-            parseAdrAnswer,
+          // An id the model made up would point readers at an ADR that doesn't exist.
+          adr: resolveAdrId(
+            await ask(
+              `ADR matching for "${finding.category}"`,
+              () =>
+                client(
+                  ADR_SYSTEM_PROMPT,
+                  createAdrUserPrompt(finding, adrs),
+                  callSignal,
+                ),
+              parseAdrAnswer,
+            ),
+            adrs,
           ),
         })),
       ),

@@ -174,6 +174,27 @@ describe('US1: detection runs without an editor', () => {
     });
   });
 
+  it('drops an ADR id that is not among the workspace ADRs', async () => {
+    const claude = createFakeClaude({
+      ...TWO_CANDIDATES,
+      'adr:modularity': answer({ adr: 'ADR-0007' }),
+      'adr:reusability': answer({ adr: 'ADR-0002' }),
+    });
+    const outcome = await detectTechnicalCredit(
+      { context, adrs: ADRS },
+      claude.client,
+      signal(),
+    );
+
+    expect(outcome).toEqual({
+      ok: true,
+      findings: [
+        { ...candidateResult('modularity'), adr: null },
+        { ...candidateResult('reusability'), adr: 'ADR-0002' },
+      ],
+    });
+  });
+
   it('makes no ADR call without ADRs, and the findings carry no adr key', async () => {
     const claude = createFakeClaude(TWO_CANDIDATES);
     const outcome = await detectTechnicalCredit(
