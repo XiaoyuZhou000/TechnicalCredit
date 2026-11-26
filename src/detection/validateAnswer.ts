@@ -52,7 +52,8 @@ export function parseHeuristicAnswer(
   if (!isRecord(answer)) {
     return problem(NOT_AN_OBJECT);
   }
-  const isCandidate = answer.is_tc_candidate;
+  // Before card 13 a missing flag read as "not a candidate"; one such answer must not fail the run.
+  const isCandidate = answer.is_tc_candidate ?? false;
   if (typeof isCandidate !== 'boolean') {
     return problem('the answer has no boolean is_tc_candidate');
   }
@@ -95,7 +96,8 @@ export function parseAdrAnswer(answer: unknown): AnswerCheck<string | null> {
   if (!isRecord(answer)) {
     return problem(NOT_AN_OBJECT);
   }
-  const adr = answer.adr;
+  // Before card 13 a missing adr read as "no match"; one such answer must not fail the run.
+  const adr = answer.adr ?? null;
   if (adr !== null && typeof adr !== 'string') {
     return problem('the answer has no valid adr');
   }

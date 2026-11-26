@@ -44,7 +44,6 @@ describe('parseHeuristicAnswer', () => {
     ['null', null, 'the answer is not a JSON object'],
     ['an array', [candidate('modularity')], 'the answer is not a JSON object'],
     ['a string', 'yes', 'the answer is not a JSON object'],
-    ['no is_tc_candidate', {}, 'the answer has no boolean is_tc_candidate'],
     [
       'a string is_tc_candidate',
       { is_tc_candidate: 'yes' },
@@ -63,6 +62,13 @@ describe('parseHeuristicAnswer', () => {
       ok: true,
       value: null,
     });
+  });
+
+  it.each([
+    ['no is_tc_candidate', { category: 'modularity' }],
+    ['a null is_tc_candidate', { is_tc_candidate: null }],
+  ])('reads %s as "not a finding", as before card 13', (_label, answer) => {
+    expect(parseHeuristicAnswer(answer)).toEqual({ ok: true, value: null });
   });
 
   it.each([
@@ -135,10 +141,13 @@ describe('parseAdrAnswer', () => {
     expect(parseAdrAnswer({ adr: null })).toEqual({ ok: true, value: null });
   });
 
+  it('reads a missing adr as "no match", as before card 13', () => {
+    expect(parseAdrAnswer({})).toEqual({ ok: true, value: null });
+  });
+
   it.each([
     ['null', null, 'the answer is not a JSON object'],
     ['an array', [], 'the answer is not a JSON object'],
-    ['a missing adr', {}, 'the answer has no valid adr'],
     ['a numeric adr', { adr: 7 }, 'the answer has no valid adr'],
   ])('rejects %s', (_label, answer, problem) => {
     expect(parseAdrAnswer(answer)).toEqual({ ok: false, problem });
