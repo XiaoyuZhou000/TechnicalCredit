@@ -2666,6 +2666,44 @@ describe('global call limit (card 11 US3, rule 11)', () => {
     detector.calls[1].resolve(ok(0));
     await settle();
     expect(called(detector)).toEqual([uri('A'), uri('B'), uri('C'), uri('A')]);
+    expect(scheduler.stats().followUps).toBe(1);
+  });
+
+  it('counts one cache miss for a queued call, not one per lookup', async () => {
+    const { scheduler, detector, cache } = limited(2);
+    ['A', 'B', 'C'].forEach((name) => scheduler.submit(fileSnap(name)));
+    expect(cache.stats().misses).toBe(3);
+
+    detector.calls[0].resolve(ok(0));
+    await settle();
+
+    expect(called(detector)).toEqual([uri('A'), uri('B'), uri('C')]);
+    expect(cache.stats().misses).toBe(3);
+  });
+
+  it('still answers queued work stored meanwhile from the cache when a slot frees', async () => {
+    const { scheduler, detector, cache } = limited(2);
+    const c = fileSnap('C');
+    ['A', 'B'].forEach((name) => scheduler.submit(fileSnap(name)));
+    scheduler.submit(c);
+    // As if another window analysed C while it waited.
+    await cache.store(
+      {
+        workspaceId: W,
+        fileUri: uri('C'),
+        contentHash: sha256Hex(c.content),
+        detectorId: 'scripted',
+        detectorVersion: '1',
+      },
+      ok(1),
+    );
+
+    detector.calls[0].resolve(ok(0));
+    await settle();
+
+    expect(called(detector)).toEqual([uri('A'), uri('B')]);
+    expect(scheduler.fileState(W, uri('C'))?.pending).toBeUndefined();
+    expect(cache.stats()).toMatchObject({ hits: 1, misses: 3 });
   });
 
   it('still starts a settling file at once when nothing else waits', async () => {

@@ -250,12 +250,18 @@ export class ResultCache {
     this.now = options.now;
   }
 
-  /** Synchronous, so the caller can decide before starting any work. Never throws. */
-  lookup(identity: CacheIdentity): CacheLookup {
+  /**
+   * Synchronous, so the caller can decide before starting any work. Never throws. A `recheck`
+   * repeats a lookup whose miss the caller already counted, so a second miss isn't counted.
+   */
+  lookup(
+    identity: CacheIdentity,
+    options: { readonly recheck?: boolean } = {},
+  ): CacheLookup {
     const result = this.read(identity);
     if (result.hit) {
       this.counts.hits++;
-    } else {
+    } else if (options.recheck !== true) {
       this.counts.misses++;
     }
     return result;

@@ -120,7 +120,10 @@ export interface FileStateView {
  */
 export interface SchedulerStats {
   readonly started: number;
-  /** Calls started for pending work when the file's running request settled. */
+  /**
+   * Calls started for pending work when the file's running request settled: at once, or
+   * (card 11) once a slot frees, if it went straight from that settlement into the slot queue.
+   */
   readonly followUps: number;
   /** Repeats (card 05), idle or not. */
   readonly duplicates: number;
@@ -210,8 +213,17 @@ interface FileState {
   lastSettledAt?: number;
   /** For card 09's status page; set on every settle and every cache hit. */
   lastOutcome?: LastOutcome;
-  /** In the slot queue: due, missed the cache, waiting for a free call slot (card 11). */
-  queued: boolean;
+  /** Only in the slot queue: due, missed the cache, waiting for a free call slot (card 11). */
+  slotWait?: SlotWait;
+}
+
+/** Why a file is in the slot queue, carried to the check made when a slot frees (card 11). */
+interface SlotWait {
+  /** Queued straight from its own request's settlement, so it counts as a follow-up on start. */
+  followUp: boolean;
+  /** The lookup that queued the current pending work; its miss is already counted. */
+  missedHash: string;
+  missedVersion: string;
 }
 
 /** JSON encoding keeps two URIs from colliding the way plain concatenation could. */
@@ -338,7 +350,6 @@ export class Scheduler implements SnapshotSink {
         latestDetectorVersion: detectorVersion,
         lastChangeAt: snapshot.observedAt,
         open: true,
-        queued: false,
       };
       this.states.set(key, state);
     } else {
@@ -490,7 +501,8 @@ export class Scheduler implements SnapshotSink {
       lastChangeAt: state.lastChangeAt,
       ...(pending && {
         eligibleAt: this.eligibleAt(state),
-        waitingFor: state.queued ? 'slot' : this.waitingFor(state),
+        waitingFor:
+          state.slotWait !== undefined ? 'slot' : this.waitingFor(state),
       }),
       open: state.open,
       ...(state.lastSettledAt !== undefined && {
@@ -688,7 +700,7 @@ export class Scheduler implements SnapshotSink {
    * which limits calls, doesn't hold it back. A miss waits out the cooldown, and `dispatch`
    * checks the cache again right before the call.
    */
-  private advance(state: FileState, fromQueue = false): boolean {
+  private advance(state: FileState, fromQueue?: SlotWait): boolean {
     const next = state.pending;
     if (next === undefined || state.active !== undefined || !state.open) {
       return false;
@@ -813,8 +825,12 @@ export class Scheduler implements SnapshotSink {
   }
 
   /** Looks the content up and logs the outcome; true on a hit. */
-  private lookup(state: FileState, item: PendingSnapshot): boolean {
-    const lookup = this.cache.lookup(this.identityOf(item));
+  private lookup(
+    state: FileState,
+    item: PendingSnapshot,
+    recheck = false,
+  ): boolean {
+    const lookup = this.cache.lookup(this.identityOf(item), { recheck });
     if (lookup.hit) {
       const findings = lookup.entry.output.findings.length;
       state.lastOutcome = {
@@ -841,13 +857,22 @@ export class Scheduler implements SnapshotSink {
   private dispatch(
     state: FileState,
     item: PendingSnapshot,
-    fromQueue = false,
+    fromQueue?: SlotWait,
   ): boolean {
-    if (this.lookup(state, item)) {
+    // Looked up again because another window may have stored it meanwhile, but a miss that
+    // queued this same work was already counted.
+    const recheck =
+      fromQueue !== undefined &&
+      fromQueue.missedHash === item.contentHash &&
+      fromQueue.missedVersion === this.detector.version;
+    if (this.lookup(state, item, recheck)) {
       this.dequeue(state);
       return false;
     }
-    if (!this.hasSlot() || (!fromQueue && this.slotQueue.length > 0)) {
+    if (
+      !this.hasSlot() ||
+      (fromQueue === undefined && this.slotQueue.length > 0)
+    ) {
       this.enqueue(state, item);
       return false;
     }
@@ -863,10 +888,15 @@ export class Scheduler implements SnapshotSink {
   private enqueue(state: FileState, item: PendingSnapshot): void {
     state.pending = item;
     this.cancelWakeup(state);
-    if (state.queued) {
+    const missed = {
+      missedHash: item.contentHash,
+      missedVersion: this.detector.version,
+    };
+    if (state.slotWait !== undefined) {
+      Object.assign(state.slotWait, missed);
       return;
     }
-    state.queued = true;
+    state.slotWait = { followUp: false, ...missed };
     this.slotQueue.push(state);
     this.counts.slotWaits++;
     this.line(
@@ -875,10 +905,10 @@ export class Scheduler implements SnapshotSink {
   }
 
   private dequeue(state: FileState): void {
-    if (!state.queued) {
+    if (state.slotWait === undefined) {
       return;
     }
-    state.queued = false;
+    state.slotWait = undefined;
     this.slotQueue = this.slotQueue.filter((queued) => queued !== state);
   }
 
@@ -887,9 +917,15 @@ export class Scheduler implements SnapshotSink {
     while (this.hasSlot() && this.slotQueue.length > 0) {
       const [state, ...rest] = this.slotQueue;
       this.slotQueue = rest;
-      state.queued = false;
-      if (this.states.get(state.key) === state) {
-        this.advance(state, true);
+      const wait = state.slotWait;
+      state.slotWait = undefined;
+      if (
+        wait !== undefined &&
+        this.states.get(state.key) === state &&
+        this.advance(state, wait) &&
+        wait.followUp
+      ) {
+        this.counts.followUps++;
       }
     }
   }
@@ -1037,6 +1073,8 @@ export class Scheduler implements SnapshotSink {
     if (state.pending !== undefined) {
       if (this.advance(state)) {
         this.counts.followUps++;
+      } else if (state.slotWait !== undefined) {
+        state.slotWait.followUp = true;
       }
     } else {
       this.forgetIfClosed(state);
