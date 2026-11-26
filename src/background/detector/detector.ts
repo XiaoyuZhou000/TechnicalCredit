@@ -25,7 +25,10 @@ export interface DetectorFinding {
 
 export interface DetectorOutput {
   readonly detectorId: string;
-  /** Covers code and configuration; part of the cache identity. */
+  /**
+   * Covers code and configuration; part of the cache identity. The `version` in effect when the
+   * call started, which a later version change doesn't alter.
+   */
   readonly detectorVersion: string;
   /** May be empty: finding nothing is a valid, cacheable success. */
   readonly findings: readonly DetectorFinding[];

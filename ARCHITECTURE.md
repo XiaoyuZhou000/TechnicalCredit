@@ -289,7 +289,7 @@ export function failureFromAbort(signal: AbortSignal): DetectorResult; // Timeou
 | 2   | `analyse` never rejects; problems are returned as `ok: false`                                                                                                                                                          | Every detector |
 | 3   | Never edit a document, show UI, or touch `vscode`                                                                                                                                                                      | Every detector |
 | 4   | Honour `signal`: once it aborts, resolve promptly with `failureFromAbort(signal)`                                                                                                                                      | Every detector |
-| 5   | `output.detectorId`/`detectorVersion` equal `this.id`/`this.version`                                                                                                                                                   | Every detector |
+| 5   | `output.detectorId` equals `this.id`; `output.detectorVersion` equals the `version` in effect when the call started (rule 14)                                                                                          | Every detector |
 | 6   | Findings are candidates only, with the existing `TCResult` shape and a 0-based declaration `line`                                                                                                                      | Every detector |
 | 7   | Depend only on this module, never on a concrete detector                                                                                                                                                               | Every caller   |
 | 8   | Own the timeout policy (`AbortSignal.timeout`, combined with cancellation via `AbortSignal.any`)                                                                                                                       | Every caller   |
@@ -308,7 +308,7 @@ Rules 12–14 are **Proposed (card 11)** until its PR is approved.
 - Under the default behaviour, findings depend only on the content: one sample finding per `class` or `interface` declaration line, or none.
 - `callCount` counts every call on entry, including cancelled and failed ones. `calls()` returns the file, document version, content hash and outcome of each call, never the file text.
 - `behaviour: { kind: 'findings' }` and `{ kind: 'fail' }` change the results, so they require a `version` other than `'mock-1'`. Card 04 relies on this: old results can't hit under a new version. The delay is never part of the version.
-- **Card 11 (proposed):** `version` is a getter. `setVersion(v)` applies the constructor's rules, is a no-op for the current version, and otherwise announces through `onVersionChange`. The extension sets it from `technicalcredit.background.mockDetectorVersion` (default `mock-1`), at start and on every change of that setting.
+- **Card 11 (proposed):** `version` is a getter. `setVersion(v)` applies the constructor's rules, is a no-op for the current version, and otherwise announces through `onVersionChange`. The extension sets it from `technicalcredit.background.mockDetectorVersion` (default `mock-1`), at start and on every change of that setting. The setting is application-scoped (user settings only), because the identity it changes is recorded once for every window (see "Detector version tracking").
 
 These are extras on the concrete class. The scheduler must still depend only on `Detector`.
 
@@ -322,7 +322,7 @@ These are extras on the concrete class. The scheduler must still depend only on 
 4. **Versions never cross**: a result stored under one detector id or version is never returned under another. Older versions keep their entries, so rolling back hits again.
 5. **Unreadable means miss**: every stored value is validated on read. Another format, a corrupt value or a throwing `get` is a miss; a failing `update` is a `failed` outcome. `lookup` and `store` never throw or reject.
 6. **No reaction to a version change**: the cache never starts an analysis. A new version simply misses on the next lookup; proactive re-analysis is card 11 (see "Detector version tracking").
-7. **No logging**: callers log from the returned outcomes, with counts, the first 8 hash characters, `detectorId@detectorVersion` and the URI, never file text or findings. `stats()` counts hits, misses and store outcomes since activation.
+7. **No logging**: callers log from the returned outcomes, with counts, the first 8 hash characters, `detectorId@detectorVersion` and the URI, never file text or findings. `stats()` counts hits, misses and store outcomes since activation. A `lookup(identity, { recheck: true })` repeats a lookup whose miss the caller already counted, so only a hit counts (card 11's slot queue).
 
 ### File events → scheduler (cards 02 and 05)
 
@@ -388,7 +388,7 @@ export interface SnapshotSink {
 7. If the sink throws, the error is logged to the **Technical Credit (Background)** output channel and later events are still delivered.
 8. After deactivation, nothing more is forwarded. All listeners are registered through `context.subscriptions` via `registry.ts`.
 
-**Rescans (Proposed, card 11):** `FileEventHandler.startup(docs)` now returns how many documents it forwarded, and `rescan(docs)` forwards each supported document as `'version'`, in the given order, returning the count. The monitor exposes `startupCount` and `rescan()`. Its rescan reads `workspace.textDocuments` and passes them through the pure `rescanOrder()`, which keeps only documents shown in a text tab (`window.tabGroups`) and orders them active editor, visible editors, then the rest. Unloaded background tabs are never loaded. The guarantees above apply to `'version'` snapshots too.
+**Rescans (Proposed, card 11):** `FileEventHandler.startup(docs)` now returns how many documents it forwarded, and `rescan(docs)` forwards each supported document as `'version'`, in the given order, returning the count. The monitor exposes `startupCount` and `rescan()`. Its rescan reads `workspace.textDocuments` and passes them through the pure `rescanOrder()`, which keeps only documents shown in a text tab or either side of a text diff tab (`window.tabGroups`) and orders them active editor, visible editors, then the rest. Unloaded background tabs are never loaded. The guarantees above apply to `'version'` snapshots too.
 
 **Consumer obligations (card 08 onwards; agreed 2026-11-17; 1–2 amended on card 05):**
 
@@ -423,7 +423,7 @@ Since card 08, `backgroundAgent.ts` plugs in the `Scheduler`, which wraps `loggi
     - Cooldowns are in memory only; a restart forgets them, and the result cache still stops unchanged content from being re-analysed.
 11. **Global limit (card 11, proposed)**: at most `maxConcurrent` detector calls run at once across all files (`DEFAULT_MAX_CONCURRENT`, 2; `0` = no limit; the constructor rejects anything but a non-negative safe integer). `running()` returns the count.
     - Due work that can't start is still looked up in the cache: a hit clears it at no cost. A miss logs `waiting for slot (<n> running) …`, counts `slotWaits`, and joins a FIFO slot queue with no timer. `fileState().waitingFor` is `'slot'`.
-    - When any call settles, freed slots go to queued files in order, each re-checked and looked up again before its call. While others wait, a settling file's own due follow-up joins the back of the queue; otherwise it starts at once as before.
+    - When any call settles, freed slots go to queued files in order, each re-checked and looked up again before its call (another window may have stored it meanwhile); that recheck doesn't count a second miss. While others wait, a settling file's own due follow-up joins the back of the queue and counts in `followUps` when it starts from there; otherwise it starts at once as before.
     - Close and a replacement that is no longer due take a file out of the queue; a replacement that is still due keeps its place. `dispose` clears the queue.
     - Log lines about a running or settled request name the version it ran under.
 
@@ -446,12 +446,12 @@ Since card 08, `backgroundAgent.ts` plugs in the `Scheduler`, which wraps `loggi
 **Proposed (card 11), until its PR is approved.** Source: `src/background/detector/versionTracker.ts`, wired in `backgroundAgent.ts`.
 
 1. **Recorded identity**: `{ detectorId, detectorVersion }` in `context.globalState` under `technicalCredit.activeDetector.v1`, never synced. Anything but two non-empty strings, or a throwing `get`, counts as nothing recorded.
-2. **Startup**: `begin()` runs before the startup scan and compares the recorded identity with the detector's. Nothing recorded means `first start`, equal means `unchanged`, and different (rollbacks included) is a `startup` change. After the scan, `startupScheduled(count)` logs one line, for example `detector version changed mock@mock-1 → mock@mock-2 (startup), 3 open files scheduled`.
+2. **Startup**: `begin()` runs before the startup scan and compares the recorded identity with the detector's. Nothing recorded means `first start`, equal means `unchanged`, and different (rollbacks included) is a `startup` change. After the scan, `startupScheduled(count)` logs one line, for example `detector version changed mock@mock-1 → mock@mock-2 (startup), 3 files scheduled`. The startup count is every loaded supported document the scan forwarded, not only those in a tab, so the line says files rather than open files.
 3. **Re-analysis is ordinary work**: the startup scan, or a rescan, submits snapshots. Because a new version makes unchanged content new work (scheduler rule 9), each file goes through the quiet period, cooldown, cache, deduplication and the global limit. The tracker holds no per-file state.
-4. **Runtime**: if the detector implements `onVersionChange`, an announcement of a different identity calls `rescan()`, logs `… (runtime), N open files scheduled`, records the new identity once the start was confirmed, and notifies listeners. A repeat of the active identity does nothing. A throwing rescan is logged and counts as 0.
+4. **Runtime**: if the detector implements `onVersionChange`, an announcement of a different identity calls `rescan()`, logs `… (runtime), N files scheduled`, records the new identity once the start was confirmed, and notifies listeners. A repeat of the active identity does nothing. A throwing rescan is logged and counts as 0.
 5. **Recording**: `confirmStarted()` is the last step of `startBackgroundAgent`, so a start that throws earlier keeps the old identity and the next start detects the change again. A failed write is logged as `detector record failed: …` and never thrown.
 6. **No polling**: the tracker sets no timers and makes no network or file access.
-7. **Several windows** share the recorded identity, so a second window with the same build reports `unchanged`; each window re-analyses only its own open files, through the shared cache.
+7. **Several windows** share the recorded identity, so a second window with the same build reports `unchanged`. The version setting is application-scoped so windows can't disagree about it; each window re-analyses only its own open files, through the shared cache.
 
 ## Live integration outline
 
