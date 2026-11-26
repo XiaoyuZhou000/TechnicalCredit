@@ -461,3 +461,53 @@ describe('functional suite: detector version change at restart (card 11 US1)', (
     rolledBack.shutdown();
   });
 });
+
+describe('functional suite: no version change, no extra calls (card 11 US2)', () => {
+  it('makes no call for 60 s after an unchanged restart with every file analysed (US2-1, SC-001)', async () => {
+    const store = createMemoryCacheStore();
+    const a = new FakeDoc('A.java', 'class A {}');
+    const b = new FakeDoc('B.java', 'class B {}');
+    const first = pipeline(store, { version: 'mock-1' });
+    await first.start([a, b]);
+    await first.tick(QUIET + MOCK_DELAY + 100);
+    expect(first.mock.callCount).toBe(2);
+    first.shutdown();
+
+    const second = pipeline(store, { version: 'mock-1' });
+    await second.start([a, b]);
+    await second.tick(60_000);
+
+    expect(
+      second.lines.filter((line) => line.includes('detector version')),
+    ).toEqual([
+      expect.stringContaining('detector version mock@mock-1 (unchanged)'),
+    ]);
+    expect(second.mock.callCount).toBe(0);
+    expect(second.cache.stats().hits).toBe(2);
+    second.shutdown();
+  });
+
+  it('analyses a file changed while VS Code was closed as ordinary new content (US2-3)', async () => {
+    const store = createMemoryCacheStore();
+    const a = new FakeDoc('A.java', 'class A {}');
+    const b = new FakeDoc('B.java', 'class B {}');
+    const first = pipeline(store, { version: 'mock-1' });
+    await first.start([a, b]);
+    await first.tick(QUIET + MOCK_DELAY + 100);
+    first.shutdown();
+
+    b.setText('class B { int edited; }'); // edited outside VS Code
+    const second = pipeline(store, { version: 'mock-1' });
+    await second.start([a, b]);
+    await second.tick(QUIET + MOCK_DELAY + 100);
+
+    expect(second.mock.calls().map((c) => c.fileUri)).toEqual([
+      'file:///w/B.java',
+    ]);
+    expect(second.tracker.lastChange()).toBeUndefined();
+    expect(second.lines.some((line) => line.includes('version changed'))).toBe(
+      false,
+    );
+    second.shutdown();
+  });
+});

@@ -5,7 +5,10 @@ import {
   type DetectorIdentity,
 } from '@/background/detector/versionTracker';
 import { createFakeTimers } from '@/test/background/fakeTimers';
-import { createMemoryCacheStore } from '@/test/background/memoryCacheStore';
+import {
+  createMemoryCacheStore,
+  throwingGetStore,
+} from '@/test/background/memoryCacheStore';
 
 /**
  * Card 11's version tracker: the startup comparison and recording. Offline: an in-memory
@@ -182,5 +185,85 @@ describe('US1: a new detector version is reported at startup', () => {
 
     expect(lines).toEqual([]);
     expect(store.get(ACTIVE_DETECTOR_KEY)).toEqual(identity('mock-1'));
+  });
+});
+
+describe('US2: an unchanged or first start reports no change', () => {
+  it('reports a first start, and records the identity', async () => {
+    const { tracker, lines, store } = harness({ version: 'mock-1' });
+
+    expect(tracker.begin()).toBeUndefined();
+    tracker.startupScheduled(2);
+    await tracker.confirmStarted();
+
+    expect(texts(lines)).toEqual([
+      'detector version mock@mock-1 (first start)',
+    ]);
+    expect(tracker.lastChange()).toBeUndefined();
+    expect(store.get(ACTIVE_DETECTOR_KEY)).toEqual(identity('mock-1'));
+  });
+
+  it('reports an unchanged identity', () => {
+    const { tracker, lines } = harness({
+      recorded: identity('mock-1'),
+      version: 'mock-1',
+    });
+
+    expect(tracker.begin()).toBeUndefined();
+    tracker.startupScheduled(5);
+
+    expect(texts(lines)).toEqual(['detector version mock@mock-1 (unchanged)']);
+    expect(tracker.lastChange()).toBeUndefined();
+  });
+
+  it.each([
+    ['null', null],
+    ['a bare string', 'mock-1'],
+    ['an empty object', {}],
+    ['a missing version', { detectorId: 'mock' }],
+    ['an empty id', { detectorId: '', detectorVersion: 'x' }],
+    ['a numeric id', { detectorId: 1, detectorVersion: 'x' }],
+    ['an array', ['mock', 'mock-1']],
+  ])('treats %s as nothing recorded', (_label, value) => {
+    const store = createMemoryCacheStore();
+    store.rawSet(ACTIVE_DETECTOR_KEY, value);
+    const { tracker, lines } = harness({ store, version: 'mock-2' });
+
+    expect(tracker.begin()).toBeUndefined();
+    tracker.startupScheduled(1);
+    expect(texts(lines)).toEqual([
+      'detector version mock@mock-2 (first start)',
+    ]);
+  });
+
+  it('treats a throwing store as nothing recorded, without throwing', () => {
+    const { tracker, lines } = harness({
+      store: throwingGetStore('storage unavailable'),
+      version: 'mock-1',
+    });
+
+    expect(() => tracker.begin()).not.toThrow();
+    tracker.startupScheduled(0);
+    expect(texts(lines)).toEqual([
+      'detector version mock@mock-1 (first start)',
+    ]);
+  });
+
+  it('lets a second window with the same build see no change', async () => {
+    const store = createMemoryCacheStore();
+    const first = harness({
+      store,
+      recorded: identity('mock-1'),
+      version: 'mock-2',
+    });
+    first.tracker.begin();
+    await first.tracker.confirmStarted();
+
+    const second = harness({ store, version: 'mock-2' });
+    expect(second.tracker.begin()).toBeUndefined();
+    second.tracker.startupScheduled(1);
+    expect(texts(second.lines)).toEqual([
+      'detector version mock@mock-2 (unchanged)',
+    ]);
   });
 });
