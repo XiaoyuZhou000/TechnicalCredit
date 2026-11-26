@@ -5,6 +5,7 @@ import {
   enumerateConstructs,
   type ConstructDescriptor,
   type EnumerationResult,
+  type Position,
 } from '@/context/enumerateConstructs';
 import { FIXTURES } from '@/test/context/fixtures';
 import { initParser } from '@/test/context/parserSetup';
@@ -452,6 +453,69 @@ describe('prompt byte-identity (the snapshots sort keys, JSON.stringify does not
           'Fixture.java',
         );
         expect(JSON.stringify(c.context)).toBe(JSON.stringify(manual));
+      }
+    }
+  });
+});
+
+describe('US5: nested types stay inside their outer construct', () => {
+  const NESTED = [
+    'class Outer {',
+    '  class Inner { void work() {} }',
+    '  static interface Nested {}',
+    '  enum Mode { ON, OFF }',
+    '  void run() {',
+    '    class Local {}',
+    '    Runnable r = new Runnable() { public void run() {} };',
+    '  }',
+    '}',
+  ].join('\n');
+
+  it('returns only the outer class, whose source and metrics hold the member types', async () => {
+    const constructs = await constructsOf(NESTED);
+
+    expect(constructs.map((c) => c.name)).toEqual(['Outer']);
+    const [outer] = constructs;
+    for (const text of [
+      'class Inner',
+      'interface Nested',
+      'enum Mode',
+      'class Local',
+      'new Runnable()',
+    ]) {
+      expect(outer.source).toContain(text);
+    }
+    expect(
+      outer.context.constructMetrics.classMetrics?.nestedDeclarations.map(
+        (n) => [n.type, n.name],
+      ),
+    ).toEqual([
+      ['class', 'Inner'],
+      ['interface', 'Nested'],
+      ['enum', 'Mode'],
+    ]);
+  });
+
+  it('returns one descriptor per top-level class, each keeping its own inner class', async () => {
+    const constructs = await constructsOf(
+      ['class A { class AI {} }', 'class B { class BI {} }'].join('\n'),
+    );
+
+    expect(constructs.map((c) => c.name)).toEqual(['A', 'B']);
+    expect(constructs[0].source).toContain('AI');
+    expect(constructs[1].source).not.toContain('AI');
+  });
+
+  it('never returns a descriptor inside another one, across every fixture', async () => {
+    const before = (a: Position, b: Position): boolean =>
+      a.line < b.line || (a.line === b.line && a.column <= b.column);
+
+    for (const source of [...FIXTURES.map(([, s]) => s), NESTED, FOUR]) {
+      const constructs = await constructsOf(source);
+      for (let i = 1; i < constructs.length; i++) {
+        expect(
+          before(constructs[i - 1].span.end, constructs[i].span.start),
+        ).toBe(true);
       }
     }
   });
