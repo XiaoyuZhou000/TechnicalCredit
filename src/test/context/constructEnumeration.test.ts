@@ -1,8 +1,12 @@
+import { Parser } from 'web-tree-sitter';
+
+import { buildContextFromSource, extractImports } from '@/context/buildContext';
 import {
   enumerateConstructs,
   type ConstructDescriptor,
   type EnumerationResult,
 } from '@/context/enumerateConstructs';
+import { FIXTURES } from '@/test/context/fixtures';
 import { initParser } from '@/test/context/parserSetup';
 
 /** Offline tests for card 12's construct enumeration: no `vscode`, no Claude. */
@@ -150,5 +154,75 @@ describe('US1: every top-level construct, in source order', () => {
     expect(Object.isFrozen(first.constructs[0])).toBe(true);
     expect(Object.isFrozen(first.constructs[0].span)).toBe(true);
     expect(Object.isFrozen(first.constructs[0].span.start)).toBe(true);
+  });
+});
+
+describe('US2: each construct carries the manual context, from one parse', () => {
+  it.each(FIXTURES)(
+    '%s: class and interface contexts equal the manual one at the name',
+    async (_name, source) => {
+      const constructs = await constructsOf(source);
+      const comparable = constructs.filter(
+        (c) =>
+          c.kind !== 'enum' && c.nameLine !== null && c.nameColumn !== null,
+      );
+      for (const c of comparable) {
+        const manual = await buildContextFromSource(
+          source,
+          c.nameLine ?? 0,
+          c.nameColumn ?? 0,
+          'java',
+          'Fixture.java',
+        );
+        expect(c.context).toEqual(manual);
+      }
+    },
+  );
+
+  it('compares at least one class and one interface across the fixtures', async () => {
+    const kinds = new Set<string>();
+    for (const [, source] of FIXTURES) {
+      for (const c of await constructsOf(source)) {
+        kinds.add(c.kind);
+      }
+    }
+    expect(kinds).toEqual(new Set(['class', 'interface', 'enum']));
+  });
+
+  it('gives every descriptor the file package and imports, as its own copy', async () => {
+    const constructs = await constructsOf(FOUR);
+
+    for (const c of constructs) {
+      expect(c.context.importLines).toEqual(extractImports(FOUR));
+    }
+    expect(constructs[0].context.importLines).not.toBe(
+      constructs[1].context.importLines,
+    );
+  });
+
+  it('parses the file once, however many constructs it holds', async () => {
+    const five = [
+      'class A {}',
+      'class B {}',
+      'interface C {}',
+      'enum D { X }',
+      'class E {}',
+    ].join('\n');
+    const parse = jest.spyOn(Parser.prototype, 'parse');
+    try {
+      const constructs = await constructsOf(five);
+      expect(constructs).toHaveLength(5);
+      expect(parse).toHaveBeenCalledTimes(1);
+    } finally {
+      parse.mockRestore();
+    }
+  });
+
+  it('adds no enumMetrics key to class or interface contexts, so prompts are unchanged', async () => {
+    const constructs = await constructsOf(FOUR);
+
+    for (const c of constructs.filter((d) => d.kind !== 'enum')) {
+      expect('enumMetrics' in c.context.constructMetrics).toBe(false);
+    }
   });
 });
