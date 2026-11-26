@@ -55,6 +55,32 @@ export function isSupported(doc: MonitoredDocument): boolean {
   return doc.languageId === 'java' && doc.uri.scheme === 'file';
 }
 
+/**
+ * Which loaded documents a runtime rescan reports, and in what order (card 11): only those shown
+ * in an editor tab, so a closed tab whose document is still loaded and documents other
+ * extensions load are skipped; the `preferred` ones (active editor, then visible editors)
+ * first, then the rest in their loaded order, each once.
+ */
+export function rescanOrder<D extends MonitoredDocument>(
+  loaded: readonly D[],
+  tabbedUris: ReadonlySet<string>,
+  preferred: readonly (D | undefined)[],
+): D[] {
+  const ordered: D[] = [];
+  const seen = new Set<string>();
+  for (const doc of [...preferred, ...loaded]) {
+    if (doc === undefined) {
+      continue;
+    }
+    const uri = doc.uri.toString();
+    if (tabbedUris.has(uri) && !seen.has(uri)) {
+      seen.add(uri);
+      ordered.push(doc);
+    }
+  }
+  return ordered;
+}
+
 export interface FileEventHandlerOptions<D extends MonitoredDocument> {
   readonly sink: SnapshotSink;
   readonly now: () => number;

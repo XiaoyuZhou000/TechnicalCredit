@@ -226,3 +226,44 @@ describe('failureFromAbort', () => {
     });
   });
 });
+
+describe('detector contract — version changes (card 11, rules 12–14)', () => {
+  test('a detector without onVersionChange is still a detector, with a fixed version', () => {
+    const detector: Detector = new EmptyDetector();
+
+    expect(detector.onVersionChange).toBeUndefined();
+  });
+
+  test('a detector whose version changes announces it after the new value is readable', () => {
+    const listeners: ((version: string) => void)[] = [];
+    let version = '1';
+    const detector: Detector = {
+      id: 'changing',
+      get version() {
+        return version;
+      },
+      analyse: () =>
+        Promise.resolve({
+          ok: true,
+          output: {
+            detectorId: 'changing',
+            detectorVersion: version,
+            findings: [],
+          },
+        }),
+      onVersionChange: (listener) => {
+        listeners.push(listener);
+        return () => undefined;
+      },
+    };
+    const seen: string[] = [];
+    detector.onVersionChange?.((announced) =>
+      seen.push(`${announced}=${detector.version}`),
+    );
+
+    version = '2';
+    listeners.forEach((listener) => listener(version));
+
+    expect(seen).toEqual(['2=2']);
+  });
+});

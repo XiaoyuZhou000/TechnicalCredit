@@ -71,19 +71,26 @@ function messageOf(error: unknown): string {
 const iso = (ms: number): string => new Date(ms).toISOString();
 
 /**
- * Card 11: tells a restart under a different detector identity apart from an ordinary one, and
- * records the identity once the agent has started. It never polls: it reacts only to `begin()`
- * at startup. Re-analysis itself is ordinary snapshots through the scheduler, so this holds no
- * per-file state. Nothing it does throws into its caller.
+ * Card 11: tells a restart under a different detector identity apart from an ordinary one,
+ * handles a detector announcing a new version while it runs, and records the identity once the
+ * agent has started. It never polls: it reacts only to `begin()` at startup and to the
+ * detector's `onVersionChange`. Re-analysis itself is ordinary snapshots through the scheduler,
+ * so this holds no per-file state. Nothing it does throws into its caller.
  */
 export class DetectorVersionTracker {
   private readonly detector: DetectorVersionTrackerOptions['detector'];
   private readonly store: IdentityStore;
   private readonly clock: Pick<Clock, 'now'>;
   private readonly log: (line: string) => void;
+  private readonly rescan: () => number;
   private readonly listeners = new Set<() => void>();
+  private readonly unsubscribe?: () => void;
   private startup?: StartupOutcome;
   private change?: VersionChange;
+  /** The identity runtime announcements are compared with. */
+  private lastActive: DetectorIdentity;
+  /** Runtime changes are recorded only once the start itself has been. */
+  private confirmed = false;
   private notifyQueued = false;
   private disposed = false;
 
@@ -92,6 +99,11 @@ export class DetectorVersionTracker {
     this.store = options.store;
     this.clock = options.clock;
     this.log = options.log;
+    this.rescan = options.rescan;
+    this.lastActive = this.active();
+    this.unsubscribe = this.detector.onVersionChange?.(() => {
+      this.announced();
+    });
   }
 
   /** Compares the recorded identity with the active one. Logs and records nothing. */
@@ -150,6 +162,7 @@ export class DetectorVersionTracker {
     if (this.disposed) {
       return;
     }
+    this.confirmed = true;
     await this.record(this.active());
   }
 
@@ -172,6 +185,40 @@ export class DetectorVersionTracker {
   dispose(): void {
     this.disposed = true;
     this.listeners.clear();
+    this.unsubscribe?.();
+  }
+
+  /**
+   * The detector announced a version while running: handled like a startup change, through a
+   * rescan of the open files. An announcement of the identity already active changes nothing.
+   */
+  private announced(): void {
+    const to = this.active();
+    if (this.disposed || sameIdentity(to, this.lastActive)) {
+      return;
+    }
+    const from = this.lastActive;
+    this.lastActive = to;
+    let scheduled = 0;
+    try {
+      scheduled = this.rescan();
+    } catch (error) {
+      this.line(`detector rescan failed: ${messageOf(error)}`);
+    }
+    this.change = {
+      from,
+      to,
+      source: 'runtime',
+      at: this.clock.now(),
+      scheduled,
+    };
+    this.line(
+      `detector version changed ${formatIdentity(from)} → ${formatIdentity(to)} (runtime), ${scheduled} open files scheduled`,
+    );
+    if (this.confirmed) {
+      void this.record(to);
+    }
+    this.changed();
   }
 
   private active(): DetectorIdentity {

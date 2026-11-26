@@ -1,4 +1,5 @@
 import type { CacheStore } from '@/background/cache/resultCache';
+import { MockDetector } from '@/background/detector/mockDetector';
 import {
   ACTIVE_DETECTOR_KEY,
   DetectorVersionTracker,
@@ -265,5 +266,179 @@ describe('US2: an unchanged or first start reports no change', () => {
     expect(texts(second.lines)).toEqual([
       'detector version mock@mock-2 (unchanged)',
     ]);
+  });
+});
+
+describe('US4: a version announced while running is handled like a startup change', () => {
+  function runtime(
+    options: { rescan?: () => number; confirmed?: boolean } = {},
+  ) {
+    const store = createMemoryCacheStore();
+    const clock = createFakeTimers();
+    const mock = new MockDetector({ timers: clock });
+    const lines: string[] = [];
+    let rescans = 0;
+    const tracker = new DetectorVersionTracker({
+      detector: mock,
+      store,
+      clock,
+      log: (line) => lines.push(line),
+      rescan:
+        options.rescan ??
+        (() => {
+          rescans++;
+          return 3;
+        }),
+    });
+    return { store, clock, mock, lines, tracker, rescans: () => rescans };
+  }
+
+  /** Lets the never-rejecting store write settle. */
+  const flushWrites = (): Promise<void> =>
+    new Promise((resolve) => setImmediate(resolve));
+
+  it('rescans once and logs the runtime change with the rescan count', () => {
+    const { mock, lines, tracker, rescans } = runtime();
+    tracker.begin();
+
+    mock.setVersion('mock-2');
+
+    expect(rescans()).toBe(1);
+    expect(texts(lines)).toEqual([
+      'detector version changed mock@mock-1 → mock@mock-2 (runtime), 3 open files scheduled',
+    ]);
+    expect(tracker.lastChange()).toMatchObject({
+      from: identity('mock-1'),
+      to: identity('mock-2'),
+      source: 'runtime',
+      scheduled: 3,
+    });
+  });
+
+  it('records the new identity once the start was confirmed', async () => {
+    const { mock, store, tracker } = runtime();
+    tracker.begin();
+    await tracker.confirmStarted();
+
+    mock.setVersion('mock-2');
+    await flushWrites();
+
+    expect(store.get(ACTIVE_DETECTOR_KEY)).toEqual(identity('mock-2'));
+  });
+
+  it('handles but does not record a change before the start is confirmed', async () => {
+    const { mock, store, tracker, rescans } = runtime();
+    tracker.begin();
+
+    mock.setVersion('mock-2');
+    await flushWrites();
+    expect(rescans()).toBe(1);
+    expect(store.get(ACTIVE_DETECTOR_KEY)).toBeUndefined();
+
+    await tracker.confirmStarted();
+    expect(store.get(ACTIVE_DETECTOR_KEY)).toEqual(identity('mock-2'));
+  });
+
+  it('ignores an announcement of the version already active', () => {
+    // The mock skips a same-value set itself, so this detector re-announces on purpose.
+    let announce: (version: string) => void = () => undefined;
+    const detector = {
+      id: 'mock',
+      version: 'mock-1',
+      onVersionChange: (listener: (version: string) => void) => {
+        announce = listener;
+        return () => undefined;
+      },
+    };
+    let rescans = 0;
+    const lines: string[] = [];
+    const tracker = new DetectorVersionTracker({
+      detector,
+      store: createMemoryCacheStore(),
+      clock: createFakeTimers(),
+      log: (line) => lines.push(line),
+      rescan: () => ++rescans,
+    });
+    tracker.begin();
+
+    announce('mock-1');
+    expect(rescans).toBe(0);
+
+    detector.version = 'mock-2';
+    announce('mock-2');
+    announce('mock-2');
+
+    expect(rescans).toBe(1);
+    expect(texts(lines)).toHaveLength(1);
+  });
+
+  it('chains quick changes, each from the previous one', () => {
+    const { mock, tracker } = runtime();
+    tracker.begin();
+
+    mock.setVersion('mock-2');
+    mock.setVersion('mock-3');
+
+    expect(tracker.lastChange()).toMatchObject({
+      from: identity('mock-2'),
+      to: identity('mock-3'),
+    });
+  });
+
+  it('logs a failing rescan and counts it as 0', () => {
+    const { mock, lines, tracker } = runtime({
+      rescan: () => {
+        throw new Error('no editor');
+      },
+    });
+    tracker.begin();
+
+    expect(() => mock.setVersion('mock-2')).not.toThrow();
+    expect(texts(lines)).toEqual([
+      'detector rescan failed: no editor',
+      'detector version changed mock@mock-1 → mock@mock-2 (runtime), 0 open files scheduled',
+    ]);
+  });
+
+  it('accepts a detector that never announces changes', () => {
+    const { tracker } = harness({ version: 'mock-1' });
+
+    expect(() => tracker.dispose()).not.toThrow();
+  });
+
+  it('ignores announcements and records nothing after dispose()', async () => {
+    const { mock, lines, store, tracker, rescans } = runtime();
+    tracker.begin();
+    await tracker.confirmStarted();
+    tracker.dispose();
+
+    mock.setVersion('mock-2');
+    await flushWrites();
+
+    expect(rescans()).toBe(0);
+    expect(lines).toEqual([]);
+    expect(store.get(ACTIVE_DETECTOR_KEY)).toEqual(identity('mock-1'));
+  });
+
+  it('notifies change listeners once per change', async () => {
+    const { mock, tracker } = runtime();
+    tracker.begin();
+    const seen: (string | undefined)[] = [];
+    tracker.onChange(() => seen.push(tracker.lastChange()?.to.detectorVersion));
+
+    mock.setVersion('mock-2');
+    await Promise.resolve();
+    mock.setVersion('mock-3');
+    await Promise.resolve();
+
+    expect(seen).toEqual(['mock-2', 'mock-3']);
+  });
+
+  it('never sets a timer, so nothing runs while no change is announced (FR-005)', () => {
+    const { clock, tracker } = runtime();
+    tracker.begin();
+    tracker.startupScheduled(2);
+
+    expect(clock.pendingCount).toBe(0);
   });
 });

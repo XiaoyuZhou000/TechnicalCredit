@@ -89,16 +89,22 @@ function pipeline(
     workspaceIdOf: () => W,
     onSinkError: (error) => errors.push(error),
   });
+  /** What the editor has open, for the runtime rescan; `start` sets it, tests may change it. */
+  let openDocs: readonly FakeDoc[] = [];
+  const setOpen = (docs: readonly FakeDoc[]): void => {
+    openDocs = docs;
+  };
   const tracker = new DetectorVersionTracker({
     detector: mock,
     store,
     clock,
     log: (line) => lines.push(line),
-    rescan: () => 0,
+    rescan: () => events.rescan(openDocs),
   });
 
   /** The composition root's start order: compare, startup scan, report, record. */
   const start = async (docs: readonly FakeDoc[]): Promise<void> => {
+    openDocs = docs;
     tracker.begin();
     tracker.startupScheduled(events.startup(docs));
     await tracker.confirmStarted();
@@ -131,6 +137,7 @@ function pipeline(
     events,
     tracker,
     start,
+    setOpen,
     lines,
     errors,
     tick,
@@ -575,6 +582,106 @@ describe('functional suite: bounded re-analysis (card 11 US3)', () => {
     expect(
       p.mock.calls().filter((c) => c.fileUri === queued.uri.toString()),
     ).toHaveLength(1);
+    p.shutdown();
+  });
+});
+
+describe('functional suite: detector version change at runtime (card 11 US4)', () => {
+  /** Three files, two calls at a time: the third settles one mock delay later. */
+  const SETTLED = QUIET + 2 * MOCK_DELAY + 100;
+  const docs = (): FakeDoc[] => [
+    new FakeDoc('A.java', 'class A {}'),
+    new FakeDoc('B.java', 'interface B {}'),
+    new FakeDoc('C.java', 'class C { int c; }'),
+  ];
+  const storedLines = (p: ReturnType<typeof pipeline>, version: string) =>
+    p.lines.filter(
+      (line) =>
+        line.includes('cache stored') && line.includes(`mock@${version}`),
+    );
+
+  it('re-analyses the open files once under the new version, without a restart (US4-1)', async () => {
+    const p = pipeline(createMemoryCacheStore(), { version: 'mock-1' });
+    await p.start(docs());
+    await p.tick(SETTLED);
+    expect(p.mock.callCount).toBe(3);
+
+    p.mock.setVersion('mock-2');
+
+    expect(p.lines.filter((line) => line.includes('(runtime)'))).toEqual([
+      expect.stringContaining(
+        'detector version changed mock@mock-1 → mock@mock-2 (runtime), 3 open files scheduled',
+      ),
+    ]);
+    // The files finished less than a cooldown ago, so the new calls wait it out first.
+    await p.tick(COOL + SETTLED);
+
+    expect(p.mock.callCount).toBe(6);
+    expect(storedLines(p, 'mock-2')).toHaveLength(3);
+    expect(p.scheduler.files().every((f) => f.latest?.current)).toBe(true);
+    p.shutdown();
+  });
+
+  it('answers a rollback at runtime from the cache, with no call (US4, cache rule 4)', async () => {
+    const p = pipeline(createMemoryCacheStore(), { version: 'mock-1' });
+    await p.start(docs());
+    await p.tick(SETTLED);
+    p.mock.setVersion('mock-2');
+    await p.tick(COOL + SETTLED);
+    expect(p.mock.callCount).toBe(6);
+
+    p.mock.setVersion('mock-1');
+    await p.tick(QUIET + 100);
+
+    expect(p.mock.callCount).toBe(6);
+    expect(p.lines.filter((line) => line.includes('cache hit'))).toHaveLength(
+      3,
+    );
+    expect(p.scheduler.files().every((f) => f.latest?.current)).toBe(true);
+    p.shutdown();
+  });
+
+  it('marks an old-version result stale and follows it with one new-version call (US3-4, SC-004)', async () => {
+    const p = pipeline(createMemoryCacheStore(), { version: 'mock-1' });
+    const a = new FakeDoc('A.java', 'class A {}');
+    await p.start([a]);
+    await p.tick(QUIET + 100); // the mock-1 call is running
+    expect(p.scheduler.running()).toBe(1);
+
+    p.mock.setVersion('mock-2');
+    await p.tick(MOCK_DELAY);
+
+    expect(storedLines(p, 'mock-1')).toHaveLength(1);
+    expect(p.lines.some((line) => line.includes('result stale #1'))).toBe(true);
+    expect(p.scheduler.files()[0].latest?.current).toBe(false);
+
+    await p.tick(COOL + MOCK_DELAY + 100);
+
+    expect(p.mock.callCount).toBe(2);
+    expect(storedLines(p, 'mock-2')).toHaveLength(1);
+    expect(p.scheduler.files()[0].latest?.current).toBe(true);
+    p.shutdown();
+  });
+
+  it('never rescans closed or unsupported documents (FR-013, SC-005)', async () => {
+    const p = pipeline(createMemoryCacheStore(), { version: 'mock-1' });
+    const a = new FakeDoc('A.java', 'class A {}');
+    const b = new FakeDoc('B.java', 'class B {}');
+    const notes = new FakeDoc('notes.txt', 'hello', 'plaintext');
+    await p.start([a, b, notes]);
+    await p.tick(QUIET + MOCK_DELAY + 100);
+    p.events.closed(b);
+    p.setOpen([a, notes]); // B's tab is gone
+
+    p.mock.setVersion('mock-2');
+    await p.tick(COOL + QUIET + MOCK_DELAY + 100);
+
+    expect(p.tracker.lastChange()).toMatchObject({ scheduled: 1 });
+    expect(p.mock.calls().map((c) => c.fileUri)).toEqual([
+      'file:///w/A.java',
+      'file:///w/B.java',
+      'file:///w/A.java',
+    ]);
     p.shutdown();
   });
 });
