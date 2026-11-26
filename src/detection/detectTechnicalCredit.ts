@@ -1,4 +1,7 @@
-import type { DetectorFailure } from '@/background/detector/detector';
+import {
+  failureFromAbort,
+  type DetectorFailure,
+} from '@/background/detector/detector';
 import type { TCResult } from '@/comment/tcResult';
 import type { TcContext } from '@/context/buildContext';
 import type { AdrSummary } from '@/context/findAdrs';
@@ -51,6 +54,18 @@ function reasonOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+const ABORTED = Symbol('aborted');
+
+/** The caller's abort as an outcome: `timeout` when the reason is a timeout, else `cancelled`. */
+function abortOutcome(signal: AbortSignal): DetectionOutcome {
+  const result = failureFromAbort(signal);
+  // failureFromAbort never succeeds; the fallback only narrows the type.
+  return {
+    ok: false,
+    failure: result.ok ? { kind: 'cancelled' } : result.failure,
+  };
+}
+
 async function ask<T>(
   step: string,
   call: () => Promise<unknown>,
@@ -75,53 +90,91 @@ async function ask<T>(
  * future background detector. Makes exactly the calls the manual command made before card 13:
  * one per heuristic category, then one ADR-matching call per candidate when ADRs exist. Any
  * failed call fails the whole run. Findings follow `HEURISTIC_CATEGORIES` order.
+ *
+ * Once `signal` aborts, no further call starts and the outcome is `cancelled` or `timeout`, even
+ * if the client ignores the signal: each phase races the abort. A failure aborts the calls still
+ * in flight, since the run has already failed.
  */
 export async function detectTechnicalCredit(
   request: DetectionRequest,
   client: ClaudeClient,
   signal: AbortSignal,
 ): Promise<DetectionOutcome> {
+  if (signal.aborted) {
+    return abortOutcome(signal);
+  }
+  const run = new AbortController();
+  const callSignal = AbortSignal.any([signal, run.signal]);
+  let onAbort = (): void => {};
+  // Resolves rather than rejects, so an abort after the run settles is never unhandled.
+  const aborted = new Promise<typeof ABORTED>((resolve) => {
+    onAbort = () => resolve(ABORTED);
+    signal.addEventListener('abort', onAbort, { once: true });
+  });
+  const phase = <T>(work: Promise<T>): Promise<T | typeof ABORTED> =>
+    Promise.race([work, aborted]);
+
   try {
     const userPrompt = createUserPrompt(request.context);
-    const answers = await Promise.all(
-      HEURISTIC_CATEGORIES.map((category) =>
-        ask(
-          `heuristic "${category}"`,
-          () =>
-            client(
-              `${SYSTEM_PROMPT}\n\n${createHeuristicPrompt(category)}`,
-              userPrompt,
-              signal,
-            ),
-          parseHeuristicAnswer,
+    const answers = await phase(
+      Promise.all(
+        HEURISTIC_CATEGORIES.map((category) =>
+          ask(
+            `heuristic "${category}"`,
+            () =>
+              client(
+                `${SYSTEM_PROMPT}\n\n${createHeuristicPrompt(category)}`,
+                userPrompt,
+                callSignal,
+              ),
+            parseHeuristicAnswer,
+          ),
         ),
       ),
     );
+    if (answers === ABORTED) {
+      return abortOutcome(signal);
+    }
     const candidates = answers.filter((a): a is TCResult => a !== null);
     if (candidates.length === 0 || request.adrs.length === 0) {
       return { ok: true, findings: candidates };
     }
 
+    if (signal.aborted) {
+      return abortOutcome(signal);
+    }
     const adrs = [...request.adrs];
-    const findings = await Promise.all(
-      candidates.map(async (finding) => ({
-        ...finding,
-        adr: await ask(
-          `ADR matching for "${finding.category}"`,
-          () =>
-            client(
-              ADR_SYSTEM_PROMPT,
-              createAdrUserPrompt(finding, adrs),
-              signal,
-            ),
-          parseAdrAnswer,
-        ),
-      })),
+    const findings = await phase(
+      Promise.all(
+        candidates.map(async (finding) => ({
+          ...finding,
+          adr: await ask(
+            `ADR matching for "${finding.category}"`,
+            () =>
+              client(
+                ADR_SYSTEM_PROMPT,
+                createAdrUserPrompt(finding, adrs),
+                callSignal,
+              ),
+            parseAdrAnswer,
+          ),
+        })),
+      ),
     );
+    if (findings === ABORTED) {
+      return abortOutcome(signal);
+    }
     return { ok: true, findings };
   } catch (e) {
+    // A call that honoured the caller's abort rejects; that is a cancellation, not a failure.
+    if (signal.aborted) {
+      return abortOutcome(signal);
+    }
     const message =
       e instanceof StepFailure ? e.message : `detection: ${reasonOf(e)}`;
     return { ok: false, failure: { kind: 'failed', message } };
+  } finally {
+    run.abort();
+    signal.removeEventListener('abort', onAbort);
   }
 }
