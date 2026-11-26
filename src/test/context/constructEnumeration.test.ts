@@ -226,3 +226,101 @@ describe('US2: each construct carries the manual context, from one parse', () =>
     }
   });
 });
+
+describe('US3: empty, declaration-free and broken files never crash', () => {
+  it('gives an empty list for an empty file', async () => {
+    expect(await enumerateConstructs('', 'Fixture.java', 'java')).toEqual({
+      ok: true,
+      constructs: [],
+    });
+  });
+
+  it('gives an empty list for a file with only a package, imports and comments', async () => {
+    const source = [
+      'package com.example;',
+      'import java.util.List;',
+      '// nothing declared yet',
+      '/* still nothing */',
+    ].join('\n');
+
+    expect(await constructsOf(source)).toEqual([]);
+  });
+
+  it('gives an empty list for text that is not Java at all', async () => {
+    expect(await constructsOf('hello world @@@ ###')).toEqual([]);
+  });
+
+  it('does not parse a non-Java document', async () => {
+    const parse = jest.spyOn(Parser.prototype, 'parse');
+    try {
+      expect(await constructsOf('class A {}', 'plaintext')).toEqual([]);
+      expect(parse).not.toHaveBeenCalled();
+    } finally {
+      parse.mockRestore();
+    }
+  });
+
+  it('returns a class missing its closing braces, marked incomplete, and keeps the one before it', async () => {
+    const constructs = await constructsOf(
+      ['class A { void f() {} }', 'class B {', '  void g() {'].join('\n'),
+    );
+
+    expect(constructs.map((c) => [c.name, c.line, c.incomplete])).toEqual([
+      ['A', 0, false],
+      ['B', 1, true],
+    ]);
+  });
+
+  it('marks only the class with a broken method as incomplete', async () => {
+    const constructs = await constructsOf(
+      ['class A {}', 'class B { void g( { }', 'class C {}'].join('\n'),
+    );
+
+    expect(constructs[0]).toMatchObject({ name: 'A', incomplete: false });
+    expect(constructs[1]).toMatchObject({
+      name: 'B',
+      line: 1,
+      incomplete: true,
+    });
+  });
+
+  it('keeps both classes complete when the only error lies between them', async () => {
+    const constructs = await constructsOf(
+      ['class A {}', '}}} ;;', 'class C {}'].join('\n'),
+    );
+
+    expect(constructs.map((c) => [c.name, c.line, c.incomplete])).toEqual([
+      ['A', 0, false],
+      ['C', 2, false],
+    ]);
+  });
+
+  it('reports "unavailable" without throwing or logging file text when the parser was never set up', async () => {
+    const errors = jest.spyOn(console, 'error').mockImplementation(() => {
+      // Silenced: the call itself is what this test checks.
+    });
+    try {
+      let fresh: typeof enumerateConstructs | undefined;
+      jest.isolateModules(() => {
+        // A fresh module registry: this copy of the parser has no extension path.
+        fresh = jest.requireActual<{
+          enumerateConstructs: typeof enumerateConstructs;
+        }>('@/context/enumerateConstructs').enumerateConstructs;
+      });
+      if (fresh === undefined) {
+        throw new Error('isolated module did not load');
+      }
+      const result = await fresh(
+        'class SECRET_TEXT_12 {}',
+        'Fixture.java',
+        'java',
+      );
+
+      expect(result).toEqual({ ok: false, reason: 'unavailable' });
+      expect(errors).toHaveBeenCalledTimes(1);
+      expect(JSON.stringify(errors.mock.calls)).not.toContain('SECRET_TEXT_12');
+    } finally {
+      errors.mockRestore();
+    }
+  });
+});
