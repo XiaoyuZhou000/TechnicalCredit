@@ -12,10 +12,13 @@ const claude = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
+/** `signal` lets the caller cancel; the per-call timeout applies either way. */
 export async function callClaude<T>(
   systemPrompt: string,
   userMessage: string,
+  signal?: AbortSignal,
 ): Promise<T> {
+  const timeout = AbortSignal.timeout(TIMEOUT_MS);
   const response = await claude.messages.create(
     {
       model: MODEL,
@@ -28,7 +31,7 @@ export async function callClaude<T>(
         { role: 'user', content: userMessage },
       ],
     },
-    { signal: AbortSignal.timeout(TIMEOUT_MS) },
+    { signal: signal ? AbortSignal.any([signal, timeout]) : timeout },
   );
 
   const raw = response.content
