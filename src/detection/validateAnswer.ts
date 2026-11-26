@@ -93,6 +93,10 @@ export function parseHeuristicAnswer(
 
 /** An ADR-matching answer: the matched ADR id, or `null` when no ADR documents the pattern. */
 export function parseAdrAnswer(answer: unknown): AnswerCheck<string | null> {
+  // A bare null says "no match" as plainly as { "adr": null }.
+  if (answer === null) {
+    return { ok: true, value: null };
+  }
   if (!isRecord(answer)) {
     return problem(NOT_AN_OBJECT);
   }

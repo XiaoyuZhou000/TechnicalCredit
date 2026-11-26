@@ -145,9 +145,13 @@ describe('parseAdrAnswer', () => {
     expect(parseAdrAnswer({})).toEqual({ ok: true, value: null });
   });
 
+  it('reads a top-level null as "no match"', () => {
+    expect(parseAdrAnswer(null)).toEqual({ ok: true, value: null });
+  });
+
   it.each([
-    ['null', null, 'the answer is not a JSON object'],
     ['an array', [], 'the answer is not a JSON object'],
+    ['a string', 'ADR-0001', 'the answer is not a JSON object'],
     ['a numeric adr', { adr: 7 }, 'the answer has no valid adr'],
   ])('rejects %s', (_label, answer, problem) => {
     expect(parseAdrAnswer(answer)).toEqual({ ok: false, problem });
