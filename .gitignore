@@ -3,7 +3,10 @@ dist
 node_modules
 .vscode-test/
 *.vsix
+# Local API credentials
 .env
+.env.*
+!.env.example
 
 # Spec Kit (local only)
 .specify/
