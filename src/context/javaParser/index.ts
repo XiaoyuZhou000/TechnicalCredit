@@ -3,7 +3,11 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { ConstructMetrics, DECLARATION_TYPES } from './types';
 import { nodeAnnotations } from './helpers';
-import { extractClassMetrics, extractInterfaceMetrics } from './extractors';
+import {
+  extractClassMetrics,
+  extractEnumMetrics,
+  extractInterfaceMetrics,
+} from './extractors';
 
 export type { ConstructMetrics } from './types';
 
@@ -66,6 +70,115 @@ const CONSTRUCT_TYPE_MAP: Record<string, ConstructMetrics['constructType']> = {
   field_declaration: 'field',
 };
 
+/** Kinds construct enumeration returns (card 12); records and annotation types are not among them. */
+export type ConstructKind = 'class' | 'interface' | 'enum';
+
+/** Zero-based; columns count UTF-16 code units, as the parser does over a JS string. */
+export interface Position {
+  readonly line: number;
+  readonly column: number;
+}
+
+/** One top-level declaration from a single parse, with everything copied out of the tree. */
+export interface TopLevelNode {
+  readonly kind: ConstructKind;
+  readonly name: string | null;
+  readonly start: Position;
+  readonly end: Position;
+  readonly nameStart: Position | null;
+  readonly source: string;
+  /** The declaration contains a syntax error or a missing token. */
+  readonly hasError: boolean;
+  readonly metrics: ConstructMetrics;
+}
+
+export type TopLevelResult =
+  | {
+      readonly ok: true;
+      readonly nodes: readonly TopLevelNode[];
+      /** The tree has an error or missing token anywhere, not only inside `nodes`. */
+      readonly hasSyntaxErrors: boolean;
+    }
+  | { readonly ok: false };
+
+const TOP_LEVEL_KINDS = new Map<string, ConstructKind>([
+  ['class_declaration', 'class'],
+  ['interface_declaration', 'interface'],
+  ['enum_declaration', 'enum'],
+]);
+
+function positionOf(point: { row: number; column: number }): Position {
+  return { line: point.row, column: point.column };
+}
+
+/**
+ * Parses the file once and returns every top-level class, interface and enum, in source order,
+ * with the same metrics the cursor path builds (card 12). Only direct children of the root
+ * count: nested, local and anonymous types stay inside their outer declaration, and top-level
+ * `ERROR` nodes are skipped. Never throws; a parser problem gives `{ ok: false }`.
+ */
+export async function extractTopLevel(
+  source: string,
+  importLines: string[],
+): Promise<TopLevelResult> {
+  try {
+    const parser = await getParser();
+    const tree = parser.parse(source);
+    if (!tree) {
+      return { ok: false };
+    }
+    try {
+      const nodes = tree.rootNode.namedChildren.flatMap(
+        (node): TopLevelNode[] => {
+          const kind = TOP_LEVEL_KINDS.get(node.type);
+          if (kind === undefined) {
+            return [];
+          }
+          const nameNode = node.childForFieldName('name');
+          return [
+            {
+              kind,
+              name: nameNode?.text ?? null,
+              start: positionOf(node.startPosition),
+              end: positionOf(node.endPosition),
+              nameStart: nameNode ? positionOf(nameNode.startPosition) : null,
+              source: node.text,
+              hasError: node.hasError,
+              metrics: topLevelMetrics(node, kind, importLines),
+            },
+          ];
+        },
+      );
+      return { ok: true, nodes, hasSyntaxErrors: tree.rootNode.hasError };
+    } finally {
+      // Everything above is copied into plain values; background analysis enumerates on every
+      // edit, so the tree's wasm memory is freed rather than left to the collector.
+      tree.delete();
+    }
+  } catch (e) {
+    console.error(
+      'construct enumeration failed:',
+      e instanceof Error ? e.message : String(e),
+    );
+    return { ok: false };
+  }
+}
+
+/**
+ * A top-level declaration has no enclosing class, as the cursor walk finds too. Only enums get
+ * `enumMetrics`, and only here: the cursor path's metrics never carry the key.
+ */
+function topLevelMetrics(
+  node: Node,
+  kind: ConstructKind,
+  importLines: string[],
+): ConstructMetrics {
+  const metrics = metricsFor(node, null, node, importLines);
+  return kind === 'enum'
+    ? { ...metrics, enumMetrics: extractEnumMetrics(node, importLines) }
+    : metrics;
+}
+
 /** Parses the Java source, walks the AST from the cursor position to the nearest declaration, and returns structural metrics for that construct and its enclosing class. */
 export async function extractMetrics(
   source: string,
@@ -110,24 +223,37 @@ export async function extractMetrics(
       return null;
     }
 
-    return {
-      constructType: CONSTRUCT_TYPE_MAP[node.type] ?? 'unknown',
-      name: node.childForFieldName('name')?.text ?? null,
-      annotations: nodeAnnotations(node),
-      startRow: node.startPosition.row,
-      enclosingClassStartRow: enclosingClass?.startPosition.row ?? null,
-      classSource: classNode.text,
-      classMetrics:
-        node.type === 'class_declaration'
-          ? extractClassMetrics(node, importLines)
-          : null,
-      interfaceMetrics:
-        node.type === 'interface_declaration'
-          ? extractInterfaceMetrics(node)
-          : null,
-    };
+    return metricsFor(node, enclosingClass, classNode, importLines);
   } catch (e) {
     console.error('extractMetrics failed:', e);
     return null;
   }
+}
+
+/**
+ * Structural metrics for one declaration node. Shared by the cursor path above and by
+ * construct enumeration (card 12), so both build exactly the same object.
+ */
+function metricsFor(
+  node: Node,
+  enclosingClass: Node | null,
+  classNode: Node,
+  importLines: string[],
+): ConstructMetrics {
+  return {
+    constructType: CONSTRUCT_TYPE_MAP[node.type] ?? 'unknown',
+    name: node.childForFieldName('name')?.text ?? null,
+    annotations: nodeAnnotations(node),
+    startRow: node.startPosition.row,
+    enclosingClassStartRow: enclosingClass?.startPosition.row ?? null,
+    classSource: classNode.text,
+    classMetrics:
+      node.type === 'class_declaration'
+        ? extractClassMetrics(node, importLines)
+        : null,
+    interfaceMetrics:
+      node.type === 'interface_declaration'
+        ? extractInterfaceMetrics(node)
+        : null,
+  };
 }
