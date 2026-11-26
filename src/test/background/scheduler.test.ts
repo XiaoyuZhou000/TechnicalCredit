@@ -2611,6 +2611,45 @@ describe('global call limit (card 11 US3, rule 11)', () => {
     expect(scheduler.stats().slotWaits).toBe(2);
   });
 
+  it('takes a queued file out of the queue when a version rescan restarts its quiet period', async () => {
+    const clock = createFakeTimers();
+    const detector = new VersionedDetector();
+    const { scheduler, lines } = setup({
+      detector,
+      clock,
+      quietMs: 1000,
+      maxConcurrent: 2,
+    });
+    const c = fileSnap('C');
+    ['A', 'B'].forEach((name) => scheduler.submit(fileSnap(name)));
+    scheduler.submit(c);
+    clock.advance(1000);
+    expect(scheduler.fileState(W, uri('C'))?.waitingFor).toBe('slot');
+    const before = scheduler.stats();
+
+    detector.version = '2';
+    scheduler.submit({ ...c, trigger: 'version', observedAt: 1000 });
+
+    expect(scheduler.fileState(W, uri('C'))).toMatchObject({
+      waitingFor: 'quiet',
+      eligibleAt: 2000,
+    });
+    expect(scheduler.stats().duplicates).toBe(before.duplicates);
+    expect(scheduler.stats().pendingReplaced).toBe(before.pendingReplaced + 1);
+    expect(lines).toContain(
+      `${new Date(1000).toISOString()} pending replaced v1 sha ${sha8(c)} scripted@2 ${uri('C')}`,
+    );
+
+    detector.calls[0].resolve(ok(0));
+    await settle();
+    expect(detector.calls).toHaveLength(2);
+
+    clock.advance(1000);
+    expect(detector.calls).toHaveLength(3);
+    expect(detector.calls[2].input.fileUri).toBe(uri('C'));
+    expect(scheduler.fileState(W, uri('C'))?.active?.detectorVersion).toBe('2');
+  });
+
   it('sends a settling file to the back of the queue when others are waiting', async () => {
     const { scheduler, detector } = limited(2);
     scheduler.submit(fileSnap('A'));

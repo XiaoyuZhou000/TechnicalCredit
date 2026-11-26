@@ -182,6 +182,8 @@ interface ActiveRequest {
 interface PendingSnapshot {
   readonly snapshot: FileSnapshot;
   readonly contentHash: string;
+  /** Detector version when it was observed: the same content under another version is new work. */
+  readonly detectorVersion: string;
 }
 
 /** The file's single scheduled check; `token` tells a superseded callback apart from the current one. */
@@ -315,7 +317,7 @@ export class Scheduler implements SnapshotSink {
     const contentHash = this.hash(snapshot.content);
     const detectorVersion = this.detector.version;
     const key = keyOf(snapshot.workspaceId, snapshot.fileUri);
-    const item: PendingSnapshot = { snapshot, contentHash };
+    const item: PendingSnapshot = { snapshot, contentHash, detectorVersion };
     let state = this.states.get(key);
     // A closed file's state survives only until its request settles, so a reopen is a first
     // report rather than a repeat.
@@ -757,8 +759,9 @@ export class Scheduler implements SnapshotSink {
    * Work that can't start yet: a request is running for this file, or its quiet period or
    * cooldown hasn't passed. Never starts or aborts a request. Content compares by hash, so
    * `open` + `activate`, unchanged saves and an edit followed by its undo are all duplicates.
-   * The running request covers a snapshot only under the version it runs with: after a version
-   * change the same content is new work (card 11, rule 3).
+   * The running request or the pending snapshot covers a snapshot only under its own detector
+   * version: after a version change the same content is new work (card 11, rule 3), so a queued
+   * file's replacement is re-checked against its quiet period and the slot queue.
    */
   private hold(
     state: FileState,
@@ -768,7 +771,7 @@ export class Scheduler implements SnapshotSink {
     if (
       active !== undefined &&
       item.contentHash === active.contentHash &&
-      this.detector.version === active.detectorVersion
+      item.detectorVersion === active.detectorVersion
     ) {
       if (state.pending === undefined) {
         this.counts.duplicates++;
@@ -783,7 +786,10 @@ export class Scheduler implements SnapshotSink {
       }
       return;
     }
-    if (item.contentHash === state.pending?.contentHash) {
+    if (
+      item.contentHash === state.pending?.contentHash &&
+      item.detectorVersion === state.pending.detectorVersion
+    ) {
       this.counts.duplicates++;
       this.line(`duplicate of pending ${this.suffix(item)}`);
       return;
