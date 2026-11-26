@@ -3,7 +3,7 @@ import type { Detector } from '@/background/detector/detector';
 import type { Clock } from '@/background/scheduler/clock';
 
 /** Where the identity of the last successful start is kept (machine-local, never synced). */
-export const ACTIVE_DETECTOR_KEY = 'technicalcredit.activeDetector.v1';
+export const ACTIVE_DETECTOR_KEY = 'technicalCredit.activeDetector.v1';
 
 export interface DetectorIdentity {
   readonly detectorId: string;

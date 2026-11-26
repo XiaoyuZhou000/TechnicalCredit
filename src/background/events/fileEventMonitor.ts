@@ -5,6 +5,11 @@ import {
   type SnapshotSink,
 } from '@/background/events/fileEvents';
 
+/** The running monitor; `startupCount` is what its startup scan forwarded (card 11). */
+export type FileEventMonitor = vscode.Disposable & {
+  readonly startupCount: number;
+};
+
 /**
  * Wires editor document events to the vscode-free handler. Each listener is one call with
  * no branching, so all filtering stays in code the offline tests cover.
@@ -12,7 +17,7 @@ import {
 export function startFileEventMonitor(
   sink: SnapshotSink,
   onSinkError: (error: unknown) => void,
-): vscode.Disposable {
+): FileEventMonitor {
   const handler = new FileEventHandler<vscode.TextDocument>({
     sink,
     now: () => Date.now(),
@@ -33,9 +38,15 @@ export function startFileEventMonitor(
     vscode.workspace.onDidCloseTextDocument((doc) => handler.closed(doc)),
   ];
 
-  handler.startup(vscode.workspace.textDocuments);
+  const startupCount = handler.startup(vscode.workspace.textDocuments);
 
-  return vscode.Disposable.from(...listeners, {
+  const disposable = vscode.Disposable.from(...listeners, {
     dispose: () => handler.stop(),
   });
+  return {
+    startupCount,
+    dispose: () => {
+      disposable.dispose();
+    },
+  };
 }

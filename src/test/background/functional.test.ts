@@ -1,16 +1,21 @@
 import {
+  CACHE_KEY_PREFIX,
   ResultCache,
   sha256Hex,
   type CacheStore,
 } from '@/background/cache/resultCache';
 import { MockDetector } from '@/background/detector/mockDetector';
+import { DetectorVersionTracker } from '@/background/detector/versionTracker';
 import {
   FileEventHandler,
   type MonitoredDocument,
 } from '@/background/events/fileEvents';
 import { Scheduler } from '@/background/scheduler/scheduler';
 import { createFakeTimers } from '@/test/background/fakeTimers';
-import { createMemoryCacheStore } from '@/test/background/memoryCacheStore';
+import {
+  createMemoryCacheStore,
+  type MemoryCacheStore,
+} from '@/test/background/memoryCacheStore';
 
 /**
  * Card 09's functional suite: real file-event handling, the scheduler with its production
@@ -53,10 +58,20 @@ function settle(): Promise<void> {
   return new Promise((resolve) => setImmediate(resolve));
 }
 
-/** The whole Background Agent minus `vscode`, over `store` so a restart can share it. */
-function pipeline(store: CacheStore = createMemoryCacheStore()) {
+/**
+ * The whole Background Agent minus `vscode`, over `store` so a restart can share it. The
+ * tracker shares the store too, as it shares `globalState` in production (card 11).
+ */
+function pipeline(
+  store: CacheStore = createMemoryCacheStore(),
+  options: { readonly version?: string } = {},
+) {
   const clock = createFakeTimers();
-  const mock = new MockDetector({ timers: clock, delayMs: MOCK_DELAY });
+  const mock = new MockDetector({
+    timers: clock,
+    delayMs: MOCK_DELAY,
+    ...(options.version !== undefined && { version: options.version }),
+  });
   const cache = new ResultCache({ store, now: () => clock.now() });
   const lines: string[] = [];
   const scheduler = new Scheduler({
@@ -74,6 +89,20 @@ function pipeline(store: CacheStore = createMemoryCacheStore()) {
     workspaceIdOf: () => W,
     onSinkError: (error) => errors.push(error),
   });
+  const tracker = new DetectorVersionTracker({
+    detector: mock,
+    store,
+    clock,
+    log: (line) => lines.push(line),
+    rescan: () => 0,
+  });
+
+  /** The composition root's start order: compare, startup scan, report, record. */
+  const start = async (docs: readonly FakeDoc[]): Promise<void> => {
+    tracker.begin();
+    tracker.startupScheduled(events.startup(docs));
+    await tracker.confirmStarted();
+  };
 
   /** Advances in 100 ms steps, so async completions settle in order between timers. */
   const tick = async (ms: number): Promise<void> => {
@@ -90,6 +119,7 @@ function pipeline(store: CacheStore = createMemoryCacheStore()) {
   };
   const shutdown = (): void => {
     events.stop();
+    tracker.dispose();
     scheduler.dispose();
   };
 
@@ -99,6 +129,8 @@ function pipeline(store: CacheStore = createMemoryCacheStore()) {
     cache,
     scheduler,
     events,
+    tracker,
+    start,
     lines,
     errors,
     tick,
@@ -295,5 +327,137 @@ describe('functional suite: restart (card 09 US2)', () => {
     await second.until(changedAt + QUIET);
     expect(second.mock.callCount).toBe(1);
     second.shutdown();
+  });
+});
+
+describe('functional suite: detector version change at restart (card 11 US1)', () => {
+  const docs = (): FakeDoc[] => [
+    new FakeDoc('A.java', 'class A {}'),
+    new FakeDoc('B.java', 'interface B {}'),
+    new FakeDoc('C.java', 'class C { int c; }'),
+  ];
+
+  /** Session 1 under `mock-1`: analyses every file, records `mock-1`, shuts down. */
+  async function firstSession(
+    store: MemoryCacheStore,
+    open: readonly FakeDoc[],
+  ): Promise<void> {
+    const first = pipeline(store, { version: 'mock-1' });
+    await first.start(open);
+    await first.tick(QUIET + MOCK_DELAY + 100);
+    expect(first.mock.callCount).toBe(open.length);
+    first.shutdown();
+  }
+
+  const storedVersions = (store: MemoryCacheStore): string[] =>
+    store
+      .keys()
+      .filter((key) => key.startsWith(CACHE_KEY_PREFIX))
+      .map((key) => {
+        const parts: unknown = JSON.parse(key.slice(CACHE_KEY_PREFIX.length));
+        return Array.isArray(parts) ? String(parts[3]) : '';
+      })
+      .sort();
+
+  it('re-analyses every open file once under the new version, with no edit or reopen (US1-1, US1-2)', async () => {
+    const store = createMemoryCacheStore();
+    const open = docs();
+    await firstSession(store, open);
+
+    const second = pipeline(store, { version: 'mock-2' });
+    await second.start(open);
+
+    expect(
+      second.lines.filter((line) => line.includes('detector version')),
+    ).toEqual([
+      expect.stringContaining(
+        'detector version changed mock@mock-1 → mock@mock-2 (startup), 3 open files scheduled',
+      ),
+    ]);
+    expect(second.tracker.lastChange()).toMatchObject({ scheduled: 3 });
+
+    await second.tick(QUIET + MOCK_DELAY + 100);
+
+    expect(second.mock.callCount).toBe(3);
+    expect(second.mock.calls().map((c) => c.fileUri)).toEqual([
+      'file:///w/A.java',
+      'file:///w/B.java',
+      'file:///w/C.java',
+    ]);
+    expect(
+      second.scheduler
+        .files()
+        .map((f) => [f.latest?.source, f.latest?.current]),
+    ).toEqual([
+      ['detector', true],
+      ['detector', true],
+      ['detector', true],
+    ]);
+    expect(
+      second.lines.filter((line) => line.includes('cache stored')).length,
+    ).toBe(3);
+    expect(
+      second.lines.every(
+        (line) =>
+          !line.includes('cache stored') || line.includes('mock@mock-2'),
+      ),
+    ).toBe(true);
+    // Versions never cross, and old entries are kept so a rollback can hit (cache rule 4).
+    expect(storedVersions(store)).toEqual([
+      'mock-1',
+      'mock-1',
+      'mock-1',
+      'mock-2',
+      'mock-2',
+      'mock-2',
+    ]);
+    second.shutdown();
+  });
+
+  it('answers a file already analysed under the new version from the cache (US1-3)', async () => {
+    const store = createMemoryCacheStore();
+    const open = docs();
+    await firstSession(store, open);
+    // A session that analysed A under mock-2 but never confirmed its start.
+    const partial = pipeline(store, { version: 'mock-2' });
+    partial.events.opened(open[0]);
+    await partial.tick(QUIET + MOCK_DELAY + 100);
+    partial.shutdown();
+
+    const second = pipeline(store, { version: 'mock-2' });
+    await second.start(open);
+    await second.tick(QUIET + MOCK_DELAY + 100);
+
+    expect(second.tracker.lastChange()).toMatchObject({ scheduled: 3 });
+    expect(second.mock.calls().map((c) => c.fileUri)).toEqual([
+      'file:///w/B.java',
+      'file:///w/C.java',
+    ]);
+    expect(second.scheduler.files()[0].latest).toMatchObject({
+      source: 'cache',
+      current: true,
+    });
+    second.shutdown();
+  });
+
+  it('answers a rollback from the old entries, with no call (US1-4)', async () => {
+    const store = createMemoryCacheStore();
+    const open = docs();
+    await firstSession(store, open);
+    const upgraded = pipeline(store, { version: 'mock-2' });
+    await upgraded.start(open);
+    await upgraded.tick(QUIET + MOCK_DELAY + 100);
+    upgraded.shutdown();
+
+    const rolledBack = pipeline(store, { version: 'mock-1' });
+    await rolledBack.start(open);
+    await rolledBack.tick(QUIET + MOCK_DELAY + 100);
+
+    expect(rolledBack.tracker.lastChange()).toMatchObject({
+      from: { detectorVersion: 'mock-2' },
+      to: { detectorVersion: 'mock-1' },
+    });
+    expect(rolledBack.mock.callCount).toBe(0);
+    rolledBack.shutdown();
   });
 });
