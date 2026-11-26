@@ -1,0 +1,2976 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`manual Analyse for TC: calls and previews Negative.java ContactCard: candidates with ADRs 1`] = `
+{
+  "adrPrompts": [
+    "Technical Credit pattern detected:
+category: modularity
+benefit: modularity benefit
+signals: modularity-signal
+conditions: modularity conditions
+
+Repository ADRs:
+ADR-0001 — Plugin registry — tc-category: modularity
+ADR-0002 — Config loading — tc-category: configurability
+
+Which ADR, if any, clearly documents this pattern?",
+    "Technical Credit pattern detected:
+category: reusability
+benefit: reusability benefit
+signals: reusability-signal
+conditions: reusability conditions
+
+Repository ADRs:
+ADR-0001 — Plugin registry — tc-category: modularity
+ADR-0002 — Config loading — tc-category: configurability
+
+Which ADR, if any, clearly documents this pattern?",
+  ],
+  "callCount": 10,
+  "messages": [],
+  "previews": [
+    {
+      "insertLine": 1,
+      "texts": [
+        "@TechnicalCredit({
+benefit: 'modularity benefit',
+category: 'modularity',
+conditions: 'modularity conditions',
+signals: ['modularity-signal'],
+adr: 'ADR-0001',
+})",
+        "@TechnicalCredit({
+benefit: 'reusability benefit',
+category: 'reusability',
+conditions: 'reusability conditions',
+signals: ['reusability-signal'],
+})",
+      ],
+    },
+  ],
+  "progress": [
+    {
+      "cancellable": false,
+      "location": 15,
+      "title": "Analysing for TC…",
+    },
+  ],
+  "systemPrompts": [
+    "387ca5c72f41db52",
+    "3b70bb48086d641b",
+    "69d237d39b3087b6",
+    "6e2451e2bca8a4e1",
+    "750da759916893ff",
+    "9233b1c11864405c",
+    "a724fd3be19d85b8",
+    "bbc64497a3745599",
+  ],
+  "userPrompt": "Analyse the following code construct for Technical Credit patterns.
+File: /workspace/src/test/creational/prototype/Negative.java
+Language: java
+Pre-extracted construct metrics (tree-sitter):
+{
+  "constructType": "class",
+  "name": "ContactCard",
+  "annotations": [],
+  "startRow": 1,
+  "enclosingClassStartRow": null,
+  "classSource": "class ContactCard {\\n    private final String name;\\n    private final String phone;\\n\\n    ContactCard(String name, String phone) {\\n        this.name = name;\\n        this.phone = phone;\\n    }\\n\\n    ContactCard(ContactCard other) {\\n        this.name = other.name;\\n        this.phone = other.phone;\\n    }\\n\\n    ContactCardSnapshot snapshot() {\\n        return new ContactCardSnapshot(this.name, this.phone);\\n    }\\n}",
+  "classMetrics": {
+    "superclass": null,
+    "implementedInterfaces": [],
+    "fields": [
+      {
+        "name": "name",
+        "type": "String",
+        "isFinal": true,
+        "annotations": []
+      },
+      {
+        "name": "phone",
+        "type": "String",
+        "isFinal": true,
+        "annotations": []
+      }
+    ],
+    "finalFieldTypes": [
+      "String",
+      "String"
+    ],
+    "constructors": [
+      {
+        "paramCount": 2,
+        "paramTypes": [
+          "String",
+          "String"
+        ],
+        "hasAutowired": false
+      },
+      {
+        "paramCount": 1,
+        "paramTypes": [
+          "ContactCard"
+        ],
+        "hasAutowired": false
+      }
+    ],
+    "methodCount": 1,
+    "nestedDeclarations": []
+  },
+  "interfaceMetrics": null
+}
+Class source:
+class ContactCard {
+    private final String name;
+    private final String phone;
+
+    ContactCard(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+
+    ContactCard(ContactCard other) {
+        this.name = other.name;
+        this.phone = other.phone;
+    }
+
+    ContactCardSnapshot snapshot() {
+        return new ContactCardSnapshot(this.name, this.phone);
+    }
+}",
+}
+`;
+
+exports[`manual Analyse for TC: calls and previews Negative.java ContactCard: candidates without ADRs 1`] = `
+{
+  "adrPrompts": [],
+  "callCount": 8,
+  "messages": [],
+  "previews": [
+    {
+      "insertLine": 1,
+      "texts": [
+        "@TechnicalCredit({
+benefit: 'modularity benefit',
+category: 'modularity',
+conditions: 'modularity conditions',
+signals: ['modularity-signal'],
+})",
+        "@TechnicalCredit({
+benefit: 'reusability benefit',
+category: 'reusability',
+conditions: 'reusability conditions',
+signals: ['reusability-signal'],
+})",
+      ],
+    },
+  ],
+  "progress": [
+    {
+      "cancellable": false,
+      "location": 15,
+      "title": "Analysing for TC…",
+    },
+  ],
+  "systemPrompts": [
+    "387ca5c72f41db52",
+    "3b70bb48086d641b",
+    "69d237d39b3087b6",
+    "6e2451e2bca8a4e1",
+    "750da759916893ff",
+    "9233b1c11864405c",
+    "a724fd3be19d85b8",
+    "bbc64497a3745599",
+  ],
+  "userPrompt": "Analyse the following code construct for Technical Credit patterns.
+File: /workspace/src/test/creational/prototype/Negative.java
+Language: java
+Pre-extracted construct metrics (tree-sitter):
+{
+  "constructType": "class",
+  "name": "ContactCard",
+  "annotations": [],
+  "startRow": 1,
+  "enclosingClassStartRow": null,
+  "classSource": "class ContactCard {\\n    private final String name;\\n    private final String phone;\\n\\n    ContactCard(String name, String phone) {\\n        this.name = name;\\n        this.phone = phone;\\n    }\\n\\n    ContactCard(ContactCard other) {\\n        this.name = other.name;\\n        this.phone = other.phone;\\n    }\\n\\n    ContactCardSnapshot snapshot() {\\n        return new ContactCardSnapshot(this.name, this.phone);\\n    }\\n}",
+  "classMetrics": {
+    "superclass": null,
+    "implementedInterfaces": [],
+    "fields": [
+      {
+        "name": "name",
+        "type": "String",
+        "isFinal": true,
+        "annotations": []
+      },
+      {
+        "name": "phone",
+        "type": "String",
+        "isFinal": true,
+        "annotations": []
+      }
+    ],
+    "finalFieldTypes": [
+      "String",
+      "String"
+    ],
+    "constructors": [
+      {
+        "paramCount": 2,
+        "paramTypes": [
+          "String",
+          "String"
+        ],
+        "hasAutowired": false
+      },
+      {
+        "paramCount": 1,
+        "paramTypes": [
+          "ContactCard"
+        ],
+        "hasAutowired": false
+      }
+    ],
+    "methodCount": 1,
+    "nestedDeclarations": []
+  },
+  "interfaceMetrics": null
+}
+Class source:
+class ContactCard {
+    private final String name;
+    private final String phone;
+
+    ContactCard(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+
+    ContactCard(ContactCard other) {
+        this.name = other.name;
+        this.phone = other.phone;
+    }
+
+    ContactCardSnapshot snapshot() {
+        return new ContactCardSnapshot(this.name, this.phone);
+    }
+}",
+}
+`;
+
+exports[`manual Analyse for TC: calls and previews Negative.java ContactCard: no candidates 1`] = `
+{
+  "adrPrompts": [],
+  "callCount": 8,
+  "messages": [
+    {
+      "level": "info",
+      "text": "No TC detected in this class.",
+    },
+  ],
+  "previews": [],
+  "progress": [
+    {
+      "cancellable": false,
+      "location": 15,
+      "title": "Analysing for TC…",
+    },
+  ],
+  "systemPrompts": [
+    "387ca5c72f41db52",
+    "3b70bb48086d641b",
+    "69d237d39b3087b6",
+    "6e2451e2bca8a4e1",
+    "750da759916893ff",
+    "9233b1c11864405c",
+    "a724fd3be19d85b8",
+    "bbc64497a3745599",
+  ],
+  "userPrompt": "Analyse the following code construct for Technical Credit patterns.
+File: /workspace/src/test/creational/prototype/Negative.java
+Language: java
+Pre-extracted construct metrics (tree-sitter):
+{
+  "constructType": "class",
+  "name": "ContactCard",
+  "annotations": [],
+  "startRow": 1,
+  "enclosingClassStartRow": null,
+  "classSource": "class ContactCard {\\n    private final String name;\\n    private final String phone;\\n\\n    ContactCard(String name, String phone) {\\n        this.name = name;\\n        this.phone = phone;\\n    }\\n\\n    ContactCard(ContactCard other) {\\n        this.name = other.name;\\n        this.phone = other.phone;\\n    }\\n\\n    ContactCardSnapshot snapshot() {\\n        return new ContactCardSnapshot(this.name, this.phone);\\n    }\\n}",
+  "classMetrics": {
+    "superclass": null,
+    "implementedInterfaces": [],
+    "fields": [
+      {
+        "name": "name",
+        "type": "String",
+        "isFinal": true,
+        "annotations": []
+      },
+      {
+        "name": "phone",
+        "type": "String",
+        "isFinal": true,
+        "annotations": []
+      }
+    ],
+    "finalFieldTypes": [
+      "String",
+      "String"
+    ],
+    "constructors": [
+      {
+        "paramCount": 2,
+        "paramTypes": [
+          "String",
+          "String"
+        ],
+        "hasAutowired": false
+      },
+      {
+        "paramCount": 1,
+        "paramTypes": [
+          "ContactCard"
+        ],
+        "hasAutowired": false
+      }
+    ],
+    "methodCount": 1,
+    "nestedDeclarations": []
+  },
+  "interfaceMetrics": null
+}
+Class source:
+class ContactCard {
+    private final String name;
+    private final String phone;
+
+    ContactCard(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+
+    ContactCard(ContactCard other) {
+        this.name = other.name;
+        this.phone = other.phone;
+    }
+
+    ContactCardSnapshot snapshot() {
+        return new ContactCardSnapshot(this.name, this.phone);
+    }
+}",
+}
+`;
+
+exports[`manual Analyse for TC: calls and previews Negative.java ContactCardSnapshot: candidates with ADRs 1`] = `
+{
+  "adrPrompts": [
+    "Technical Credit pattern detected:
+category: modularity
+benefit: modularity benefit
+signals: modularity-signal
+conditions: modularity conditions
+
+Repository ADRs:
+ADR-0001 — Plugin registry — tc-category: modularity
+ADR-0002 — Config loading — tc-category: configurability
+
+Which ADR, if any, clearly documents this pattern?",
+    "Technical Credit pattern detected:
+category: reusability
+benefit: reusability benefit
+signals: reusability-signal
+conditions: reusability conditions
+
+Repository ADRs:
+ADR-0001 — Plugin registry — tc-category: modularity
+ADR-0002 — Config loading — tc-category: configurability
+
+Which ADR, if any, clearly documents this pattern?",
+  ],
+  "callCount": 10,
+  "messages": [],
+  "previews": [
+    {
+      "insertLine": 20,
+      "texts": [
+        "@TechnicalCredit({
+benefit: 'modularity benefit',
+category: 'modularity',
+conditions: 'modularity conditions',
+signals: ['modularity-signal'],
+adr: 'ADR-0001',
+})",
+        "@TechnicalCredit({
+benefit: 'reusability benefit',
+category: 'reusability',
+conditions: 'reusability conditions',
+signals: ['reusability-signal'],
+})",
+      ],
+    },
+  ],
+  "progress": [
+    {
+      "cancellable": false,
+      "location": 15,
+      "title": "Analysing for TC…",
+    },
+  ],
+  "systemPrompts": [
+    "387ca5c72f41db52",
+    "3b70bb48086d641b",
+    "69d237d39b3087b6",
+    "6e2451e2bca8a4e1",
+    "750da759916893ff",
+    "9233b1c11864405c",
+    "a724fd3be19d85b8",
+    "bbc64497a3745599",
+  ],
+  "userPrompt": "Analyse the following code construct for Technical Credit patterns.
+File: /workspace/src/test/creational/prototype/Negative.java
+Language: java
+Pre-extracted construct metrics (tree-sitter):
+{
+  "constructType": "class",
+  "name": "ContactCardSnapshot",
+  "annotations": [],
+  "startRow": 20,
+  "enclosingClassStartRow": null,
+  "classSource": "class ContactCardSnapshot {\\n    private final String name;\\n    private final String phone;\\n\\n    ContactCardSnapshot(String name, String phone) {\\n        this.name = name;\\n        this.phone = phone;\\n    }\\n}",
+  "classMetrics": {
+    "superclass": null,
+    "implementedInterfaces": [],
+    "fields": [
+      {
+        "name": "name",
+        "type": "String",
+        "isFinal": true,
+        "annotations": []
+      },
+      {
+        "name": "phone",
+        "type": "String",
+        "isFinal": true,
+        "annotations": []
+      }
+    ],
+    "finalFieldTypes": [
+      "String",
+      "String"
+    ],
+    "constructors": [
+      {
+        "paramCount": 2,
+        "paramTypes": [
+          "String",
+          "String"
+        ],
+        "hasAutowired": false
+      }
+    ],
+    "methodCount": 0,
+    "nestedDeclarations": []
+  },
+  "interfaceMetrics": null
+}
+Class source:
+class ContactCardSnapshot {
+    private final String name;
+    private final String phone;
+
+    ContactCardSnapshot(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+}",
+}
+`;
+
+exports[`manual Analyse for TC: calls and previews Negative.java ContactCardSnapshot: candidates without ADRs 1`] = `
+{
+  "adrPrompts": [],
+  "callCount": 8,
+  "messages": [],
+  "previews": [
+    {
+      "insertLine": 20,
+      "texts": [
+        "@TechnicalCredit({
+benefit: 'modularity benefit',
+category: 'modularity',
+conditions: 'modularity conditions',
+signals: ['modularity-signal'],
+})",
+        "@TechnicalCredit({
+benefit: 'reusability benefit',
+category: 'reusability',
+conditions: 'reusability conditions',
+signals: ['reusability-signal'],
+})",
+      ],
+    },
+  ],
+  "progress": [
+    {
+      "cancellable": false,
+      "location": 15,
+      "title": "Analysing for TC…",
+    },
+  ],
+  "systemPrompts": [
+    "387ca5c72f41db52",
+    "3b70bb48086d641b",
+    "69d237d39b3087b6",
+    "6e2451e2bca8a4e1",
+    "750da759916893ff",
+    "9233b1c11864405c",
+    "a724fd3be19d85b8",
+    "bbc64497a3745599",
+  ],
+  "userPrompt": "Analyse the following code construct for Technical Credit patterns.
+File: /workspace/src/test/creational/prototype/Negative.java
+Language: java
+Pre-extracted construct metrics (tree-sitter):
+{
+  "constructType": "class",
+  "name": "ContactCardSnapshot",
+  "annotations": [],
+  "startRow": 20,
+  "enclosingClassStartRow": null,
+  "classSource": "class ContactCardSnapshot {\\n    private final String name;\\n    private final String phone;\\n\\n    ContactCardSnapshot(String name, String phone) {\\n        this.name = name;\\n        this.phone = phone;\\n    }\\n}",
+  "classMetrics": {
+    "superclass": null,
+    "implementedInterfaces": [],
+    "fields": [
+      {
+        "name": "name",
+        "type": "String",
+        "isFinal": true,
+        "annotations": []
+      },
+      {
+        "name": "phone",
+        "type": "String",
+        "isFinal": true,
+        "annotations": []
+      }
+    ],
+    "finalFieldTypes": [
+      "String",
+      "String"
+    ],
+    "constructors": [
+      {
+        "paramCount": 2,
+        "paramTypes": [
+          "String",
+          "String"
+        ],
+        "hasAutowired": false
+      }
+    ],
+    "methodCount": 0,
+    "nestedDeclarations": []
+  },
+  "interfaceMetrics": null
+}
+Class source:
+class ContactCardSnapshot {
+    private final String name;
+    private final String phone;
+
+    ContactCardSnapshot(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+}",
+}
+`;
+
+exports[`manual Analyse for TC: calls and previews Negative.java ContactCardSnapshot: no candidates 1`] = `
+{
+  "adrPrompts": [],
+  "callCount": 8,
+  "messages": [
+    {
+      "level": "info",
+      "text": "No TC detected in this class.",
+    },
+  ],
+  "previews": [],
+  "progress": [
+    {
+      "cancellable": false,
+      "location": 15,
+      "title": "Analysing for TC…",
+    },
+  ],
+  "systemPrompts": [
+    "387ca5c72f41db52",
+    "3b70bb48086d641b",
+    "69d237d39b3087b6",
+    "6e2451e2bca8a4e1",
+    "750da759916893ff",
+    "9233b1c11864405c",
+    "a724fd3be19d85b8",
+    "bbc64497a3745599",
+  ],
+  "userPrompt": "Analyse the following code construct for Technical Credit patterns.
+File: /workspace/src/test/creational/prototype/Negative.java
+Language: java
+Pre-extracted construct metrics (tree-sitter):
+{
+  "constructType": "class",
+  "name": "ContactCardSnapshot",
+  "annotations": [],
+  "startRow": 20,
+  "enclosingClassStartRow": null,
+  "classSource": "class ContactCardSnapshot {\\n    private final String name;\\n    private final String phone;\\n\\n    ContactCardSnapshot(String name, String phone) {\\n        this.name = name;\\n        this.phone = phone;\\n    }\\n}",
+  "classMetrics": {
+    "superclass": null,
+    "implementedInterfaces": [],
+    "fields": [
+      {
+        "name": "name",
+        "type": "String",
+        "isFinal": true,
+        "annotations": []
+      },
+      {
+        "name": "phone",
+        "type": "String",
+        "isFinal": true,
+        "annotations": []
+      }
+    ],
+    "finalFieldTypes": [
+      "String",
+      "String"
+    ],
+    "constructors": [
+      {
+        "paramCount": 2,
+        "paramTypes": [
+          "String",
+          "String"
+        ],
+        "hasAutowired": false
+      }
+    ],
+    "methodCount": 0,
+    "nestedDeclarations": []
+  },
+  "interfaceMetrics": null
+}
+Class source:
+class ContactCardSnapshot {
+    private final String name;
+    private final String phone;
+
+    ContactCardSnapshot(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+}",
+}
+`;
+
+exports[`manual Analyse for TC: calls and previews Negative.java Invoice: candidates with ADRs 1`] = `
+{
+  "adrPrompts": [
+    "Technical Credit pattern detected:
+category: modularity
+benefit: modularity benefit
+signals: modularity-signal
+conditions: modularity conditions
+
+Repository ADRs:
+ADR-0001 — Plugin registry — tc-category: modularity
+ADR-0002 — Config loading — tc-category: configurability
+
+Which ADR, if any, clearly documents this pattern?",
+    "Technical Credit pattern detected:
+category: reusability
+benefit: reusability benefit
+signals: reusability-signal
+conditions: reusability conditions
+
+Repository ADRs:
+ADR-0001 — Plugin registry — tc-category: modularity
+ADR-0002 — Config loading — tc-category: configurability
+
+Which ADR, if any, clearly documents this pattern?",
+  ],
+  "callCount": 10,
+  "messages": [],
+  "previews": [
+    {
+      "insertLine": 31,
+      "texts": [
+        "@TechnicalCredit({
+benefit: 'modularity benefit',
+category: 'modularity',
+conditions: 'modularity conditions',
+signals: ['modularity-signal'],
+adr: 'ADR-0001',
+})",
+        "@TechnicalCredit({
+benefit: 'reusability benefit',
+category: 'reusability',
+conditions: 'reusability conditions',
+signals: ['reusability-signal'],
+})",
+      ],
+    },
+  ],
+  "progress": [
+    {
+      "cancellable": false,
+      "location": 15,
+      "title": "Analysing for TC…",
+    },
+  ],
+  "systemPrompts": [
+    "387ca5c72f41db52",
+    "3b70bb48086d641b",
+    "69d237d39b3087b6",
+    "6e2451e2bca8a4e1",
+    "750da759916893ff",
+    "9233b1c11864405c",
+    "a724fd3be19d85b8",
+    "bbc64497a3745599",
+  ],
+  "userPrompt": "Analyse the following code construct for Technical Credit patterns.
+File: /workspace/src/test/creational/prototype/Negative.java
+Language: java
+Pre-extracted construct metrics (tree-sitter):
+{
+  "constructType": "class",
+  "name": "Invoice",
+  "annotations": [],
+  "startRow": 31,
+  "enclosingClassStartRow": null,
+  "classSource": "class Invoice {\\n    private final double amount;\\n    private final String currency;\\n\\n    Invoice(double amount, String currency) {\\n        this.amount = amount;\\n        this.currency = currency;\\n    }\\n\\n    Invoice copyWith(double amount) {\\n        return new Invoice(amount, this.currency);\\n    }\\n}",
+  "classMetrics": {
+    "superclass": null,
+    "implementedInterfaces": [],
+    "fields": [
+      {
+        "name": "amount",
+        "type": "double",
+        "isFinal": true,
+        "annotations": []
+      },
+      {
+        "name": "currency",
+        "type": "String",
+        "isFinal": true,
+        "annotations": []
+      }
+    ],
+    "finalFieldTypes": [
+      "double",
+      "String"
+    ],
+    "constructors": [
+      {
+        "paramCount": 2,
+        "paramTypes": [
+          "double",
+          "String"
+        ],
+        "hasAutowired": false
+      }
+    ],
+    "methodCount": 1,
+    "nestedDeclarations": []
+  },
+  "interfaceMetrics": null
+}
+Class source:
+class Invoice {
+    private final double amount;
+    private final String currency;
+
+    Invoice(double amount, String currency) {
+        this.amount = amount;
+        this.currency = currency;
+    }
+
+    Invoice copyWith(double amount) {
+        return new Invoice(amount, this.currency);
+    }
+}",
+}
+`;
+
+exports[`manual Analyse for TC: calls and previews Negative.java Invoice: candidates without ADRs 1`] = `
+{
+  "adrPrompts": [],
+  "callCount": 8,
+  "messages": [],
+  "previews": [
+    {
+      "insertLine": 31,
+      "texts": [
+        "@TechnicalCredit({
+benefit: 'modularity benefit',
+category: 'modularity',
+conditions: 'modularity conditions',
+signals: ['modularity-signal'],
+})",
+        "@TechnicalCredit({
+benefit: 'reusability benefit',
+category: 'reusability',
+conditions: 'reusability conditions',
+signals: ['reusability-signal'],
+})",
+      ],
+    },
+  ],
+  "progress": [
+    {
+      "cancellable": false,
+      "location": 15,
+      "title": "Analysing for TC…",
+    },
+  ],
+  "systemPrompts": [
+    "387ca5c72f41db52",
+    "3b70bb48086d641b",
+    "69d237d39b3087b6",
+    "6e2451e2bca8a4e1",
+    "750da759916893ff",
+    "9233b1c11864405c",
+    "a724fd3be19d85b8",
+    "bbc64497a3745599",
+  ],
+  "userPrompt": "Analyse the following code construct for Technical Credit patterns.
+File: /workspace/src/test/creational/prototype/Negative.java
+Language: java
+Pre-extracted construct metrics (tree-sitter):
+{
+  "constructType": "class",
+  "name": "Invoice",
+  "annotations": [],
+  "startRow": 31,
+  "enclosingClassStartRow": null,
+  "classSource": "class Invoice {\\n    private final double amount;\\n    private final String currency;\\n\\n    Invoice(double amount, String currency) {\\n        this.amount = amount;\\n        this.currency = currency;\\n    }\\n\\n    Invoice copyWith(double amount) {\\n        return new Invoice(amount, this.currency);\\n    }\\n}",
+  "classMetrics": {
+    "superclass": null,
+    "implementedInterfaces": [],
+    "fields": [
+      {
+        "name": "amount",
+        "type": "double",
+        "isFinal": true,
+        "annotations": []
+      },
+      {
+        "name": "currency",
+        "type": "String",
+        "isFinal": true,
+        "annotations": []
+      }
+    ],
+    "finalFieldTypes": [
+      "double",
+      "String"
+    ],
+    "constructors": [
+      {
+        "paramCount": 2,
+        "paramTypes": [
+          "double",
+          "String"
+        ],
+        "hasAutowired": false
+      }
+    ],
+    "methodCount": 1,
+    "nestedDeclarations": []
+  },
+  "interfaceMetrics": null
+}
+Class source:
+class Invoice {
+    private final double amount;
+    private final String currency;
+
+    Invoice(double amount, String currency) {
+        this.amount = amount;
+        this.currency = currency;
+    }
+
+    Invoice copyWith(double amount) {
+        return new Invoice(amount, this.currency);
+    }
+}",
+}
+`;
+
+exports[`manual Analyse for TC: calls and previews Negative.java Invoice: no candidates 1`] = `
+{
+  "adrPrompts": [],
+  "callCount": 8,
+  "messages": [
+    {
+      "level": "info",
+      "text": "No TC detected in this class.",
+    },
+  ],
+  "previews": [],
+  "progress": [
+    {
+      "cancellable": false,
+      "location": 15,
+      "title": "Analysing for TC…",
+    },
+  ],
+  "systemPrompts": [
+    "387ca5c72f41db52",
+    "3b70bb48086d641b",
+    "69d237d39b3087b6",
+    "6e2451e2bca8a4e1",
+    "750da759916893ff",
+    "9233b1c11864405c",
+    "a724fd3be19d85b8",
+    "bbc64497a3745599",
+  ],
+  "userPrompt": "Analyse the following code construct for Technical Credit patterns.
+File: /workspace/src/test/creational/prototype/Negative.java
+Language: java
+Pre-extracted construct metrics (tree-sitter):
+{
+  "constructType": "class",
+  "name": "Invoice",
+  "annotations": [],
+  "startRow": 31,
+  "enclosingClassStartRow": null,
+  "classSource": "class Invoice {\\n    private final double amount;\\n    private final String currency;\\n\\n    Invoice(double amount, String currency) {\\n        this.amount = amount;\\n        this.currency = currency;\\n    }\\n\\n    Invoice copyWith(double amount) {\\n        return new Invoice(amount, this.currency);\\n    }\\n}",
+  "classMetrics": {
+    "superclass": null,
+    "implementedInterfaces": [],
+    "fields": [
+      {
+        "name": "amount",
+        "type": "double",
+        "isFinal": true,
+        "annotations": []
+      },
+      {
+        "name": "currency",
+        "type": "String",
+        "isFinal": true,
+        "annotations": []
+      }
+    ],
+    "finalFieldTypes": [
+      "double",
+      "String"
+    ],
+    "constructors": [
+      {
+        "paramCount": 2,
+        "paramTypes": [
+          "double",
+          "String"
+        ],
+        "hasAutowired": false
+      }
+    ],
+    "methodCount": 1,
+    "nestedDeclarations": []
+  },
+  "interfaceMetrics": null
+}
+Class source:
+class Invoice {
+    private final double amount;
+    private final String currency;
+
+    Invoice(double amount, String currency) {
+        this.amount = amount;
+        this.currency = currency;
+    }
+
+    Invoice copyWith(double amount) {
+        return new Invoice(amount, this.currency);
+    }
+}",
+}
+`;
+
+exports[`manual Analyse for TC: calls and previews Negative.java Point: candidates with ADRs 1`] = `
+{
+  "adrPrompts": [
+    "Technical Credit pattern detected:
+category: modularity
+benefit: modularity benefit
+signals: modularity-signal
+conditions: modularity conditions
+
+Repository ADRs:
+ADR-0001 — Plugin registry — tc-category: modularity
+ADR-0002 — Config loading — tc-category: configurability
+
+Which ADR, if any, clearly documents this pattern?",
+    "Technical Credit pattern detected:
+category: reusability
+benefit: reusability benefit
+signals: reusability-signal
+conditions: reusability conditions
+
+Repository ADRs:
+ADR-0001 — Plugin registry — tc-category: modularity
+ADR-0002 — Config loading — tc-category: configurability
+
+Which ADR, if any, clearly documents this pattern?",
+  ],
+  "callCount": 10,
+  "messages": [],
+  "previews": [
+    {
+      "insertLine": 46,
+      "texts": [
+        "@TechnicalCredit({
+benefit: 'modularity benefit',
+category: 'modularity',
+conditions: 'modularity conditions',
+signals: ['modularity-signal'],
+adr: 'ADR-0001',
+})",
+        "@TechnicalCredit({
+benefit: 'reusability benefit',
+category: 'reusability',
+conditions: 'reusability conditions',
+signals: ['reusability-signal'],
+})",
+      ],
+    },
+  ],
+  "progress": [
+    {
+      "cancellable": false,
+      "location": 15,
+      "title": "Analysing for TC…",
+    },
+  ],
+  "systemPrompts": [
+    "387ca5c72f41db52",
+    "3b70bb48086d641b",
+    "69d237d39b3087b6",
+    "6e2451e2bca8a4e1",
+    "750da759916893ff",
+    "9233b1c11864405c",
+    "a724fd3be19d85b8",
+    "bbc64497a3745599",
+  ],
+  "userPrompt": "Analyse the following code construct for Technical Credit patterns.
+File: /workspace/src/test/creational/prototype/Negative.java
+Language: java
+Pre-extracted construct metrics (tree-sitter):
+{
+  "constructType": "class",
+  "name": "Point",
+  "annotations": [],
+  "startRow": 46,
+  "enclosingClassStartRow": null,
+  "classSource": "class Point {\\n    private final int x;\\n    private final int y;\\n\\n    Point(int x, int y) {\\n        this.x = x;\\n        this.y = y;\\n    }\\n\\n    private Point(Point other) {\\n        this.x = other.x;\\n        this.y = other.y;\\n    }\\n}",
+  "classMetrics": {
+    "superclass": null,
+    "implementedInterfaces": [],
+    "fields": [
+      {
+        "name": "x",
+        "type": "int",
+        "isFinal": true,
+        "annotations": []
+      },
+      {
+        "name": "y",
+        "type": "int",
+        "isFinal": true,
+        "annotations": []
+      }
+    ],
+    "finalFieldTypes": [
+      "int",
+      "int"
+    ],
+    "constructors": [
+      {
+        "paramCount": 2,
+        "paramTypes": [
+          "int",
+          "int"
+        ],
+        "hasAutowired": false
+      },
+      {
+        "paramCount": 1,
+        "paramTypes": [
+          "Point"
+        ],
+        "hasAutowired": false
+      }
+    ],
+    "methodCount": 0,
+    "nestedDeclarations": []
+  },
+  "interfaceMetrics": null
+}
+Class source:
+class Point {
+    private final int x;
+    private final int y;
+
+    Point(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    private Point(Point other) {
+        this.x = other.x;
+        this.y = other.y;
+    }
+}",
+}
+`;
+
+exports[`manual Analyse for TC: calls and previews Negative.java Point: candidates without ADRs 1`] = `
+{
+  "adrPrompts": [],
+  "callCount": 8,
+  "messages": [],
+  "previews": [
+    {
+      "insertLine": 46,
+      "texts": [
+        "@TechnicalCredit({
+benefit: 'modularity benefit',
+category: 'modularity',
+conditions: 'modularity conditions',
+signals: ['modularity-signal'],
+})",
+        "@TechnicalCredit({
+benefit: 'reusability benefit',
+category: 'reusability',
+conditions: 'reusability conditions',
+signals: ['reusability-signal'],
+})",
+      ],
+    },
+  ],
+  "progress": [
+    {
+      "cancellable": false,
+      "location": 15,
+      "title": "Analysing for TC…",
+    },
+  ],
+  "systemPrompts": [
+    "387ca5c72f41db52",
+    "3b70bb48086d641b",
+    "69d237d39b3087b6",
+    "6e2451e2bca8a4e1",
+    "750da759916893ff",
+    "9233b1c11864405c",
+    "a724fd3be19d85b8",
+    "bbc64497a3745599",
+  ],
+  "userPrompt": "Analyse the following code construct for Technical Credit patterns.
+File: /workspace/src/test/creational/prototype/Negative.java
+Language: java
+Pre-extracted construct metrics (tree-sitter):
+{
+  "constructType": "class",
+  "name": "Point",
+  "annotations": [],
+  "startRow": 46,
+  "enclosingClassStartRow": null,
+  "classSource": "class Point {\\n    private final int x;\\n    private final int y;\\n\\n    Point(int x, int y) {\\n        this.x = x;\\n        this.y = y;\\n    }\\n\\n    private Point(Point other) {\\n        this.x = other.x;\\n        this.y = other.y;\\n    }\\n}",
+  "classMetrics": {
+    "superclass": null,
+    "implementedInterfaces": [],
+    "fields": [
+      {
+        "name": "x",
+        "type": "int",
+        "isFinal": true,
+        "annotations": []
+      },
+      {
+        "name": "y",
+        "type": "int",
+        "isFinal": true,
+        "annotations": []
+      }
+    ],
+    "finalFieldTypes": [
+      "int",
+      "int"
+    ],
+    "constructors": [
+      {
+        "paramCount": 2,
+        "paramTypes": [
+          "int",
+          "int"
+        ],
+        "hasAutowired": false
+      },
+      {
+        "paramCount": 1,
+        "paramTypes": [
+          "Point"
+        ],
+        "hasAutowired": false
+      }
+    ],
+    "methodCount": 0,
+    "nestedDeclarations": []
+  },
+  "interfaceMetrics": null
+}
+Class source:
+class Point {
+    private final int x;
+    private final int y;
+
+    Point(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    private Point(Point other) {
+        this.x = other.x;
+        this.y = other.y;
+    }
+}",
+}
+`;
+
+exports[`manual Analyse for TC: calls and previews Negative.java Point: no candidates 1`] = `
+{
+  "adrPrompts": [],
+  "callCount": 8,
+  "messages": [
+    {
+      "level": "info",
+      "text": "No TC detected in this class.",
+    },
+  ],
+  "previews": [],
+  "progress": [
+    {
+      "cancellable": false,
+      "location": 15,
+      "title": "Analysing for TC…",
+    },
+  ],
+  "systemPrompts": [
+    "387ca5c72f41db52",
+    "3b70bb48086d641b",
+    "69d237d39b3087b6",
+    "6e2451e2bca8a4e1",
+    "750da759916893ff",
+    "9233b1c11864405c",
+    "a724fd3be19d85b8",
+    "bbc64497a3745599",
+  ],
+  "userPrompt": "Analyse the following code construct for Technical Credit patterns.
+File: /workspace/src/test/creational/prototype/Negative.java
+Language: java
+Pre-extracted construct metrics (tree-sitter):
+{
+  "constructType": "class",
+  "name": "Point",
+  "annotations": [],
+  "startRow": 46,
+  "enclosingClassStartRow": null,
+  "classSource": "class Point {\\n    private final int x;\\n    private final int y;\\n\\n    Point(int x, int y) {\\n        this.x = x;\\n        this.y = y;\\n    }\\n\\n    private Point(Point other) {\\n        this.x = other.x;\\n        this.y = other.y;\\n    }\\n}",
+  "classMetrics": {
+    "superclass": null,
+    "implementedInterfaces": [],
+    "fields": [
+      {
+        "name": "x",
+        "type": "int",
+        "isFinal": true,
+        "annotations": []
+      },
+      {
+        "name": "y",
+        "type": "int",
+        "isFinal": true,
+        "annotations": []
+      }
+    ],
+    "finalFieldTypes": [
+      "int",
+      "int"
+    ],
+    "constructors": [
+      {
+        "paramCount": 2,
+        "paramTypes": [
+          "int",
+          "int"
+        ],
+        "hasAutowired": false
+      },
+      {
+        "paramCount": 1,
+        "paramTypes": [
+          "Point"
+        ],
+        "hasAutowired": false
+      }
+    ],
+    "methodCount": 0,
+    "nestedDeclarations": []
+  },
+  "interfaceMetrics": null
+}
+Class source:
+class Point {
+    private final int x;
+    private final int y;
+
+    Point(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    private Point(Point other) {
+        this.x = other.x;
+        this.y = other.y;
+    }
+}",
+}
+`;
+
+exports[`manual Analyse for TC: calls and previews Positive.java Animal: candidates with ADRs 1`] = `
+{
+  "adrPrompts": [
+    "Technical Credit pattern detected:
+category: modularity
+benefit: modularity benefit
+signals: modularity-signal
+conditions: modularity conditions
+
+Repository ADRs:
+ADR-0001 — Plugin registry — tc-category: modularity
+ADR-0002 — Config loading — tc-category: configurability
+
+Which ADR, if any, clearly documents this pattern?",
+    "Technical Credit pattern detected:
+category: reusability
+benefit: reusability benefit
+signals: reusability-signal
+conditions: reusability conditions
+
+Repository ADRs:
+ADR-0001 — Plugin registry — tc-category: modularity
+ADR-0002 — Config loading — tc-category: configurability
+
+Which ADR, if any, clearly documents this pattern?",
+  ],
+  "callCount": 10,
+  "messages": [],
+  "previews": [
+    {
+      "insertLine": 23,
+      "texts": [
+        "@TechnicalCredit({
+benefit: 'modularity benefit',
+category: 'modularity',
+conditions: 'modularity conditions',
+signals: ['modularity-signal'],
+adr: 'ADR-0001',
+})",
+        "@TechnicalCredit({
+benefit: 'reusability benefit',
+category: 'reusability',
+conditions: 'reusability conditions',
+signals: ['reusability-signal'],
+})",
+      ],
+    },
+  ],
+  "progress": [
+    {
+      "cancellable": false,
+      "location": 15,
+      "title": "Analysing for TC…",
+    },
+  ],
+  "systemPrompts": [
+    "387ca5c72f41db52",
+    "3b70bb48086d641b",
+    "69d237d39b3087b6",
+    "6e2451e2bca8a4e1",
+    "750da759916893ff",
+    "9233b1c11864405c",
+    "a724fd3be19d85b8",
+    "bbc64497a3745599",
+  ],
+  "userPrompt": "Analyse the following code construct for Technical Credit patterns.
+File: /workspace/src/test/creational/prototype/Positive.java
+Language: java
+Pre-extracted construct metrics (tree-sitter):
+{
+  "constructType": "class",
+  "name": "Animal",
+  "annotations": [],
+  "startRow": 23,
+  "enclosingClassStartRow": null,
+  "classSource": "abstract class Animal {\\n    abstract Animal clone();\\n    abstract String describe();\\n}",
+  "classMetrics": {
+    "superclass": null,
+    "implementedInterfaces": [],
+    "fields": [],
+    "finalFieldTypes": [],
+    "constructors": [],
+    "methodCount": 2,
+    "nestedDeclarations": []
+  },
+  "interfaceMetrics": null
+}
+Class source:
+abstract class Animal {
+    abstract Animal clone();
+    abstract String describe();
+}",
+}
+`;
+
+exports[`manual Analyse for TC: calls and previews Positive.java Animal: candidates without ADRs 1`] = `
+{
+  "adrPrompts": [],
+  "callCount": 8,
+  "messages": [],
+  "previews": [
+    {
+      "insertLine": 23,
+      "texts": [
+        "@TechnicalCredit({
+benefit: 'modularity benefit',
+category: 'modularity',
+conditions: 'modularity conditions',
+signals: ['modularity-signal'],
+})",
+        "@TechnicalCredit({
+benefit: 'reusability benefit',
+category: 'reusability',
+conditions: 'reusability conditions',
+signals: ['reusability-signal'],
+})",
+      ],
+    },
+  ],
+  "progress": [
+    {
+      "cancellable": false,
+      "location": 15,
+      "title": "Analysing for TC…",
+    },
+  ],
+  "systemPrompts": [
+    "387ca5c72f41db52",
+    "3b70bb48086d641b",
+    "69d237d39b3087b6",
+    "6e2451e2bca8a4e1",
+    "750da759916893ff",
+    "9233b1c11864405c",
+    "a724fd3be19d85b8",
+    "bbc64497a3745599",
+  ],
+  "userPrompt": "Analyse the following code construct for Technical Credit patterns.
+File: /workspace/src/test/creational/prototype/Positive.java
+Language: java
+Pre-extracted construct metrics (tree-sitter):
+{
+  "constructType": "class",
+  "name": "Animal",
+  "annotations": [],
+  "startRow": 23,
+  "enclosingClassStartRow": null,
+  "classSource": "abstract class Animal {\\n    abstract Animal clone();\\n    abstract String describe();\\n}",
+  "classMetrics": {
+    "superclass": null,
+    "implementedInterfaces": [],
+    "fields": [],
+    "finalFieldTypes": [],
+    "constructors": [],
+    "methodCount": 2,
+    "nestedDeclarations": []
+  },
+  "interfaceMetrics": null
+}
+Class source:
+abstract class Animal {
+    abstract Animal clone();
+    abstract String describe();
+}",
+}
+`;
+
+exports[`manual Analyse for TC: calls and previews Positive.java Animal: no candidates 1`] = `
+{
+  "adrPrompts": [],
+  "callCount": 8,
+  "messages": [
+    {
+      "level": "info",
+      "text": "No TC detected in this class.",
+    },
+  ],
+  "previews": [],
+  "progress": [
+    {
+      "cancellable": false,
+      "location": 15,
+      "title": "Analysing for TC…",
+    },
+  ],
+  "systemPrompts": [
+    "387ca5c72f41db52",
+    "3b70bb48086d641b",
+    "69d237d39b3087b6",
+    "6e2451e2bca8a4e1",
+    "750da759916893ff",
+    "9233b1c11864405c",
+    "a724fd3be19d85b8",
+    "bbc64497a3745599",
+  ],
+  "userPrompt": "Analyse the following code construct for Technical Credit patterns.
+File: /workspace/src/test/creational/prototype/Positive.java
+Language: java
+Pre-extracted construct metrics (tree-sitter):
+{
+  "constructType": "class",
+  "name": "Animal",
+  "annotations": [],
+  "startRow": 23,
+  "enclosingClassStartRow": null,
+  "classSource": "abstract class Animal {\\n    abstract Animal clone();\\n    abstract String describe();\\n}",
+  "classMetrics": {
+    "superclass": null,
+    "implementedInterfaces": [],
+    "fields": [],
+    "finalFieldTypes": [],
+    "constructors": [],
+    "methodCount": 2,
+    "nestedDeclarations": []
+  },
+  "interfaceMetrics": null
+}
+Class source:
+abstract class Animal {
+    abstract Animal clone();
+    abstract String describe();
+}",
+}
+`;
+
+exports[`manual Analyse for TC: calls and previews Positive.java Circle: candidates with ADRs 1`] = `
+{
+  "adrPrompts": [
+    "Technical Credit pattern detected:
+category: modularity
+benefit: modularity benefit
+signals: modularity-signal
+conditions: modularity conditions
+
+Repository ADRs:
+ADR-0001 — Plugin registry — tc-category: modularity
+ADR-0002 — Config loading — tc-category: configurability
+
+Which ADR, if any, clearly documents this pattern?",
+    "Technical Credit pattern detected:
+category: reusability
+benefit: reusability benefit
+signals: reusability-signal
+conditions: reusability conditions
+
+Repository ADRs:
+ADR-0001 — Plugin registry — tc-category: modularity
+ADR-0002 — Config loading — tc-category: configurability
+
+Which ADR, if any, clearly documents this pattern?",
+  ],
+  "callCount": 10,
+  "messages": [],
+  "previews": [
+    {
+      "insertLine": 6,
+      "texts": [
+        "@TechnicalCredit({
+benefit: 'modularity benefit',
+category: 'modularity',
+conditions: 'modularity conditions',
+signals: ['modularity-signal'],
+adr: 'ADR-0001',
+})",
+        "@TechnicalCredit({
+benefit: 'reusability benefit',
+category: 'reusability',
+conditions: 'reusability conditions',
+signals: ['reusability-signal'],
+})",
+      ],
+    },
+  ],
+  "progress": [
+    {
+      "cancellable": false,
+      "location": 15,
+      "title": "Analysing for TC…",
+    },
+  ],
+  "systemPrompts": [
+    "387ca5c72f41db52",
+    "3b70bb48086d641b",
+    "69d237d39b3087b6",
+    "6e2451e2bca8a4e1",
+    "750da759916893ff",
+    "9233b1c11864405c",
+    "a724fd3be19d85b8",
+    "bbc64497a3745599",
+  ],
+  "userPrompt": "Analyse the following code construct for Technical Credit patterns.
+File: /workspace/src/test/creational/prototype/Positive.java
+Language: java
+Pre-extracted construct metrics (tree-sitter):
+{
+  "constructType": "class",
+  "name": "Circle",
+  "annotations": [],
+  "startRow": 6,
+  "enclosingClassStartRow": null,
+  "classSource": "class Circle implements Shape {\\n    private final int radius;\\n\\n    Circle(int radius) {\\n        this.radius = radius;\\n    }\\n\\n    public Circle clone() {\\n        return new Circle(this.radius);\\n    }\\n\\n    public void draw() {\\n        System.out.println(\\"Circle r=\\" + radius);\\n    }\\n}",
+  "classMetrics": {
+    "superclass": null,
+    "implementedInterfaces": [],
+    "fields": [
+      {
+        "name": "radius",
+        "type": "int",
+        "isFinal": true,
+        "annotations": []
+      }
+    ],
+    "finalFieldTypes": [
+      "int"
+    ],
+    "constructors": [
+      {
+        "paramCount": 1,
+        "paramTypes": [
+          "int"
+        ],
+        "hasAutowired": false
+      }
+    ],
+    "methodCount": 2,
+    "nestedDeclarations": []
+  },
+  "interfaceMetrics": null
+}
+Class source:
+class Circle implements Shape {
+    private final int radius;
+
+    Circle(int radius) {
+        this.radius = radius;
+    }
+
+    public Circle clone() {
+        return new Circle(this.radius);
+    }
+
+    public void draw() {
+        System.out.println("Circle r=" + radius);
+    }
+}",
+}
+`;
+
+exports[`manual Analyse for TC: calls and previews Positive.java Circle: candidates without ADRs 1`] = `
+{
+  "adrPrompts": [],
+  "callCount": 8,
+  "messages": [],
+  "previews": [
+    {
+      "insertLine": 6,
+      "texts": [
+        "@TechnicalCredit({
+benefit: 'modularity benefit',
+category: 'modularity',
+conditions: 'modularity conditions',
+signals: ['modularity-signal'],
+})",
+        "@TechnicalCredit({
+benefit: 'reusability benefit',
+category: 'reusability',
+conditions: 'reusability conditions',
+signals: ['reusability-signal'],
+})",
+      ],
+    },
+  ],
+  "progress": [
+    {
+      "cancellable": false,
+      "location": 15,
+      "title": "Analysing for TC…",
+    },
+  ],
+  "systemPrompts": [
+    "387ca5c72f41db52",
+    "3b70bb48086d641b",
+    "69d237d39b3087b6",
+    "6e2451e2bca8a4e1",
+    "750da759916893ff",
+    "9233b1c11864405c",
+    "a724fd3be19d85b8",
+    "bbc64497a3745599",
+  ],
+  "userPrompt": "Analyse the following code construct for Technical Credit patterns.
+File: /workspace/src/test/creational/prototype/Positive.java
+Language: java
+Pre-extracted construct metrics (tree-sitter):
+{
+  "constructType": "class",
+  "name": "Circle",
+  "annotations": [],
+  "startRow": 6,
+  "enclosingClassStartRow": null,
+  "classSource": "class Circle implements Shape {\\n    private final int radius;\\n\\n    Circle(int radius) {\\n        this.radius = radius;\\n    }\\n\\n    public Circle clone() {\\n        return new Circle(this.radius);\\n    }\\n\\n    public void draw() {\\n        System.out.println(\\"Circle r=\\" + radius);\\n    }\\n}",
+  "classMetrics": {
+    "superclass": null,
+    "implementedInterfaces": [],
+    "fields": [
+      {
+        "name": "radius",
+        "type": "int",
+        "isFinal": true,
+        "annotations": []
+      }
+    ],
+    "finalFieldTypes": [
+      "int"
+    ],
+    "constructors": [
+      {
+        "paramCount": 1,
+        "paramTypes": [
+          "int"
+        ],
+        "hasAutowired": false
+      }
+    ],
+    "methodCount": 2,
+    "nestedDeclarations": []
+  },
+  "interfaceMetrics": null
+}
+Class source:
+class Circle implements Shape {
+    private final int radius;
+
+    Circle(int radius) {
+        this.radius = radius;
+    }
+
+    public Circle clone() {
+        return new Circle(this.radius);
+    }
+
+    public void draw() {
+        System.out.println("Circle r=" + radius);
+    }
+}",
+}
+`;
+
+exports[`manual Analyse for TC: calls and previews Positive.java Circle: no candidates 1`] = `
+{
+  "adrPrompts": [],
+  "callCount": 8,
+  "messages": [
+    {
+      "level": "info",
+      "text": "No TC detected in this class.",
+    },
+  ],
+  "previews": [],
+  "progress": [
+    {
+      "cancellable": false,
+      "location": 15,
+      "title": "Analysing for TC…",
+    },
+  ],
+  "systemPrompts": [
+    "387ca5c72f41db52",
+    "3b70bb48086d641b",
+    "69d237d39b3087b6",
+    "6e2451e2bca8a4e1",
+    "750da759916893ff",
+    "9233b1c11864405c",
+    "a724fd3be19d85b8",
+    "bbc64497a3745599",
+  ],
+  "userPrompt": "Analyse the following code construct for Technical Credit patterns.
+File: /workspace/src/test/creational/prototype/Positive.java
+Language: java
+Pre-extracted construct metrics (tree-sitter):
+{
+  "constructType": "class",
+  "name": "Circle",
+  "annotations": [],
+  "startRow": 6,
+  "enclosingClassStartRow": null,
+  "classSource": "class Circle implements Shape {\\n    private final int radius;\\n\\n    Circle(int radius) {\\n        this.radius = radius;\\n    }\\n\\n    public Circle clone() {\\n        return new Circle(this.radius);\\n    }\\n\\n    public void draw() {\\n        System.out.println(\\"Circle r=\\" + radius);\\n    }\\n}",
+  "classMetrics": {
+    "superclass": null,
+    "implementedInterfaces": [],
+    "fields": [
+      {
+        "name": "radius",
+        "type": "int",
+        "isFinal": true,
+        "annotations": []
+      }
+    ],
+    "finalFieldTypes": [
+      "int"
+    ],
+    "constructors": [
+      {
+        "paramCount": 1,
+        "paramTypes": [
+          "int"
+        ],
+        "hasAutowired": false
+      }
+    ],
+    "methodCount": 2,
+    "nestedDeclarations": []
+  },
+  "interfaceMetrics": null
+}
+Class source:
+class Circle implements Shape {
+    private final int radius;
+
+    Circle(int radius) {
+        this.radius = radius;
+    }
+
+    public Circle clone() {
+        return new Circle(this.radius);
+    }
+
+    public void draw() {
+        System.out.println("Circle r=" + radius);
+    }
+}",
+}
+`;
+
+exports[`manual Analyse for TC: calls and previews Positive.java Document: candidates with ADRs 1`] = `
+{
+  "adrPrompts": [
+    "Technical Credit pattern detected:
+category: modularity
+benefit: modularity benefit
+signals: modularity-signal
+conditions: modularity conditions
+
+Repository ADRs:
+ADR-0001 — Plugin registry — tc-category: modularity
+ADR-0002 — Config loading — tc-category: configurability
+
+Which ADR, if any, clearly documents this pattern?",
+    "Technical Credit pattern detected:
+category: reusability
+benefit: reusability benefit
+signals: reusability-signal
+conditions: reusability conditions
+
+Repository ADRs:
+ADR-0001 — Plugin registry — tc-category: modularity
+ADR-0002 — Config loading — tc-category: configurability
+
+Which ADR, if any, clearly documents this pattern?",
+  ],
+  "callCount": 10,
+  "messages": [],
+  "previews": [
+    {
+      "insertLine": 45,
+      "texts": [
+        "@TechnicalCredit({
+benefit: 'modularity benefit',
+category: 'modularity',
+conditions: 'modularity conditions',
+signals: ['modularity-signal'],
+adr: 'ADR-0001',
+})",
+        "@TechnicalCredit({
+benefit: 'reusability benefit',
+category: 'reusability',
+conditions: 'reusability conditions',
+signals: ['reusability-signal'],
+})",
+      ],
+    },
+  ],
+  "progress": [
+    {
+      "cancellable": false,
+      "location": 15,
+      "title": "Analysing for TC…",
+    },
+  ],
+  "systemPrompts": [
+    "387ca5c72f41db52",
+    "3b70bb48086d641b",
+    "69d237d39b3087b6",
+    "6e2451e2bca8a4e1",
+    "750da759916893ff",
+    "9233b1c11864405c",
+    "a724fd3be19d85b8",
+    "bbc64497a3745599",
+  ],
+  "userPrompt": "Analyse the following code construct for Technical Credit patterns.
+File: /workspace/src/test/creational/prototype/Positive.java
+Language: java
+Pre-extracted construct metrics (tree-sitter):
+{
+  "constructType": "interface",
+  "name": "Document",
+  "annotations": [],
+  "startRow": 45,
+  "enclosingClassStartRow": null,
+  "classSource": "interface Document {\\n    Document clone();\\n    String save();\\n}",
+  "classMetrics": null,
+  "interfaceMetrics": {
+    "fieldCount": 0,
+    "methodCount": 2,
+    "extendedInterfaces": []
+  }
+}
+Class source:
+interface Document {
+    Document clone();
+    String save();
+}",
+}
+`;
+
+exports[`manual Analyse for TC: calls and previews Positive.java Document: candidates without ADRs 1`] = `
+{
+  "adrPrompts": [],
+  "callCount": 8,
+  "messages": [],
+  "previews": [
+    {
+      "insertLine": 45,
+      "texts": [
+        "@TechnicalCredit({
+benefit: 'modularity benefit',
+category: 'modularity',
+conditions: 'modularity conditions',
+signals: ['modularity-signal'],
+})",
+        "@TechnicalCredit({
+benefit: 'reusability benefit',
+category: 'reusability',
+conditions: 'reusability conditions',
+signals: ['reusability-signal'],
+})",
+      ],
+    },
+  ],
+  "progress": [
+    {
+      "cancellable": false,
+      "location": 15,
+      "title": "Analysing for TC…",
+    },
+  ],
+  "systemPrompts": [
+    "387ca5c72f41db52",
+    "3b70bb48086d641b",
+    "69d237d39b3087b6",
+    "6e2451e2bca8a4e1",
+    "750da759916893ff",
+    "9233b1c11864405c",
+    "a724fd3be19d85b8",
+    "bbc64497a3745599",
+  ],
+  "userPrompt": "Analyse the following code construct for Technical Credit patterns.
+File: /workspace/src/test/creational/prototype/Positive.java
+Language: java
+Pre-extracted construct metrics (tree-sitter):
+{
+  "constructType": "interface",
+  "name": "Document",
+  "annotations": [],
+  "startRow": 45,
+  "enclosingClassStartRow": null,
+  "classSource": "interface Document {\\n    Document clone();\\n    String save();\\n}",
+  "classMetrics": null,
+  "interfaceMetrics": {
+    "fieldCount": 0,
+    "methodCount": 2,
+    "extendedInterfaces": []
+  }
+}
+Class source:
+interface Document {
+    Document clone();
+    String save();
+}",
+}
+`;
+
+exports[`manual Analyse for TC: calls and previews Positive.java Document: no candidates 1`] = `
+{
+  "adrPrompts": [],
+  "callCount": 8,
+  "messages": [
+    {
+      "level": "info",
+      "text": "No TC detected in this class.",
+    },
+  ],
+  "previews": [],
+  "progress": [
+    {
+      "cancellable": false,
+      "location": 15,
+      "title": "Analysing for TC…",
+    },
+  ],
+  "systemPrompts": [
+    "387ca5c72f41db52",
+    "3b70bb48086d641b",
+    "69d237d39b3087b6",
+    "6e2451e2bca8a4e1",
+    "750da759916893ff",
+    "9233b1c11864405c",
+    "a724fd3be19d85b8",
+    "bbc64497a3745599",
+  ],
+  "userPrompt": "Analyse the following code construct for Technical Credit patterns.
+File: /workspace/src/test/creational/prototype/Positive.java
+Language: java
+Pre-extracted construct metrics (tree-sitter):
+{
+  "constructType": "interface",
+  "name": "Document",
+  "annotations": [],
+  "startRow": 45,
+  "enclosingClassStartRow": null,
+  "classSource": "interface Document {\\n    Document clone();\\n    String save();\\n}",
+  "classMetrics": null,
+  "interfaceMetrics": {
+    "fieldCount": 0,
+    "methodCount": 2,
+    "extendedInterfaces": []
+  }
+}
+Class source:
+interface Document {
+    Document clone();
+    String save();
+}",
+}
+`;
+
+exports[`manual Analyse for TC: calls and previews Positive.java Dog: candidates with ADRs 1`] = `
+{
+  "adrPrompts": [
+    "Technical Credit pattern detected:
+category: modularity
+benefit: modularity benefit
+signals: modularity-signal
+conditions: modularity conditions
+
+Repository ADRs:
+ADR-0001 — Plugin registry — tc-category: modularity
+ADR-0002 — Config loading — tc-category: configurability
+
+Which ADR, if any, clearly documents this pattern?",
+    "Technical Credit pattern detected:
+category: reusability
+benefit: reusability benefit
+signals: reusability-signal
+conditions: reusability conditions
+
+Repository ADRs:
+ADR-0001 — Plugin registry — tc-category: modularity
+ADR-0002 — Config loading — tc-category: configurability
+
+Which ADR, if any, clearly documents this pattern?",
+  ],
+  "callCount": 10,
+  "messages": [],
+  "previews": [
+    {
+      "insertLine": 28,
+      "texts": [
+        "@TechnicalCredit({
+benefit: 'modularity benefit',
+category: 'modularity',
+conditions: 'modularity conditions',
+signals: ['modularity-signal'],
+adr: 'ADR-0001',
+})",
+        "@TechnicalCredit({
+benefit: 'reusability benefit',
+category: 'reusability',
+conditions: 'reusability conditions',
+signals: ['reusability-signal'],
+})",
+      ],
+    },
+  ],
+  "progress": [
+    {
+      "cancellable": false,
+      "location": 15,
+      "title": "Analysing for TC…",
+    },
+  ],
+  "systemPrompts": [
+    "387ca5c72f41db52",
+    "3b70bb48086d641b",
+    "69d237d39b3087b6",
+    "6e2451e2bca8a4e1",
+    "750da759916893ff",
+    "9233b1c11864405c",
+    "a724fd3be19d85b8",
+    "bbc64497a3745599",
+  ],
+  "userPrompt": "Analyse the following code construct for Technical Credit patterns.
+File: /workspace/src/test/creational/prototype/Positive.java
+Language: java
+Pre-extracted construct metrics (tree-sitter):
+{
+  "constructType": "class",
+  "name": "Dog",
+  "annotations": [],
+  "startRow": 28,
+  "enclosingClassStartRow": null,
+  "classSource": "class Dog extends Animal {\\n    private final String name;\\n\\n    Dog(String name) {\\n        this.name = name;\\n    }\\n\\n    public Dog clone() {\\n        return new Dog(this.name);\\n    }\\n\\n    public String describe() {\\n        return \\"Dog: \\" + name;\\n    }\\n}",
+  "classMetrics": {
+    "superclass": "Animal",
+    "implementedInterfaces": [],
+    "fields": [
+      {
+        "name": "name",
+        "type": "String",
+        "isFinal": true,
+        "annotations": []
+      }
+    ],
+    "finalFieldTypes": [
+      "String"
+    ],
+    "constructors": [
+      {
+        "paramCount": 1,
+        "paramTypes": [
+          "String"
+        ],
+        "hasAutowired": false
+      }
+    ],
+    "methodCount": 2,
+    "nestedDeclarations": []
+  },
+  "interfaceMetrics": null
+}
+Class source:
+class Dog extends Animal {
+    private final String name;
+
+    Dog(String name) {
+        this.name = name;
+    }
+
+    public Dog clone() {
+        return new Dog(this.name);
+    }
+
+    public String describe() {
+        return "Dog: " + name;
+    }
+}",
+}
+`;
+
+exports[`manual Analyse for TC: calls and previews Positive.java Dog: candidates without ADRs 1`] = `
+{
+  "adrPrompts": [],
+  "callCount": 8,
+  "messages": [],
+  "previews": [
+    {
+      "insertLine": 28,
+      "texts": [
+        "@TechnicalCredit({
+benefit: 'modularity benefit',
+category: 'modularity',
+conditions: 'modularity conditions',
+signals: ['modularity-signal'],
+})",
+        "@TechnicalCredit({
+benefit: 'reusability benefit',
+category: 'reusability',
+conditions: 'reusability conditions',
+signals: ['reusability-signal'],
+})",
+      ],
+    },
+  ],
+  "progress": [
+    {
+      "cancellable": false,
+      "location": 15,
+      "title": "Analysing for TC…",
+    },
+  ],
+  "systemPrompts": [
+    "387ca5c72f41db52",
+    "3b70bb48086d641b",
+    "69d237d39b3087b6",
+    "6e2451e2bca8a4e1",
+    "750da759916893ff",
+    "9233b1c11864405c",
+    "a724fd3be19d85b8",
+    "bbc64497a3745599",
+  ],
+  "userPrompt": "Analyse the following code construct for Technical Credit patterns.
+File: /workspace/src/test/creational/prototype/Positive.java
+Language: java
+Pre-extracted construct metrics (tree-sitter):
+{
+  "constructType": "class",
+  "name": "Dog",
+  "annotations": [],
+  "startRow": 28,
+  "enclosingClassStartRow": null,
+  "classSource": "class Dog extends Animal {\\n    private final String name;\\n\\n    Dog(String name) {\\n        this.name = name;\\n    }\\n\\n    public Dog clone() {\\n        return new Dog(this.name);\\n    }\\n\\n    public String describe() {\\n        return \\"Dog: \\" + name;\\n    }\\n}",
+  "classMetrics": {
+    "superclass": "Animal",
+    "implementedInterfaces": [],
+    "fields": [
+      {
+        "name": "name",
+        "type": "String",
+        "isFinal": true,
+        "annotations": []
+      }
+    ],
+    "finalFieldTypes": [
+      "String"
+    ],
+    "constructors": [
+      {
+        "paramCount": 1,
+        "paramTypes": [
+          "String"
+        ],
+        "hasAutowired": false
+      }
+    ],
+    "methodCount": 2,
+    "nestedDeclarations": []
+  },
+  "interfaceMetrics": null
+}
+Class source:
+class Dog extends Animal {
+    private final String name;
+
+    Dog(String name) {
+        this.name = name;
+    }
+
+    public Dog clone() {
+        return new Dog(this.name);
+    }
+
+    public String describe() {
+        return "Dog: " + name;
+    }
+}",
+}
+`;
+
+exports[`manual Analyse for TC: calls and previews Positive.java Dog: no candidates 1`] = `
+{
+  "adrPrompts": [],
+  "callCount": 8,
+  "messages": [
+    {
+      "level": "info",
+      "text": "No TC detected in this class.",
+    },
+  ],
+  "previews": [],
+  "progress": [
+    {
+      "cancellable": false,
+      "location": 15,
+      "title": "Analysing for TC…",
+    },
+  ],
+  "systemPrompts": [
+    "387ca5c72f41db52",
+    "3b70bb48086d641b",
+    "69d237d39b3087b6",
+    "6e2451e2bca8a4e1",
+    "750da759916893ff",
+    "9233b1c11864405c",
+    "a724fd3be19d85b8",
+    "bbc64497a3745599",
+  ],
+  "userPrompt": "Analyse the following code construct for Technical Credit patterns.
+File: /workspace/src/test/creational/prototype/Positive.java
+Language: java
+Pre-extracted construct metrics (tree-sitter):
+{
+  "constructType": "class",
+  "name": "Dog",
+  "annotations": [],
+  "startRow": 28,
+  "enclosingClassStartRow": null,
+  "classSource": "class Dog extends Animal {\\n    private final String name;\\n\\n    Dog(String name) {\\n        this.name = name;\\n    }\\n\\n    public Dog clone() {\\n        return new Dog(this.name);\\n    }\\n\\n    public String describe() {\\n        return \\"Dog: \\" + name;\\n    }\\n}",
+  "classMetrics": {
+    "superclass": "Animal",
+    "implementedInterfaces": [],
+    "fields": [
+      {
+        "name": "name",
+        "type": "String",
+        "isFinal": true,
+        "annotations": []
+      }
+    ],
+    "finalFieldTypes": [
+      "String"
+    ],
+    "constructors": [
+      {
+        "paramCount": 1,
+        "paramTypes": [
+          "String"
+        ],
+        "hasAutowired": false
+      }
+    ],
+    "methodCount": 2,
+    "nestedDeclarations": []
+  },
+  "interfaceMetrics": null
+}
+Class source:
+class Dog extends Animal {
+    private final String name;
+
+    Dog(String name) {
+        this.name = name;
+    }
+
+    public Dog clone() {
+        return new Dog(this.name);
+    }
+
+    public String describe() {
+        return "Dog: " + name;
+    }
+}",
+}
+`;
+
+exports[`manual Analyse for TC: calls and previews Positive.java Shape: candidates with ADRs 1`] = `
+{
+  "adrPrompts": [
+    "Technical Credit pattern detected:
+category: modularity
+benefit: modularity benefit
+signals: modularity-signal
+conditions: modularity conditions
+
+Repository ADRs:
+ADR-0001 — Plugin registry — tc-category: modularity
+ADR-0002 — Config loading — tc-category: configurability
+
+Which ADR, if any, clearly documents this pattern?",
+    "Technical Credit pattern detected:
+category: reusability
+benefit: reusability benefit
+signals: reusability-signal
+conditions: reusability conditions
+
+Repository ADRs:
+ADR-0001 — Plugin registry — tc-category: modularity
+ADR-0002 — Config loading — tc-category: configurability
+
+Which ADR, if any, clearly documents this pattern?",
+  ],
+  "callCount": 10,
+  "messages": [],
+  "previews": [
+    {
+      "insertLine": 1,
+      "texts": [
+        "@TechnicalCredit({
+benefit: 'modularity benefit',
+category: 'modularity',
+conditions: 'modularity conditions',
+signals: ['modularity-signal'],
+adr: 'ADR-0001',
+})",
+        "@TechnicalCredit({
+benefit: 'reusability benefit',
+category: 'reusability',
+conditions: 'reusability conditions',
+signals: ['reusability-signal'],
+})",
+      ],
+    },
+  ],
+  "progress": [
+    {
+      "cancellable": false,
+      "location": 15,
+      "title": "Analysing for TC…",
+    },
+  ],
+  "systemPrompts": [
+    "387ca5c72f41db52",
+    "3b70bb48086d641b",
+    "69d237d39b3087b6",
+    "6e2451e2bca8a4e1",
+    "750da759916893ff",
+    "9233b1c11864405c",
+    "a724fd3be19d85b8",
+    "bbc64497a3745599",
+  ],
+  "userPrompt": "Analyse the following code construct for Technical Credit patterns.
+File: /workspace/src/test/creational/prototype/Positive.java
+Language: java
+Pre-extracted construct metrics (tree-sitter):
+{
+  "constructType": "interface",
+  "name": "Shape",
+  "annotations": [],
+  "startRow": 1,
+  "enclosingClassStartRow": null,
+  "classSource": "interface Shape {\\n    Shape clone();\\n    void draw();\\n}",
+  "classMetrics": null,
+  "interfaceMetrics": {
+    "fieldCount": 0,
+    "methodCount": 2,
+    "extendedInterfaces": []
+  }
+}
+Class source:
+interface Shape {
+    Shape clone();
+    void draw();
+}",
+}
+`;
+
+exports[`manual Analyse for TC: calls and previews Positive.java Shape: candidates without ADRs 1`] = `
+{
+  "adrPrompts": [],
+  "callCount": 8,
+  "messages": [],
+  "previews": [
+    {
+      "insertLine": 1,
+      "texts": [
+        "@TechnicalCredit({
+benefit: 'modularity benefit',
+category: 'modularity',
+conditions: 'modularity conditions',
+signals: ['modularity-signal'],
+})",
+        "@TechnicalCredit({
+benefit: 'reusability benefit',
+category: 'reusability',
+conditions: 'reusability conditions',
+signals: ['reusability-signal'],
+})",
+      ],
+    },
+  ],
+  "progress": [
+    {
+      "cancellable": false,
+      "location": 15,
+      "title": "Analysing for TC…",
+    },
+  ],
+  "systemPrompts": [
+    "387ca5c72f41db52",
+    "3b70bb48086d641b",
+    "69d237d39b3087b6",
+    "6e2451e2bca8a4e1",
+    "750da759916893ff",
+    "9233b1c11864405c",
+    "a724fd3be19d85b8",
+    "bbc64497a3745599",
+  ],
+  "userPrompt": "Analyse the following code construct for Technical Credit patterns.
+File: /workspace/src/test/creational/prototype/Positive.java
+Language: java
+Pre-extracted construct metrics (tree-sitter):
+{
+  "constructType": "interface",
+  "name": "Shape",
+  "annotations": [],
+  "startRow": 1,
+  "enclosingClassStartRow": null,
+  "classSource": "interface Shape {\\n    Shape clone();\\n    void draw();\\n}",
+  "classMetrics": null,
+  "interfaceMetrics": {
+    "fieldCount": 0,
+    "methodCount": 2,
+    "extendedInterfaces": []
+  }
+}
+Class source:
+interface Shape {
+    Shape clone();
+    void draw();
+}",
+}
+`;
+
+exports[`manual Analyse for TC: calls and previews Positive.java Shape: no candidates 1`] = `
+{
+  "adrPrompts": [],
+  "callCount": 8,
+  "messages": [
+    {
+      "level": "info",
+      "text": "No TC detected in this class.",
+    },
+  ],
+  "previews": [],
+  "progress": [
+    {
+      "cancellable": false,
+      "location": 15,
+      "title": "Analysing for TC…",
+    },
+  ],
+  "systemPrompts": [
+    "387ca5c72f41db52",
+    "3b70bb48086d641b",
+    "69d237d39b3087b6",
+    "6e2451e2bca8a4e1",
+    "750da759916893ff",
+    "9233b1c11864405c",
+    "a724fd3be19d85b8",
+    "bbc64497a3745599",
+  ],
+  "userPrompt": "Analyse the following code construct for Technical Credit patterns.
+File: /workspace/src/test/creational/prototype/Positive.java
+Language: java
+Pre-extracted construct metrics (tree-sitter):
+{
+  "constructType": "interface",
+  "name": "Shape",
+  "annotations": [],
+  "startRow": 1,
+  "enclosingClassStartRow": null,
+  "classSource": "interface Shape {\\n    Shape clone();\\n    void draw();\\n}",
+  "classMetrics": null,
+  "interfaceMetrics": {
+    "fieldCount": 0,
+    "methodCount": 2,
+    "extendedInterfaces": []
+  }
+}
+Class source:
+interface Shape {
+    Shape clone();
+    void draw();
+}",
+}
+`;
+
+exports[`manual Analyse for TC: calls and previews Positive.java TextDocument: candidates with ADRs 1`] = `
+{
+  "adrPrompts": [
+    "Technical Credit pattern detected:
+category: modularity
+benefit: modularity benefit
+signals: modularity-signal
+conditions: modularity conditions
+
+Repository ADRs:
+ADR-0001 — Plugin registry — tc-category: modularity
+ADR-0002 — Config loading — tc-category: configurability
+
+Which ADR, if any, clearly documents this pattern?",
+    "Technical Credit pattern detected:
+category: reusability
+benefit: reusability benefit
+signals: reusability-signal
+conditions: reusability conditions
+
+Repository ADRs:
+ADR-0001 — Plugin registry — tc-category: modularity
+ADR-0002 — Config loading — tc-category: configurability
+
+Which ADR, if any, clearly documents this pattern?",
+  ],
+  "callCount": 10,
+  "messages": [],
+  "previews": [
+    {
+      "insertLine": 50,
+      "texts": [
+        "@TechnicalCredit({
+benefit: 'modularity benefit',
+category: 'modularity',
+conditions: 'modularity conditions',
+signals: ['modularity-signal'],
+adr: 'ADR-0001',
+})",
+        "@TechnicalCredit({
+benefit: 'reusability benefit',
+category: 'reusability',
+conditions: 'reusability conditions',
+signals: ['reusability-signal'],
+})",
+      ],
+    },
+  ],
+  "progress": [
+    {
+      "cancellable": false,
+      "location": 15,
+      "title": "Analysing for TC…",
+    },
+  ],
+  "systemPrompts": [
+    "387ca5c72f41db52",
+    "3b70bb48086d641b",
+    "69d237d39b3087b6",
+    "6e2451e2bca8a4e1",
+    "750da759916893ff",
+    "9233b1c11864405c",
+    "a724fd3be19d85b8",
+    "bbc64497a3745599",
+  ],
+  "userPrompt": "Analyse the following code construct for Technical Credit patterns.
+File: /workspace/src/test/creational/prototype/Positive.java
+Language: java
+Pre-extracted construct metrics (tree-sitter):
+{
+  "constructType": "class",
+  "name": "TextDocument",
+  "annotations": [],
+  "startRow": 50,
+  "enclosingClassStartRow": null,
+  "classSource": "class TextDocument implements Document {\\n    private final String content;\\n\\n    TextDocument(String content) {\\n        this.content = content;\\n    }\\n\\n    public TextDocument clone() {\\n        return new TextDocument(this.content);\\n    }\\n\\n    public String save() {\\n        return \\"Saved: \\" + content;\\n    }\\n}",
+  "classMetrics": {
+    "superclass": null,
+    "implementedInterfaces": [],
+    "fields": [
+      {
+        "name": "content",
+        "type": "String",
+        "isFinal": true,
+        "annotations": []
+      }
+    ],
+    "finalFieldTypes": [
+      "String"
+    ],
+    "constructors": [
+      {
+        "paramCount": 1,
+        "paramTypes": [
+          "String"
+        ],
+        "hasAutowired": false
+      }
+    ],
+    "methodCount": 2,
+    "nestedDeclarations": []
+  },
+  "interfaceMetrics": null
+}
+Class source:
+class TextDocument implements Document {
+    private final String content;
+
+    TextDocument(String content) {
+        this.content = content;
+    }
+
+    public TextDocument clone() {
+        return new TextDocument(this.content);
+    }
+
+    public String save() {
+        return "Saved: " + content;
+    }
+}",
+}
+`;
+
+exports[`manual Analyse for TC: calls and previews Positive.java TextDocument: candidates without ADRs 1`] = `
+{
+  "adrPrompts": [],
+  "callCount": 8,
+  "messages": [],
+  "previews": [
+    {
+      "insertLine": 50,
+      "texts": [
+        "@TechnicalCredit({
+benefit: 'modularity benefit',
+category: 'modularity',
+conditions: 'modularity conditions',
+signals: ['modularity-signal'],
+})",
+        "@TechnicalCredit({
+benefit: 'reusability benefit',
+category: 'reusability',
+conditions: 'reusability conditions',
+signals: ['reusability-signal'],
+})",
+      ],
+    },
+  ],
+  "progress": [
+    {
+      "cancellable": false,
+      "location": 15,
+      "title": "Analysing for TC…",
+    },
+  ],
+  "systemPrompts": [
+    "387ca5c72f41db52",
+    "3b70bb48086d641b",
+    "69d237d39b3087b6",
+    "6e2451e2bca8a4e1",
+    "750da759916893ff",
+    "9233b1c11864405c",
+    "a724fd3be19d85b8",
+    "bbc64497a3745599",
+  ],
+  "userPrompt": "Analyse the following code construct for Technical Credit patterns.
+File: /workspace/src/test/creational/prototype/Positive.java
+Language: java
+Pre-extracted construct metrics (tree-sitter):
+{
+  "constructType": "class",
+  "name": "TextDocument",
+  "annotations": [],
+  "startRow": 50,
+  "enclosingClassStartRow": null,
+  "classSource": "class TextDocument implements Document {\\n    private final String content;\\n\\n    TextDocument(String content) {\\n        this.content = content;\\n    }\\n\\n    public TextDocument clone() {\\n        return new TextDocument(this.content);\\n    }\\n\\n    public String save() {\\n        return \\"Saved: \\" + content;\\n    }\\n}",
+  "classMetrics": {
+    "superclass": null,
+    "implementedInterfaces": [],
+    "fields": [
+      {
+        "name": "content",
+        "type": "String",
+        "isFinal": true,
+        "annotations": []
+      }
+    ],
+    "finalFieldTypes": [
+      "String"
+    ],
+    "constructors": [
+      {
+        "paramCount": 1,
+        "paramTypes": [
+          "String"
+        ],
+        "hasAutowired": false
+      }
+    ],
+    "methodCount": 2,
+    "nestedDeclarations": []
+  },
+  "interfaceMetrics": null
+}
+Class source:
+class TextDocument implements Document {
+    private final String content;
+
+    TextDocument(String content) {
+        this.content = content;
+    }
+
+    public TextDocument clone() {
+        return new TextDocument(this.content);
+    }
+
+    public String save() {
+        return "Saved: " + content;
+    }
+}",
+}
+`;
+
+exports[`manual Analyse for TC: calls and previews Positive.java TextDocument: no candidates 1`] = `
+{
+  "adrPrompts": [],
+  "callCount": 8,
+  "messages": [
+    {
+      "level": "info",
+      "text": "No TC detected in this class.",
+    },
+  ],
+  "previews": [],
+  "progress": [
+    {
+      "cancellable": false,
+      "location": 15,
+      "title": "Analysing for TC…",
+    },
+  ],
+  "systemPrompts": [
+    "387ca5c72f41db52",
+    "3b70bb48086d641b",
+    "69d237d39b3087b6",
+    "6e2451e2bca8a4e1",
+    "750da759916893ff",
+    "9233b1c11864405c",
+    "a724fd3be19d85b8",
+    "bbc64497a3745599",
+  ],
+  "userPrompt": "Analyse the following code construct for Technical Credit patterns.
+File: /workspace/src/test/creational/prototype/Positive.java
+Language: java
+Pre-extracted construct metrics (tree-sitter):
+{
+  "constructType": "class",
+  "name": "TextDocument",
+  "annotations": [],
+  "startRow": 50,
+  "enclosingClassStartRow": null,
+  "classSource": "class TextDocument implements Document {\\n    private final String content;\\n\\n    TextDocument(String content) {\\n        this.content = content;\\n    }\\n\\n    public TextDocument clone() {\\n        return new TextDocument(this.content);\\n    }\\n\\n    public String save() {\\n        return \\"Saved: \\" + content;\\n    }\\n}",
+  "classMetrics": {
+    "superclass": null,
+    "implementedInterfaces": [],
+    "fields": [
+      {
+        "name": "content",
+        "type": "String",
+        "isFinal": true,
+        "annotations": []
+      }
+    ],
+    "finalFieldTypes": [
+      "String"
+    ],
+    "constructors": [
+      {
+        "paramCount": 1,
+        "paramTypes": [
+          "String"
+        ],
+        "hasAutowired": false
+      }
+    ],
+    "methodCount": 2,
+    "nestedDeclarations": []
+  },
+  "interfaceMetrics": null
+}
+Class source:
+class TextDocument implements Document {
+    private final String content;
+
+    TextDocument(String content) {
+        this.content = content;
+    }
+
+    public TextDocument clone() {
+        return new TextDocument(this.content);
+    }
+
+    public String save() {
+        return "Saved: " + content;
+    }
+}",
+}
+`;
+
+exports[`manual Analyse for TC: no analysis Negative.java: a cursor on the leading comment makes no call 1`] = `
+{
+  "adrPrompts": [],
+  "callCount": 0,
+  "messages": [
+    {
+      "level": "error",
+      "text": "Analyse for TC: cursor is not inside a class or interface.",
+    },
+  ],
+  "previews": [],
+  "progress": [],
+  "systemPrompts": [],
+  "userPrompt": null,
+}
+`;
+
+exports[`manual Analyse for TC: no analysis Positive.java: a cursor on the leading comment makes no call 1`] = `
+{
+  "adrPrompts": [],
+  "callCount": 0,
+  "messages": [
+    {
+      "level": "error",
+      "text": "Analyse for TC: cursor is not inside a class or interface.",
+    },
+  ],
+  "previews": [],
+  "progress": [],
+  "systemPrompts": [],
+  "userPrompt": null,
+}
+`;
+
+exports[`manual Analyse for TC: no analysis reports a missing editor and makes no call 1`] = `
+{
+  "adrPrompts": [],
+  "callCount": 0,
+  "messages": [
+    {
+      "level": "error",
+      "text": "Analyse for TC: no active editor.",
+    },
+  ],
+  "previews": [],
+  "progress": [],
+  "systemPrompts": [],
+  "userPrompt": null,
+}
+`;
