@@ -233,6 +233,7 @@ describe('US3: empty, declaration-free and broken files never crash', () => {
     expect(await enumerateConstructs('', 'Fixture.java', 'java')).toEqual({
       ok: true,
       constructs: [],
+      hasSyntaxErrors: false,
     });
   });
 
@@ -294,6 +295,46 @@ describe('US3: empty, declaration-free and broken files never crash', () => {
       ['A', 0, false],
       ['C', 2, false],
     ]);
+  });
+
+  it('flags syntax errors on the file even when every construct is complete', async () => {
+    const result = await enumerateConstructs(
+      ['class A {}', '}}} ;;', 'class C {}'].join('\n'),
+      'Fixture.java',
+      'java',
+    );
+
+    expect(result).toMatchObject({ ok: true, hasSyntaxErrors: true });
+  });
+
+  it('reports no syntax errors for a clean file', async () => {
+    expect(
+      await enumerateConstructs(FOUR, 'Fixture.java', 'java'),
+    ).toMatchObject({ ok: true, hasSyntaxErrors: false });
+  });
+
+  it('flags syntax errors when a half-typed annotation hides a class, so absence is not deletion', async () => {
+    // The parser reads `@ class` as an annotation named `class` and scatters Foo's members over
+    // top-level fragments, so Foo is missing rather than returned as incomplete.
+    const result = await enumerateConstructs(
+      [
+        'class A {}',
+        '@',
+        'class Foo {',
+        '  int x;',
+        '  void f() {}',
+        '}',
+        'class B {}',
+      ].join('\n'),
+      'Fixture.java',
+      'java',
+    );
+
+    if (!result.ok) {
+      throw new Error('enumeration unavailable');
+    }
+    expect(result.constructs.map((c) => c.name)).toEqual(['A', 'B']);
+    expect(result.hasSyntaxErrors).toBe(true);
   });
 
   it('reports "unavailable" without throwing or logging file text when the parser was never set up', async () => {

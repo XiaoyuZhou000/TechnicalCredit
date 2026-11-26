@@ -29,12 +29,22 @@ export interface ConstructDescriptor {
 }
 
 export type EnumerationResult =
-  | { readonly ok: true; readonly constructs: readonly ConstructDescriptor[] }
+  | {
+      readonly ok: true;
+      readonly constructs: readonly ConstructDescriptor[];
+      /**
+       * The file has a syntax error somewhere. A half-typed declaration can then be scattered
+       * over top-level fragments or swallowed by its neighbour, so `constructs` may miss or
+       * misplace some: a construct absent from this list must not be treated as deleted.
+       */
+      readonly hasSyntaxErrors: boolean;
+    }
   | { readonly ok: false; readonly reason: 'unavailable' };
 
 const NOTHING: EnumerationResult = Object.freeze({
   ok: true,
   constructs: Object.freeze([]),
+  hasSyntaxErrors: false,
 });
 
 const UNAVAILABLE: EnumerationResult = Object.freeze({
@@ -69,6 +79,7 @@ export async function enumerateConstructs(
           describe(node, source, importLines, fileName),
         ),
       ),
+      hasSyntaxErrors: result.hasSyntaxErrors,
     });
   } catch (e) {
     console.error(

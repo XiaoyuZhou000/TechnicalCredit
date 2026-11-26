@@ -93,7 +93,12 @@ export interface TopLevelNode {
 }
 
 export type TopLevelResult =
-  | { readonly ok: true; readonly nodes: readonly TopLevelNode[] }
+  | {
+      readonly ok: true;
+      readonly nodes: readonly TopLevelNode[];
+      /** The tree has an error or missing token anywhere, not only inside `nodes`. */
+      readonly hasSyntaxErrors: boolean;
+    }
   | { readonly ok: false };
 
 const TOP_LEVEL_KINDS = new Map<string, ConstructKind>([
@@ -144,7 +149,7 @@ export async function extractTopLevel(
           ];
         },
       );
-      return { ok: true, nodes };
+      return { ok: true, nodes, hasSyntaxErrors: tree.rootNode.hasError };
     } finally {
       // Everything above is copied into plain values; background analysis enumerates on every
       // edit, so the tree's wasm memory is freed rather than left to the collector.

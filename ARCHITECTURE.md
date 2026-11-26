@@ -479,7 +479,11 @@ export interface ConstructDescriptor {
 }
 
 export type EnumerationResult =
-  | { readonly ok: true; readonly constructs: readonly ConstructDescriptor[] }
+  | {
+      readonly ok: true;
+      readonly constructs: readonly ConstructDescriptor[];
+      readonly hasSyntaxErrors: boolean; // tree.rootNode.hasError; see rule 7
+    }
   | { readonly ok: false; readonly reason: 'unavailable' };
 
 export function enumerateConstructs(
@@ -493,8 +497,9 @@ export function enumerateConstructs(
 2. **One parse**: one `Parser.parse` per call, and the tree is freed afterwards. No trimming or per-construct re-parse, so every position refers to the original text. Columns are UTF-16 code units, as in VS Code.
 3. **Manual parity**: for a top-level class or interface, `context` equals `buildContextFromSource` at the name position, serialised identically. `import type` keeps `buildContext.ts` vscode-free. The manual context for every cursor position is pinned by `manualContext.test.ts` snapshots; run them with `--ci` and treat a diff as a regression.
 4. **Enums**: a top-level enum gets `constructMetrics.enumMetrics` (constants, implemented interfaces, fields, constructors, method count, nested declarations). Only enumeration adds the key, so manual prompts never gain it. The manual command still does nothing on a top-level enum.
-5. **Any input**: an empty or declaration-free file, or a non-Java `languageId`, gives `{ ok: true, constructs: [] }`. A parser that isn't set up, or a parse that fails, gives `unavailable` and one `console.error` without file text. Nothing throws.
+5. **Any input**: an empty or declaration-free file, or a non-Java `languageId`, gives `{ ok: true, constructs: [], hasSyntaxErrors: false }`. A parser that isn't set up, or a parse that fails, gives `unavailable` and one `console.error` without file text. Nothing throws.
 6. **Single file**: no imported file is read, no detector or Claude is called, and no prompt changes. Card 14 calls the detector per descriptor and decides what to do with `incomplete` ones.
+7. **Syntax errors**: `hasSyntaxErrors` is true when the file has an error or missing token anywhere, including outside every returned construct. While it is set, `constructs` may miss or misplace declarations, so **a construct absent from the list must not be treated as deleted**. Typing `@` above `class Foo {` makes the parser read `@ class` as an annotation and scatter `Foo`'s members over top-level fragments, so `Foo` is missing rather than `incomplete`; a missing `}` in one class pulls the next class inside it. Reconstructing declarations from those fragments was rejected: their source and metrics would be unreliable context. Card 14 owns retention: it keeps the last good results and markers while the flag is set, removes a missing construct only after a clean parse, and skips analysis of `incomplete` constructs. The manual command is unchanged.
 
 ## Live integration outline
 
