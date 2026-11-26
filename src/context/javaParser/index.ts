@@ -3,7 +3,11 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { ConstructMetrics, DECLARATION_TYPES } from './types';
 import { nodeAnnotations } from './helpers';
-import { extractClassMetrics, extractInterfaceMetrics } from './extractors';
+import {
+  extractClassMetrics,
+  extractEnumMetrics,
+  extractInterfaceMetrics,
+} from './extractors';
 
 export type { ConstructMetrics } from './types';
 
@@ -135,8 +139,7 @@ export async function extractTopLevel(
               nameStart: nameNode ? positionOf(nameNode.startPosition) : null,
               source: node.text,
               hasError: node.hasError,
-              // A top-level declaration has no enclosing class, as the cursor walk finds too.
-              metrics: metricsFor(node, null, node, importLines),
+              metrics: topLevelMetrics(node, kind, importLines),
             },
           ];
         },
@@ -154,6 +157,21 @@ export async function extractTopLevel(
     );
     return { ok: false };
   }
+}
+
+/**
+ * A top-level declaration has no enclosing class, as the cursor walk finds too. Only enums get
+ * `enumMetrics`, and only here: the cursor path's metrics never carry the key.
+ */
+function topLevelMetrics(
+  node: Node,
+  kind: ConstructKind,
+  importLines: string[],
+): ConstructMetrics {
+  const metrics = metricsFor(node, null, node, importLines);
+  return kind === 'enum'
+    ? { ...metrics, enumMetrics: extractEnumMetrics(node, importLines) }
+    : metrics;
 }
 
 /** Parses the Java source, walks the AST from the cursor position to the nearest declaration, and returns structural metrics for that construct and its enclosing class. */

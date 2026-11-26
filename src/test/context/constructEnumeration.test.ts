@@ -324,3 +324,135 @@ describe('US3: empty, declaration-free and broken files never crash', () => {
     }
   });
 });
+
+describe('US4: top-level enums get a complete context', () => {
+  const ENUM = [
+    'import com.example.Shape;', // 0
+    'enum D implements Shape {', // 1
+    '  X { void f() {} },', // 2
+    '  Y;', // 3
+    '  private final int v = 1;', // 4
+    '  D() {}', // 5
+    '  int get() { return v; }', // 6
+    '  enum Inner { Q }', // 7
+    '}', // 8
+  ].join('\n');
+
+  it('builds the enum context with its constants and members', async () => {
+    const [d] = await constructsOf(ENUM);
+
+    expect([d.kind, d.name, d.line, d.context.insertLine]).toEqual([
+      'enum',
+      'D',
+      1,
+      1,
+    ]);
+    expect(d.context.importLines).toEqual(['import com.example.Shape;']);
+    expect(d.context.constructMetrics).toMatchObject({
+      constructType: 'enum',
+      name: 'D',
+      startRow: 1,
+      enclosingClassStartRow: null,
+      classSource: d.source,
+      classMetrics: null,
+      interfaceMetrics: null,
+    });
+    expect(d.context.constructMetrics.enumMetrics).toEqual({
+      constants: ['X', 'Y'],
+      implementedInterfaces: expect.any(Array),
+      fields: [{ name: 'v', type: 'int', isFinal: true, annotations: [] }],
+      finalFieldTypes: ['int'],
+      constructors: [{ paramCount: 0, paramTypes: [], hasAutowired: false }],
+      methodCount: 1,
+      nestedDeclarations: [
+        {
+          type: 'enum',
+          name: 'Inner',
+          implementedInterfaces: [],
+          annotations: [],
+        },
+      ],
+    });
+  });
+
+  it('resolves the enum interfaces exactly as a class with the same clause', async () => {
+    const [d] = await constructsOf(ENUM);
+    const [k] = await constructsOf(
+      ['import com.example.Shape;', 'class K implements Shape {}'].join('\n'),
+    );
+
+    expect(
+      d.context.constructMetrics.enumMetrics?.implementedInterfaces,
+    ).toEqual(k.context.constructMetrics.classMetrics?.implementedInterfaces);
+  });
+
+  it('gives an enum with only constants empty members', async () => {
+    const [e] = await constructsOf('enum E { A, B, C }');
+
+    expect(e.context.constructMetrics.enumMetrics).toMatchObject({
+      constants: ['A', 'B', 'C'],
+      fields: [],
+      constructors: [],
+      methodCount: 0,
+      nestedDeclarations: [],
+    });
+  });
+
+  it('leaves the manual command unchanged on a top-level enum (Clarification 1)', async () => {
+    const [d] = await constructsOf(ENUM);
+
+    expect(
+      await buildContextFromSource(
+        ENUM,
+        d.nameLine ?? 0,
+        d.nameColumn ?? 0,
+        'java',
+        'Fixture.java',
+      ),
+    ).toBeNull();
+  });
+});
+
+describe('prompt byte-identity (the snapshots sort keys, JSON.stringify does not)', () => {
+  it('keeps the class metrics keys in their original order', async () => {
+    const [, b] = await constructsOf(FOUR);
+
+    expect(Object.keys(b.context.constructMetrics)).toEqual([
+      'constructType',
+      'name',
+      'annotations',
+      'startRow',
+      'enclosingClassStartRow',
+      'classSource',
+      'classMetrics',
+      'interfaceMetrics',
+    ]);
+    expect(Object.keys(b.context.constructMetrics.classMetrics ?? {})).toEqual([
+      'superclass',
+      'implementedInterfaces',
+      'fields',
+      'finalFieldTypes',
+      'constructors',
+      'methodCount',
+      'nestedDeclarations',
+    ]);
+  });
+
+  it('serialises class and interface contexts exactly as the manual path does', async () => {
+    for (const [, source] of FIXTURES) {
+      for (const c of await constructsOf(source)) {
+        if (c.kind === 'enum' || c.nameLine === null || c.nameColumn === null) {
+          continue;
+        }
+        const manual = await buildContextFromSource(
+          source,
+          c.nameLine,
+          c.nameColumn,
+          'java',
+          'Fixture.java',
+        );
+        expect(JSON.stringify(c.context)).toBe(JSON.stringify(manual));
+      }
+    }
+  });
+});
