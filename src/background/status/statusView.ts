@@ -1,3 +1,4 @@
+import { formatIdentity } from '@/background/detector/versionTracker';
 import type { FileStatus } from '@/background/scheduler/scheduler';
 import type { StatusSnapshot } from '@/background/status/backgroundStatus';
 
@@ -59,6 +60,9 @@ function waitingCell(
   ) {
     return '—';
   }
+  if (file.waitingFor === 'slot') {
+    return 'waiting for a free slot';
+  }
   // A passed deadline means the work now waits only for the running request to settle; showing
   // the old time would report a deadline that is no longer what it waits for (PR #12 review).
   if (file.active !== undefined && file.eligibleAt <= takenAt) {
@@ -80,6 +84,28 @@ function latestCell(file: FileStatus): string {
   return escapeHtml(
     `${state} · ${source} v${latest.version} · ${findings(latest.findings ?? 0)}`,
   );
+}
+
+function versionChangeLine(
+  snapshot: StatusSnapshot,
+  time: (ms: number) => string,
+): string {
+  const change = snapshot.versionChange;
+  if (change === undefined) {
+    return '';
+  }
+  const files = `${change.scheduled} file${change.scheduled === 1 ? '' : 's'}`;
+  return `<p class="change">${escapeHtml(
+    `Detector version changed: ${formatIdentity(change.from)} → ${formatIdentity(change.to)} (${change.source}), ${files} scheduled, ${time(change.at)}`,
+  )}</p>
+`;
+}
+
+function concurrencyLine(snapshot: StatusSnapshot): string {
+  const { running, limit } = snapshot.concurrency;
+  const of = limit === 0 ? 'no limit' : `${limit}`;
+  return `<p>${escapeHtml(`Running: ${running} / ${of}`)}</p>
+`;
 }
 
 function row(
@@ -142,12 +168,13 @@ table { border-collapse: collapse; width: 100%; }
 th, td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--vscode-panel-border); vertical-align: top; }
 .uri { opacity: 0.7; font-size: 0.85em; }
 .empty { opacity: 0.8; }
+.change { font-weight: bold; }
 </style>
 </head>
 <body>
 <h1>Background status</h1>
 <p><span class="label">${escapeHtml(snapshot.label)}</span> ${escapeHtml(snapshot.detector)} · updated ${escapeHtml(time(snapshot.takenAt))}</p>
-<dl>
+${versionChangeLine(snapshot, time)}${concurrencyLine(snapshot)}<dl>
 ${counters.map(([name, value]) => `<dt>${escapeHtml(name)}</dt>\n<dd>${value}</dd>`).join('\n')}
 </dl>
 ${body}

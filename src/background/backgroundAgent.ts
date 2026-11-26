@@ -132,6 +132,8 @@ export function startBackgroundAgent(context: vscode.ExtensionContext): void {
       clock: realClock,
       detector,
       label: 'Sprint 1 mock detector',
+      tracker,
+      limit: DEFAULT_MAX_CONCURRENT,
     }),
     realClock,
   );
