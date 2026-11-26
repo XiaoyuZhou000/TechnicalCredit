@@ -279,3 +279,61 @@ describe('US3', () => {
     expect(delivered.map((s) => s.trigger)).toEqual(['open']);
   });
 });
+
+describe('card 11: startup counts and rescans', () => {
+  const mixed = (): FakeDoc[] => [
+    fakeDoc(),
+    ...UNSUPPORTED,
+    fakeDoc({ uri: 'file:///w/B.java' }),
+  ];
+
+  it('startup returns how many supported documents it forwarded', () => {
+    const { handler, sink } = makeHandler();
+
+    expect(handler.startup(mixed())).toBe(2);
+    expect(sink.snapshots).toHaveLength(2);
+  });
+
+  it('rescan forwards "version" snapshots in the given order and returns the count', () => {
+    const { handler, sink } = makeHandler();
+    const b = fakeDoc({
+      uri: 'file:///w/B.java',
+      version: 7,
+      text: 'class B {}',
+    });
+
+    expect(handler.rescan([b, ...UNSUPPORTED, fakeDoc()])).toBe(2);
+    expect(
+      sink.snapshots.map((s) => [s.trigger, s.fileUri, s.version, s.content]),
+    ).toEqual([
+      ['version', 'file:///w/B.java', 7, 'class B {}'],
+      ['version', 'file:///w/A.java', 1, 'class A {}'],
+    ]);
+  });
+
+  it('rescan after stop forwards nothing and returns 0', () => {
+    const { handler, sink } = makeHandler();
+    handler.stop();
+
+    expect(handler.rescan([fakeDoc()])).toBe(0);
+    expect(handler.startup([fakeDoc()])).toBe(0);
+    expect(sink.snapshots).toEqual([]);
+  });
+
+  it('still counts a document whose delivery threw, and reports the error', () => {
+    const boom = new Error('sink failed');
+    const { handler, errors } = makeHandler({
+      sink: {
+        submit: () => {
+          throw boom;
+        },
+        closed: () => undefined,
+      },
+    });
+
+    expect(
+      handler.rescan([fakeDoc(), fakeDoc({ uri: 'file:///w/B.java' })]),
+    ).toBe(2);
+    expect(errors).toEqual([boom, boom]);
+  });
+});
