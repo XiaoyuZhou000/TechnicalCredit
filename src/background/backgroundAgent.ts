@@ -14,6 +14,7 @@ import {
 import type { Clock } from '@/background/scheduler/clock';
 import {
   DEFAULT_COOLDOWN_MS,
+  DEFAULT_MAX_CONCURRENT,
   DEFAULT_QUIET_MS,
   Scheduler,
 } from '@/background/scheduler/scheduler';
@@ -73,6 +74,7 @@ export function startBackgroundAgent(context: vscode.ExtensionContext): void {
     clock: realClock,
     quietMs: DEFAULT_QUIET_MS,
     cooldownMs: DEFAULT_COOLDOWN_MS,
+    maxConcurrent: DEFAULT_MAX_CONCURRENT,
   });
   // Compared before the startup scan, so the change is known when its count is logged.
   const tracker = new DetectorVersionTracker({

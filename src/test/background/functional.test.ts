@@ -331,6 +331,8 @@ describe('functional suite: restart (card 09 US2)', () => {
 });
 
 describe('functional suite: detector version change at restart (card 11 US1)', () => {
+  /** Three files, two calls at a time (rule 11): the third settles one delay later. */
+  const SETTLED = QUIET + 2 * MOCK_DELAY + 100;
   const docs = (): FakeDoc[] => [
     new FakeDoc('A.java', 'class A {}'),
     new FakeDoc('B.java', 'interface B {}'),
@@ -344,7 +346,7 @@ describe('functional suite: detector version change at restart (card 11 US1)', (
   ): Promise<void> {
     const first = pipeline(store, { version: 'mock-1' });
     await first.start(open);
-    await first.tick(QUIET + MOCK_DELAY + 100);
+    await first.tick(SETTLED);
     expect(first.mock.callCount).toBe(open.length);
     first.shutdown();
   }
@@ -376,7 +378,7 @@ describe('functional suite: detector version change at restart (card 11 US1)', (
     ]);
     expect(second.tracker.lastChange()).toMatchObject({ scheduled: 3 });
 
-    await second.tick(QUIET + MOCK_DELAY + 100);
+    await second.tick(SETTLED);
 
     expect(second.mock.callCount).toBe(3);
     expect(second.mock.calls().map((c) => c.fileUri)).toEqual([
@@ -421,12 +423,12 @@ describe('functional suite: detector version change at restart (card 11 US1)', (
     // A session that analysed A under mock-2 but never confirmed its start.
     const partial = pipeline(store, { version: 'mock-2' });
     partial.events.opened(open[0]);
-    await partial.tick(QUIET + MOCK_DELAY + 100);
+    await partial.tick(SETTLED);
     partial.shutdown();
 
     const second = pipeline(store, { version: 'mock-2' });
     await second.start(open);
-    await second.tick(QUIET + MOCK_DELAY + 100);
+    await second.tick(SETTLED);
 
     expect(second.tracker.lastChange()).toMatchObject({ scheduled: 3 });
     expect(second.mock.calls().map((c) => c.fileUri)).toEqual([
@@ -446,12 +448,12 @@ describe('functional suite: detector version change at restart (card 11 US1)', (
     await firstSession(store, open);
     const upgraded = pipeline(store, { version: 'mock-2' });
     await upgraded.start(open);
-    await upgraded.tick(QUIET + MOCK_DELAY + 100);
+    await upgraded.tick(SETTLED);
     upgraded.shutdown();
 
     const rolledBack = pipeline(store, { version: 'mock-1' });
     await rolledBack.start(open);
-    await rolledBack.tick(QUIET + MOCK_DELAY + 100);
+    await rolledBack.tick(SETTLED);
 
     expect(rolledBack.tracker.lastChange()).toMatchObject({
       from: { detectorVersion: 'mock-2' },
@@ -509,5 +511,70 @@ describe('functional suite: no version change, no extra calls (card 11 US2)', ()
       false,
     );
     second.shutdown();
+  });
+});
+
+describe('functional suite: bounded re-analysis (card 11 US3)', () => {
+  const tenDocs = (): FakeDoc[] =>
+    Array.from(
+      { length: 10 },
+      (_, i) => new FakeDoc(`F${i}.java`, `class F${i} { int v${i}; }`),
+    );
+
+  /** Ticks in 100 ms steps, recording the most calls ever running at once. */
+  async function tickTracking(
+    p: ReturnType<typeof pipeline>,
+    ms: number,
+  ): Promise<number> {
+    let peak = p.scheduler.running();
+    for (let left = ms; left > 0; left -= 100) {
+      await p.tick(Math.min(100, left));
+      peak = Math.max(peak, p.scheduler.running());
+    }
+    return peak;
+  }
+
+  it('re-analyses ten open files two at a time after a version change (SC-002, SC-003)', async () => {
+    const store = createMemoryCacheStore();
+    const open = tenDocs();
+    const first = pipeline(store, { version: 'mock-1' });
+    await first.start(open);
+    expect(await tickTracking(first, QUIET + 5 * MOCK_DELAY + 100)).toBe(2);
+    expect(first.mock.callCount).toBe(10);
+    first.shutdown();
+
+    const second = pipeline(store, { version: 'mock-2' });
+    await second.start(open);
+    // Quiet period, then five rounds of two calls (spec SC-002).
+    const peak = await tickTracking(second, QUIET + 5 * MOCK_DELAY + 100);
+
+    expect(peak).toBe(2);
+    expect(second.mock.callCount).toBe(10);
+    expect(second.scheduler.files().every((f) => f.latest?.current)).toBe(true);
+    expect(second.scheduler.stats().slotWaits).toBe(8);
+    second.shutdown();
+  });
+
+  it('adds no job for repeated triggers on a file waiting for a slot (FR-008)', async () => {
+    const store = createMemoryCacheStore();
+    const open = tenDocs();
+    const p = pipeline(store, { version: 'mock-2' });
+    await p.start(open);
+    await p.tick(QUIET + 100); // two running, eight queued
+    const queued = open[9];
+    expect(p.scheduler.fileState(W, queued.uri.toString())?.waitingFor).toBe(
+      'slot',
+    );
+
+    p.events.activated(queued);
+    p.events.saved(queued);
+    p.events.startup([queued]);
+    await p.tick(5 * MOCK_DELAY + 100);
+
+    expect(p.mock.callCount).toBe(10);
+    expect(
+      p.mock.calls().filter((c) => c.fileUri === queued.uri.toString()),
+    ).toHaveLength(1);
+    p.shutdown();
   });
 });

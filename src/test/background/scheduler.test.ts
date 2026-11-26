@@ -165,6 +165,8 @@ interface SetupOptions {
   readonly quietMs?: number;
   /** Defaults to 0, so earlier cards' tests keep their timing (card 07 FR-011). */
   readonly cooldownMs?: number;
+  /** Defaults to 0 (no limit), so earlier cards' tests keep their concurrent starts (card 11). */
+  readonly maxConcurrent?: number;
 }
 
 function setup(options: SetupOptions = {}) {
@@ -191,6 +193,7 @@ function setup(options: SetupOptions = {}) {
     clock,
     quietMs: options.quietMs ?? 0,
     cooldownMs: options.cooldownMs ?? 0,
+    maxConcurrent: options.maxConcurrent ?? 0,
     onSettled:
       options.onSettled ??
       ((event) => {
@@ -241,6 +244,7 @@ describe('scheduler basics', () => {
       pendingReplaced: 0,
       pendingCleared: 0,
       pendingDropped: 0,
+      slotWaits: 0,
     });
     expect(Object.isFrozen(scheduler.stats())).toBe(true);
 
@@ -1032,6 +1036,7 @@ describe('inspection (US5)', () => {
       pendingReplaced: 1,
       pendingCleared: 1,
       pendingDropped: 1,
+      slotWaits: 0,
     });
     expect(Object.isFrozen(scheduler.stats())).toBe(true);
     expect(detector.outstanding).toBe(3);
@@ -1468,6 +1473,7 @@ describe('event coalescing: inspection (card 05 US4)', () => {
       pendingReplaced: 1,
       pendingCleared: 1,
       pendingDropped: 1,
+      slotWaits: 0,
     });
     expect(scheduler.fileState(W, A_URI)).toMatchObject({
       latestHash: sha256Hex(c.content),
@@ -2495,5 +2501,200 @@ describe('version-aware running duplicates (card 11 US3, rule 3 amended)', () =>
     expect(lines).toContain(
       `${T0} cache stored 2 findings v1 sha ${sha8(a)} scripted@1 ${A_URI}`,
     );
+  });
+});
+
+describe('global call limit (card 11 US3, rule 11)', () => {
+  const uri = (name: string): string => `file:///w/${name}.java`;
+  /** A snapshot of `name`'s file with its own content. */
+  const fileSnap = (name: string, text = '', version = 1): FileSnapshot =>
+    snapshot({
+      fileUri: uri(name),
+      version,
+      content: `class ${name} { ${SECRET} ${text} }`,
+    });
+  const called = (detector: ScriptedDetector): string[] =>
+    detector.calls.map((call) => call.input.fileUri);
+
+  function limited(maxConcurrent: number) {
+    const detector = new ScriptedDetector();
+    return { ...setup({ detector, maxConcurrent }), detector };
+  }
+
+  it('never runs more than the limit, and starts queued files in submission order (US3-1)', async () => {
+    const { scheduler, detector } = limited(2);
+    const names = Array.from({ length: 10 }, (_, i) => `F${i}`);
+    names.forEach((name) => scheduler.submit(fileSnap(name)));
+
+    expect(scheduler.running()).toBe(2);
+    expect(scheduler.stats().slotWaits).toBe(8);
+
+    let peak = scheduler.running();
+    for (let i = 0; i < names.length; i++) {
+      detector.calls[i].resolve(ok(0));
+      await settle();
+      peak = Math.max(peak, scheduler.running());
+    }
+
+    expect(peak).toBe(2);
+    expect(called(detector)).toEqual(names.map(uri));
+    expect(scheduler.running()).toBe(0);
+    expect(scheduler.pendingCount()).toBe(0);
+  });
+
+  it('logs the wait and shows the file as waiting for a slot', () => {
+    const { scheduler, lines } = limited(2);
+    scheduler.submit(fileSnap('A'));
+    scheduler.submit(fileSnap('B'));
+    const c = fileSnap('C');
+    scheduler.submit(c);
+
+    expect(lines).toContain(
+      `${T0} waiting for slot (2 running) v1 sha ${sha8(c)} scripted@1 ${uri('C')}`,
+    );
+    expect(scheduler.fileState(W, uri('C'))).toMatchObject({
+      waitingFor: 'slot',
+      pending: { contentHash: sha256Hex(c.content) },
+    });
+  });
+
+  it('answers queued work from the cache without a slot', async () => {
+    const { scheduler, detector, cache } = limited(2);
+    const cached = fileSnap('C', 'cached', 2);
+    await cache.store(
+      {
+        workspaceId: W,
+        fileUri: uri('C'),
+        contentHash: sha256Hex(cached.content),
+        detectorId: 'scripted',
+        detectorVersion: '1',
+      },
+      ok(1),
+    );
+    scheduler.submit(fileSnap('A'));
+    scheduler.submit(fileSnap('B'));
+    scheduler.submit(fileSnap('C'));
+    expect(scheduler.fileState(W, uri('C'))?.waitingFor).toBe('slot');
+
+    scheduler.submit(cached);
+
+    expect(scheduler.fileState(W, uri('C'))?.pending).toBeUndefined();
+    detector.calls[0].resolve(ok(0));
+    detector.calls[1].resolve(ok(0));
+    await settle();
+    expect(called(detector)).toEqual([uri('A'), uri('B')]);
+  });
+
+  it('drops a closed file from the queue and gives its turn to the next (US3-1)', async () => {
+    const { scheduler, detector } = limited(2);
+    ['A', 'B', 'C', 'D'].forEach((name) => scheduler.submit(fileSnap(name)));
+
+    scheduler.closed({ workspaceId: W, fileUri: uri('C'), observedAt: 0 });
+    detector.calls[0].resolve(ok(0));
+    await settle();
+
+    expect(called(detector)).toEqual([uri('A'), uri('B'), uri('D')]);
+    expect(scheduler.fileState(W, uri('C'))).toBeUndefined();
+  });
+
+  it('keeps the place of a queued file whose newer content is still due', async () => {
+    const { scheduler, detector } = limited(2);
+    ['A', 'B', 'C', 'D'].forEach((name) => scheduler.submit(fileSnap(name)));
+    const newer = fileSnap('C', 'newer', 2);
+    scheduler.submit(newer);
+
+    detector.calls[0].resolve(ok(0));
+    await settle();
+
+    expect(called(detector)).toEqual([uri('A'), uri('B'), uri('C')]);
+    expect(detector.calls[2].input.contentHash).toBe(sha256Hex(newer.content));
+    expect(scheduler.stats().slotWaits).toBe(2);
+  });
+
+  it('sends a settling file to the back of the queue when others are waiting', async () => {
+    const { scheduler, detector } = limited(2);
+    scheduler.submit(fileSnap('A'));
+    scheduler.submit(fileSnap('B'));
+    scheduler.submit(fileSnap('C'));
+    scheduler.submit(fileSnap('A', 'edited', 2)); // pending behind A's running call
+
+    detector.calls[0].resolve(ok(0));
+    await settle();
+    expect(called(detector)).toEqual([uri('A'), uri('B'), uri('C')]);
+    expect(scheduler.fileState(W, uri('A'))?.waitingFor).toBe('slot');
+    expect(scheduler.stats().followUps).toBe(0);
+
+    detector.calls[1].resolve(ok(0));
+    await settle();
+    expect(called(detector)).toEqual([uri('A'), uri('B'), uri('C'), uri('A')]);
+  });
+
+  it('still starts a settling file at once when nothing else waits', async () => {
+    const { scheduler, detector } = limited(1);
+    scheduler.submit(fileSnap('A'));
+    scheduler.submit(fileSnap('A', 'edited', 2));
+
+    detector.calls[0].resolve(ok(0));
+    await settle();
+
+    expect(detector.calls).toHaveLength(2);
+    expect(scheduler.stats().followUps).toBe(1);
+    expect(scheduler.stats().slotWaits).toBe(0);
+  });
+
+  it('starts nothing from the queue after dispose', async () => {
+    const { scheduler, detector } = limited(2);
+    ['A', 'B', 'C'].forEach((name) => scheduler.submit(fileSnap(name)));
+
+    scheduler.dispose();
+    await settle();
+
+    expect(detector.calls).toHaveLength(2);
+    expect(detector.calls.every((call) => call.signal.aborted)).toBe(true);
+    expect(scheduler.running()).toBe(0);
+  });
+
+  it('treats 0 as no limit', () => {
+    const { scheduler, detector } = limited(0);
+    ['A', 'B', 'C', 'D', 'E'].forEach((name) =>
+      scheduler.submit(fileSnap(name)),
+    );
+
+    expect(detector.calls).toHaveLength(5);
+    expect(scheduler.stats().slotWaits).toBe(0);
+  });
+
+  it.each([-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY])(
+    'rejects maxConcurrent %p',
+    (maxConcurrent) => {
+      expect(() => setup({ maxConcurrent })).toThrow(RangeError);
+    },
+  );
+
+  it('waits out a cooldown first, then queues for a slot (US3-5)', async () => {
+    const clock = createFakeTimers();
+    const detector = new ScriptedDetector();
+    const { scheduler } = setup({
+      detector,
+      clock,
+      cooldownMs: 1000,
+      maxConcurrent: 1,
+    });
+    scheduler.submit(fileSnap('A'));
+    detector.calls[0].resolve(ok(0));
+    await settle(); // A's cooldown runs until t = 1000
+
+    scheduler.submit(fileSnap('B')); // takes the only slot
+    scheduler.submit(fileSnap('A', 'edited', 2));
+    expect(scheduler.fileState(W, uri('A'))?.waitingFor).toBe('cooldown');
+    expect(scheduler.stats().slotWaits).toBe(0);
+
+    clock.advance(1000);
+    expect(scheduler.fileState(W, uri('A'))?.waitingFor).toBe('slot');
+    expect(scheduler.stats().slotWaits).toBe(1);
+
+    detector.calls[1].resolve(ok(0));
+    await settle();
+    expect(called(detector)).toEqual([uri('A'), uri('B'), uri('A')]);
   });
 });
