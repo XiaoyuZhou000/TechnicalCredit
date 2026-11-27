@@ -468,6 +468,7 @@ export class ResultCache {
     if (entry === undefined) {
       return { hit: false, reason: 'content-changed' };
     }
+    this.touch(identity, read.scope, entry);
     return {
       hit: true,
       entry: {
@@ -477,6 +478,31 @@ export class ResultCache {
         output: entry.output,
       },
     };
+  }
+
+  /**
+   * A hit counts as use (card 16A), written at once so the order survives restarts. The write
+   * runs in the background, because `lookup` must answer synchronously; a failed write only
+   * leaves the order slightly older, so it is counted and never reported as an error.
+   */
+  private touch(
+    identity: CacheIdentity,
+    scope: StoredScope,
+    used: StoredEntry,
+  ): void {
+    const uses = scope.uses + 1;
+    const touched: StoredScope = {
+      format: CACHE_FORMAT,
+      uses,
+      entries: scope.entries.map((e) =>
+        e === used ? { ...e, lastUse: uses } : e,
+      ),
+    };
+    void this.writeValue(keyFor(identity), touched).then((failure) => {
+      if (failure !== undefined) {
+        this.counts.recencyFailures++;
+      }
+    });
   }
 
   private async write(
