@@ -184,9 +184,9 @@ describe('consistency with the background result cache', () => {
       findings: findings.map((result) => ({ line: 0, result })),
     };
 
-    expect(await cache.store(identity, { ok: true, output })).toEqual({
-      status: 'stored',
-    });
+    expect((await cache.store(identity, { ok: true, output })).status).toBe(
+      'stored',
+    );
     const lookup = cache.lookup(identity);
     expect(lookup.hit).toBe(true);
     expect(lookup.hit && lookup.entry.output).toEqual(output);

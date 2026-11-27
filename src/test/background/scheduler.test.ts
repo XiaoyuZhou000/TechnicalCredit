@@ -487,7 +487,7 @@ describe('latest pending snapshot (US2)', () => {
     expect(scheduler.stats().followUps).toBe(0);
   });
 
-  it('rechecks pending content after a successful store replaced its entry', async () => {
+  it('rechecks pending content after a successful store, which no longer replaces its entry (card 16A)', async () => {
     const { scheduler, detector, cache, lines } = scripted();
     const [a, c] = [rev('a', 1), rev('c', 2)];
     await cache.store(
@@ -506,9 +506,12 @@ describe('latest pending snapshot (US2)', () => {
     detector.calls[0].resolve(ok(1));
     await settle();
 
-    // Card 04 keeps one entry per file and version, so A's store replaced C's.
-    expect(lines.at(-1)).toBe(`${T0} scripted start #2 v2 ${A_URI}`);
-    expect(detector.outstanding).toBe(2);
+    // Card 04 kept one entry per file and version, so A's store replaced C's and C was
+    // analysed again (known issue 24). Card 16A keeps both, so C's follow-up hits.
+    expect(lines.at(-1)).toBe(
+      `${T0} cache hit 3 findings v2 sha ${sha8(c)} scripted@1 ${A_URI}`,
+    );
+    expect(detector.outstanding).toBe(1);
   });
 
   it('ignores repeated events for the running content (US2-2, SC-003)', async () => {

@@ -2,8 +2,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import {
+  CACHE_CAPACITY,
   CACHE_FORMAT,
   CACHE_KEY_PREFIX,
+  LEGACY_KEY_PREFIX,
   ResultCache,
   sha256Hex,
   type CacheIdentity,
@@ -21,7 +23,7 @@ import {
   type MemoryCacheStore,
 } from '@/test/background/memoryCacheStore';
 
-/** Offline tests for card 04's cache: no `vscode`, an in-memory store, a fixed clock. */
+/** Offline tests for card 04's cache, in card 16A's bounded format: no `vscode`, an in-memory store, a fixed clock. */
 
 const POSITIVE = fs.readFileSync(
   path.join(__dirname, '../creational/prototype/Positive.java'),
@@ -73,9 +75,11 @@ describe('sha256Hex', () => {
 });
 
 describe('cache format', () => {
-  it('keeps the key prefix existing entries were stored under', () => {
-    expect(CACHE_FORMAT).toBe(1);
-    expect(CACHE_KEY_PREFIX).toBe('technicalCredit.resultCache.v1:');
+  it('stores format 2 under its own prefix, and knows the v1 prefix it migrates (card 16A)', () => {
+    expect(CACHE_FORMAT).toBe(2);
+    expect(CACHE_KEY_PREFIX).toBe('technicalCredit.resultCache.v2:');
+    expect(LEGACY_KEY_PREFIX).toBe('technicalCredit.resultCache.v1:');
+    expect(CACHE_CAPACITY).toBe(4);
   });
 });
 
@@ -89,7 +93,7 @@ describe('ResultCache', () => {
       expect(lookup).toEqual({
         hit: true,
         entry: {
-          format: 1,
+          format: CACHE_FORMAT,
           contentHash: sha256Hex(POSITIVE),
           storedAt: 1234,
           output: {
@@ -120,6 +124,7 @@ describe('ResultCache', () => {
 
     expect(await cache.store(identity(), ok([]))).toEqual({
       status: 'stored',
+      replaced: false,
     });
     const lookup = cache.lookup(identity());
     expect(lookup.hit && lookup.entry.output.findings).toEqual([]);
@@ -156,7 +161,7 @@ describe('ResultCache', () => {
     expect(lookup.hit && lookup.entry.output.findings).toHaveLength(6);
   });
 
-  it('keeps one entry per file and version, holding the latest content (SC-006)', async () => {
+  it('keeps at most four entries per file and version, under one key (SC-006, card 16A)', async () => {
     const { cache, store } = memory();
     const versions = Array.from({ length: 20 }, (_, i) => `${POSITIVE}${i}`);
 
@@ -166,12 +171,16 @@ describe('ResultCache', () => {
 
     expect(store.keys()).toHaveLength(1);
     expect(store.keys()[0].startsWith(CACHE_KEY_PREFIX)).toBe(true);
-    expect(
-      cache.lookup(identity({ contentHash: sha256Hex(versions[19]) })).hit,
-    ).toBe(true);
-    expect(
-      cache.lookup(identity({ contentHash: sha256Hex(versions[18]) })),
-    ).toEqual({ hit: false, reason: 'content-changed' });
+    for (const content of versions.slice(16)) {
+      expect(
+        cache.lookup(identity({ contentHash: sha256Hex(content) })).hit,
+      ).toBe(true);
+    }
+    for (const content of versions.slice(0, 16)) {
+      expect(
+        cache.lookup(identity({ contentHash: sha256Hex(content) })),
+      ).toEqual({ hit: false, reason: 'content-changed' });
+    }
   });
 });
 
@@ -191,18 +200,26 @@ describe('ResultCache across restarts and bad storage', () => {
     };
   }
 
-  /** A valid stored value, shaped as `store` writes it, for corrupting one field at a time. */
-  function stored(
+  /** One valid entry, shaped as `store` writes it, for corrupting one field at a time. */
+  function entry(
     overrides: Record<string, unknown> = {},
     findings: unknown = [{ line: 1, result: result() }],
   ): Record<string, unknown> {
     return {
-      format: 1,
       contentHash: sha256Hex(POSITIVE),
       storedAt: 1234,
+      lastUse: 1,
       output: { detectorId: 'mock', detectorVersion: 'mock-1', findings },
       ...overrides,
     };
+  }
+
+  /** A valid v2 scope holding that one entry, as `store` writes it (card 16A). */
+  function stored(
+    overrides: Record<string, unknown> = {},
+    findings?: unknown,
+  ): Record<string, unknown> {
+    return { format: 2, uses: 1, entries: [entry(overrides, findings)] };
   }
 
   it('returns identical entries from a new cache over the same store (SC-002)', async () => {
@@ -219,6 +236,10 @@ describe('ResultCache across restarts and bad storage', () => {
       stored: 0,
       skipped: 0,
       storeFailures: 0,
+      evicted: 0,
+      notRetained: 0,
+      migrated: 0,
+      recencyFailures: 0,
     });
     const lookup = after.lookup(identity());
     expect(lookup.hit).toBe(true);
@@ -230,7 +251,16 @@ describe('ResultCache across restarts and bad storage', () => {
     const { cache, store } = memory();
     store.rawSet(KEY, stored());
 
-    expect(cache.lookup(identity())).toEqual({ hit: true, entry: stored() });
+    const planted = entry();
+    expect(cache.lookup(identity())).toEqual({
+      hit: true,
+      entry: {
+        format: CACHE_FORMAT,
+        contentHash: planted.contentHash,
+        storedAt: planted.storedAt,
+        output: planted.output,
+      },
+    });
   });
 
   it.each<[string, unknown]>([
@@ -238,7 +268,8 @@ describe('ResultCache across restarts and bad storage', () => {
     ['a string', 'text'],
     ['an array', [stored()]],
     ['an empty object', {}],
-    ['another format', stored({ format: 2 })],
+    ['another format', { ...stored(), format: 3 }],
+    ['the v1 single-entry shape', { format: 1, ...entry() }],
     [
       'an uppercase hash',
       stored({ contentHash: sha256Hex(POSITIVE).toUpperCase() }),
@@ -292,7 +323,7 @@ describe('ResultCache across restarts and bad storage', () => {
 
   it('never reads entries written under another format prefix', () => {
     const { cache, store } = memory();
-    store.rawSet(KEY.replace('.v1:', '.v0:'), stored());
+    store.rawSet(KEY.replace('.v2:', '.v0:'), stored());
 
     expect(cache.lookup(identity())).toEqual({ hit: false, reason: 'absent' });
   });
@@ -431,6 +462,10 @@ describe('ResultCache stats', () => {
       stored: 2,
       skipped: 2,
       storeFailures: 1,
+      evicted: 0,
+      notRetained: 0,
+      migrated: 0,
+      recencyFailures: 0,
     });
     expect(Object.isFrozen(stats)).toBe(true);
   });
