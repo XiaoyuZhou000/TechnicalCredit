@@ -141,9 +141,18 @@ interface StoredScope {
   readonly entries: readonly StoredEntry[];
 }
 
+/**
+ * `legacy` marks a scope read from card 04's v1 key because it has no format 2 value yet:
+ * `migrate` when the v1 entry was valid (it is the scope's only entry), `drop` when it wasn't.
+ */
 type ScopeRead =
-  | { readonly kind: 'ok'; readonly scope: StoredScope }
-  | { readonly kind: 'absent' | 'unreadable' }
+  | {
+      readonly kind: 'ok';
+      readonly scope: StoredScope;
+      readonly legacy?: 'migrate';
+    }
+  | { readonly kind: 'absent' }
+  | { readonly kind: 'unreadable'; readonly legacy?: 'drop' }
   | { readonly kind: 'error'; readonly message: string };
 
 const EMPTY_SCOPE: StoredScope = { format: CACHE_FORMAT, uses: 0, entries: [] };
@@ -262,6 +271,31 @@ function parseOutput(
     detectorVersion: identity.detectorVersion,
     findings,
   };
+}
+
+/**
+ * Card 04's single-result value, checked as strictly as it was then. A valid one becomes the
+ * only entry of its scope's format 2 value (card 16A).
+ */
+function parseLegacyEntry(
+  value: unknown,
+  identity: CacheIdentity,
+): StoredEntry | undefined {
+  if (!isRecord(value) || value.format !== 1) {
+    return undefined;
+  }
+  const { contentHash, storedAt } = value;
+  const output = parseOutput(value.output, identity);
+  if (
+    typeof contentHash !== 'string' ||
+    !HASH.test(contentHash) ||
+    typeof storedAt !== 'number' ||
+    !Number.isFinite(storedAt) ||
+    output === undefined
+  ) {
+    return undefined;
+  }
+  return { contentHash, storedAt, lastUse: 1, output };
 }
 
 function isUse(value: unknown): value is number {
@@ -445,10 +479,47 @@ export class ResultCache {
       return { kind: 'error', message: messageOf(error) };
     }
     if (value === undefined) {
-      return { kind: 'absent' };
+      return this.readLegacy(identity);
     }
     const scope = parseScope(value, identity);
     return scope === undefined ? { kind: 'unreadable' } : { kind: 'ok', scope };
+  }
+
+  /** Only consulted while a scope has no format 2 value; once it has one, v1 is never read. */
+  private readLegacy(identity: CacheIdentity): ScopeRead {
+    let value: unknown;
+    try {
+      value = this.readValue(keyFor(identity, LEGACY_KEY_PREFIX));
+    } catch (error) {
+      return { kind: 'error', message: messageOf(error) };
+    }
+    if (value === undefined) {
+      return { kind: 'absent' };
+    }
+    const entry = parseLegacyEntry(value, identity);
+    return entry === undefined
+      ? { kind: 'unreadable', legacy: 'drop' }
+      : {
+          kind: 'ok',
+          scope: { format: CACHE_FORMAT, uses: 1, entries: [entry] },
+          legacy: 'migrate',
+        };
+  }
+
+  /**
+   * Deletes the scope's v1 key in the background. A failed delete is harmless: v1 is ignored
+   * once format 2 exists, and the next store tries again.
+   */
+  private dropLegacy(identity: CacheIdentity): void {
+    void this.writeValue(keyFor(identity, LEGACY_KEY_PREFIX), undefined);
+  }
+
+  private hasLegacy(identity: CacheIdentity): boolean {
+    try {
+      return this.readValue(keyFor(identity, LEGACY_KEY_PREFIX)) !== undefined;
+    } catch {
+      return false;
+    }
   }
 
   private read(identity: CacheIdentity): CacheLookup {
@@ -457,18 +528,31 @@ export class ResultCache {
       case 'error':
         return { hit: false, reason: 'error', message: read.message };
       case 'absent':
+        return { hit: false, reason: 'absent' };
       case 'unreadable':
-        return { hit: false, reason: read.kind };
+        if (read.legacy === 'drop') {
+          this.dropLegacy(identity);
+        }
+        return { hit: false, reason: 'unreadable' };
       case 'ok':
         break;
     }
     const entry = read.scope.entries.find(
       (e) => e.contentHash === identity.contentHash,
     );
+    if (entry !== undefined) {
+      // Written first, so the format 2 value exists before the v1 key goes.
+      this.touch(identity, read.scope, entry);
+    } else if (read.legacy === 'migrate') {
+      void this.writeValue(keyFor(identity), read.scope);
+    }
+    if (read.legacy === 'migrate') {
+      this.counts.migrated++;
+      this.dropLegacy(identity);
+    }
     if (entry === undefined) {
       return { hit: false, reason: 'content-changed' };
     }
-    this.touch(identity, read.scope, entry);
     return {
       hit: true,
       entry: {
@@ -563,6 +647,13 @@ export class ResultCache {
     const failure = await this.writeValue(keyFor(identity), scope);
     if (failure !== undefined) {
       return { status: 'failed', message: failure };
+    }
+    if (read.kind === 'ok' && read.legacy === 'migrate') {
+      this.counts.migrated++;
+    }
+    // Also clears a v1 key left by an earlier failed delete, or by an older window.
+    if (this.hasLegacy(identity)) {
+      this.dropLegacy(identity);
     }
     return evicted === undefined
       ? { status: 'stored', replaced }

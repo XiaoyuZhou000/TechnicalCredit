@@ -12,6 +12,9 @@ import type {
 import {
   createDeferredCacheStore,
   createMemoryCacheStore,
+  rejectingUpdateStore,
+  throwingGetStore,
+  throwingUpdateStore,
 } from '@/test/background/memoryCacheStore';
 
 jest.mock('@/utils/claude', () => {
@@ -261,5 +264,117 @@ describe('US3: a stale result never evicts protected content', () => {
     expect(
       await cache.store(id(3), ok(), { protect: [hash(1), hash(2)] }),
     ).toEqual({ status: 'stored', replaced: false });
+  });
+});
+
+describe('US4: unreadable scopes and isolation', () => {
+  function entry(n: number, lastUse: number) {
+    return {
+      contentHash: hash(n),
+      storedAt: 0,
+      lastUse,
+      output: {
+        detectorId: 'mock',
+        detectorVersion: 'mock-1',
+        findings: [FINDING],
+      },
+    };
+  }
+
+  const scope = (uses: number, entries: unknown[], format = 2) => ({
+    format,
+    uses,
+    entries,
+  });
+
+  it.each<[string, unknown]>([
+    ['no entries', scope(1, [])],
+    [
+      'five entries',
+      scope(
+        5,
+        [1, 2, 3, 4, 5].map((n) => entry(n, n)),
+      ),
+    ],
+    ['duplicate hashes', scope(2, [entry(1, 1), entry(1, 2)])],
+    ['duplicate uses', scope(2, [entry(1, 1), entry(2, 1)])],
+    ['a use beyond the counter', scope(1, [entry(1, 2)])],
+    ['a fractional counter', scope(1.5, [entry(1, 1)])],
+    ['format 3', scope(1, [entry(1, 1)], 3)],
+    [
+      'an invalid finding',
+      scope(1, [
+        {
+          ...entry(1, 1),
+          output: {
+            detectorId: 'mock',
+            detectorVersion: 'mock-1',
+            findings: [{ line: -1, result: FINDING.result }],
+          },
+        },
+      ]),
+    ],
+  ])(
+    'treats a scope with %s as unreadable, and the next store replaces it (US4-4)',
+    async (_, value) => {
+      const store = createMemoryCacheStore();
+      store.rawSet(KEY, value);
+      const cache = newCache(store);
+
+      expect(cache.lookup(id(1))).toEqual({
+        hit: false,
+        reason: 'unreadable',
+      });
+
+      expect(await cache.store(id(9), ok())).toEqual({
+        status: 'stored',
+        replaced: false,
+      });
+      expect(cache.lookup(id(9)).hit).toBe(true);
+      expect(entryCount(store)).toBe(1);
+    },
+  );
+
+  it('keeps files, workspaces, detectors and versions apart (US4-5)', async () => {
+    const cache = newCache(createMemoryCacheStore());
+    const others = [
+      id(1, { fileUri: 'file:///w/B.java' }),
+      id(1, { workspaceId: 'file:///other' }),
+      id(1, { detectorId: 'live' }),
+      id(1, { detectorVersion: 'mock-2' }),
+    ];
+    for (const other of others) {
+      await cache.store(
+        other,
+        ok([FINDING], other.detectorVersion, other.detectorId),
+      );
+    }
+
+    await storeAll(cache, [1, 2, 3, 4, 5]);
+
+    expect(cache.lookup(id(1))).toEqual({
+      hit: false,
+      reason: 'content-changed',
+    });
+    for (const other of others) {
+      expect(cache.lookup(other).hit).toBe(true);
+    }
+  });
+
+  it('reports failing storage as outcomes, never throwing (US4-6)', async () => {
+    const cases = [
+      [throwingGetStore('disk gone'), 'disk gone'],
+      [rejectingUpdateStore('quota'), 'quota'],
+      [throwingUpdateStore('quota'), 'quota'],
+    ] as const;
+    for (const [store, message] of cases) {
+      const cache = newCache(store);
+
+      expect(() => cache.lookup(id(1))).not.toThrow();
+      await expect(cache.store(id(1), ok())).resolves.toEqual({
+        status: 'failed',
+        message,
+      });
+    }
   });
 });

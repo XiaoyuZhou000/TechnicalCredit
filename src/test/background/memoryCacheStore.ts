@@ -60,6 +60,8 @@ export interface DeferredCacheStore extends MemoryCacheStore {
   flush(): void;
   /** Makes the next held update reject with `message` instead of applying. */
   failNext(message: string): void;
+  /** Settles only the oldest held update: applies it, or rejects it with `failWith`. */
+  flushNext(failWith?: string): void;
   /** Updates made but not yet applied. */
   held(): number;
 }
@@ -101,6 +103,17 @@ export function createDeferredCacheStore(): DeferredCacheStore {
     },
     failNext: (message) => {
       failures.push(message);
+    },
+    flushNext: (failWith) => {
+      const item = queue.shift();
+      if (item === undefined) {
+        throw new Error('no held update');
+      }
+      if (failWith === undefined) {
+        item.apply();
+      } else {
+        item.reject(new Error(failWith));
+      }
     },
     held: () => queue.length,
   };
