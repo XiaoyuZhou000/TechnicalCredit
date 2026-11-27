@@ -1307,8 +1307,8 @@ describe('event coalescing: newest unstarted content (card 05 US2)', () => {
     scheduler.submit(rev('a', 1));
     scheduler.submit(rev('b', 2));
     scheduler.submit(c);
-    // A fails, so nothing is stored: storing A would replace C's entry (one entry per file, the
-    // open stale-result cache eviction decision).
+    // A fails, so nothing is stored. Since card 16A a stored A would no longer replace C's entry
+    // either: a file keeps up to four results (see staleEviction.test.ts).
     detector.calls[0].resolve(fail('failed'));
     await settle();
 

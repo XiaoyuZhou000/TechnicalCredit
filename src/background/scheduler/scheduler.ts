@@ -1025,6 +1025,12 @@ export class Scheduler implements SnapshotSink {
         this.line(
           `cache stored ${result.output.findings.length} findings ${this.suffix(active, active.detectorVersion)}`,
         );
+        // Card 16A: a full scope made room by dropping its least recently used content.
+        if (outcome.evicted !== undefined) {
+          this.line(
+            `cache evicted sha ${outcome.evicted.slice(0, 8)} ${this.detector.id}@${active.detectorVersion} ${snapshot.fileUri}`,
+          );
+        }
       } else if (outcome.status === 'failed') {
         this.line(
           `cache store failed: ${outcome.message} ${this.suffix(active, active.detectorVersion)}`,
