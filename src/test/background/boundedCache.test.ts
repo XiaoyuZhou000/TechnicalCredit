@@ -203,3 +203,63 @@ describe('US2: up to four results per file survive restarts, least recently used
     expect(cache.lookup(id(1)).hit).toBe(true);
   });
 });
+
+describe('US3: a stale result never evicts protected content', () => {
+  it('skips a protected least recently used entry and evicts the next one (US3-1, SC-005)', async () => {
+    const cache = newCache(createMemoryCacheStore());
+    await storeAll(cache, [1, 2, 3, 4]);
+
+    const outcome = await cache.store(id(5), ok(), { protect: [hash(1)] });
+
+    expect(outcome).toEqual({
+      status: 'stored',
+      replaced: false,
+      evicted: hash(2),
+    });
+    expect(cache.lookup(id(1)).hit).toBe(true);
+  });
+
+  it('does not retain a result when every entry is protected (US3-2)', async () => {
+    const store = createMemoryCacheStore();
+    const cache = newCache(store);
+    await storeAll(cache, [1, 2, 3, 4]);
+    const before: unknown = store.get(KEY);
+
+    const outcome = await cache.store(id(5), ok(), {
+      protect: [hash(1), hash(2), hash(3), hash(4)],
+    });
+
+    expect(outcome).toEqual({ status: 'skipped', reason: 'protected' });
+    expect(store.get(KEY)).toEqual(before);
+    expect(cache.lookup(id(5))).toEqual({
+      hit: false,
+      reason: 'content-changed',
+    });
+    expect(cache.stats()).toMatchObject({
+      stored: 4,
+      skipped: 1,
+      notRetained: 1,
+      evicted: 0,
+    });
+  });
+
+  it('treats a protected new hash, or unknown hashes, as no protection (US3-3)', async () => {
+    for (const protect of [[hash(5)], [hash(98), hash(99)]]) {
+      const cache = newCache(createMemoryCacheStore());
+      await storeAll(cache, [1, 2, 3, 4]);
+
+      const outcome = await cache.store(id(5), ok(), { protect });
+
+      expect(outcome.status === 'stored' && outcome.evicted).toBe(hash(1));
+    }
+  });
+
+  it('never needs protection below capacity', async () => {
+    const cache = newCache(createMemoryCacheStore());
+    await storeAll(cache, [1, 2]);
+
+    expect(
+      await cache.store(id(3), ok(), { protect: [hash(1), hash(2)] }),
+    ).toEqual({ status: 'stored', replaced: false });
+  });
+});

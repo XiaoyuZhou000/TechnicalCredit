@@ -1,8 +1,11 @@
 import {
+  CACHE_KEY_PREFIX,
   ResultCache,
   sha256Hex,
   type CacheIdentity,
   type CacheStore,
+  type StoreOptions,
+  type StoreOutcome,
 } from '@/background/cache/resultCache';
 import {
   failureFromAbort,
@@ -227,5 +230,141 @@ describe('eviction is logged without file text', () => {
       /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z cache evicted sha [0-9a-f]{8} scripted@1 file:\/\/\/w\/A\.java$/,
     );
     expect(lines.some((l) => l.includes(SECRET))).toBe(false);
+  });
+});
+
+/** Records the protected hashes the scheduler passes, then stores as usual. */
+class SpyCache extends ResultCache {
+  readonly protects: (readonly string[])[] = [];
+
+  override store(
+    identity: CacheIdentity,
+    result: DetectorResult,
+    options: StoreOptions = {},
+  ): Promise<StoreOutcome> {
+    this.protects.push(options.protect ?? []);
+    return super.store(identity, result, options);
+  }
+}
+
+/** Reports every store as not retained, as a fully protected scope would. */
+class FullyProtectedCache extends ResultCache {
+  override store(): Promise<StoreOutcome> {
+    return Promise.resolve({ status: 'skipped', reason: 'protected' });
+  }
+}
+
+function withCache(cache: ResultCache) {
+  const detector = new ScriptedDetector();
+  const lines: string[] = [];
+  const scheduler = new Scheduler({
+    inner: { submit: () => {}, closed: () => {} },
+    detector,
+    cache,
+    hash: sha256Hex,
+    log: (line) => lines.push(line),
+    clock: createFakeTimers(),
+    quietMs: 0,
+    cooldownMs: 0,
+    maxConcurrent: 0,
+  });
+  return { scheduler, detector, lines };
+}
+
+const SCOPE_KEY = `${CACHE_KEY_PREFIX}${JSON.stringify([W, A_URI, 'scripted', '1'])}`;
+
+/** The content hash with the lowest `lastUse` in the stored scope. */
+function leastRecentlyUsedHash(store: CacheStore): string {
+  const value: unknown = store.get(SCOPE_KEY);
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    !('entries' in value) ||
+    !Array.isArray(value.entries)
+  ) {
+    throw new Error('no stored scope');
+  }
+  const entries: { contentHash: string; lastUse: number }[] = value.entries;
+  return entries.reduce((a, b) => (b.lastUse < a.lastUse ? b : a)).contentHash;
+}
+
+describe('US3: a stale result never evicts the current content', () => {
+  it('evicts another entry when the current content is the least recently used (US3-1, SC-005)', async () => {
+    const store = createMemoryCacheStore();
+    const cache = new SpyCache({ store, now: () => 0 });
+    const { scheduler, detector, lines } = withCache(cache);
+    const [a, c, x, y, z] = ['a', 'c', 'x', 'y', 'z'].map((t, i) =>
+      rev(t, i + 1),
+    );
+    for (const s of [c, x, y, z]) {
+      await cache.store(identityOf(s), ok(1));
+    }
+
+    scheduler.submit(a);
+    scheduler.submit(c);
+    // C is the scope's least recently used entry when A's stale result is stored.
+    expect(leastRecentlyUsedHash(store)).toBe(sha256Hex(c.content));
+    detector.calls[0].resolve(ok(2));
+    await settle();
+
+    expect(cache.protects.at(-1)).toEqual([sha256Hex(c.content)]);
+    expect(lines).toContain(
+      `${T0} cache evicted sha ${sha8(x)} scripted@1 ${A_URI}`,
+    );
+    expect(lines.at(-1)).toBe(
+      `${T0} cache hit 1 findings v2 sha ${sha8(c)} scripted@1 ${A_URI}`,
+    );
+    expect(detector.analysed()).toEqual([a.content]);
+  });
+
+  it('logs a result it could not retain, without file text (US3-2)', async () => {
+    const { scheduler, detector, lines } = withCache(
+      new FullyProtectedCache({
+        store: createMemoryCacheStore(),
+        now: () => 0,
+      }),
+    );
+    const a = rev('a', 1);
+
+    scheduler.submit(a);
+    detector.calls[0].resolve(ok(1));
+    await settle();
+
+    expect(lines).toContain(
+      `${T0} cache not retained (protected) v1 sha ${sha8(a)} scripted@1 ${A_URI}`,
+    );
+    expect(lines.some((l) => l.includes(' cache stored '))).toBe(false);
+    expect(lines.some((l) => l.includes(SECRET))).toBe(false);
+  });
+
+  it('protects nothing for a file closed while its analysis ran', async () => {
+    const cache = new SpyCache({
+      store: createMemoryCacheStore(),
+      now: () => 0,
+    });
+    const { scheduler, detector } = withCache(cache);
+
+    scheduler.submit(rev('a', 1));
+    scheduler.closed({ workspaceId: W, fileUri: A_URI, observedAt: 1 });
+    detector.calls[0].resolve(ok(1));
+    await settle();
+
+    expect(cache.protects).toEqual([[]]);
+  });
+
+  it('protects the current and the pending content, once each', async () => {
+    const cache = new SpyCache({
+      store: createMemoryCacheStore(),
+      now: () => 0,
+    });
+    const { scheduler, detector } = withCache(cache);
+    const [a, b] = [rev('a', 1), rev('b', 2)];
+
+    scheduler.submit(a);
+    scheduler.submit(b);
+    detector.calls[0].resolve(ok(1));
+    await settle();
+
+    expect(cache.protects[0]).toEqual([sha256Hex(b.content)]);
   });
 });
