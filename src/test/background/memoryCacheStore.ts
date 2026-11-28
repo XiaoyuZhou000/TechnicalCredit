@@ -56,12 +56,16 @@ export function throwingUpdateStore(message: string): CacheStore {
 }
 
 export interface DeferredCacheStore extends MemoryCacheStore {
-  /** Applies and resolves every held update, in the order they were made. */
+  /**
+   * Settles every held update, oldest first: each rejects with the next queued `failNext`
+   * message if there is one, and is applied otherwise.
+   */
   flush(): void;
-  /** Makes the next held update reject with `message` instead of applying. */
+  /**
+   * Queues a failure for the next update `flush` settles, whether it was made before or after
+   * this call. Calls queue up, one failure per settled update.
+   */
   failNext(message: string): void;
-  /** Settles only the oldest held update: applies it, or rejects it with `failWith`. */
-  flushNext(failWith?: string): void;
   /** Updates made but not yet applied. */
   held(): number;
 }
@@ -103,17 +107,6 @@ export function createDeferredCacheStore(): DeferredCacheStore {
     },
     failNext: (message) => {
       failures.push(message);
-    },
-    flushNext: (failWith) => {
-      const item = queue.shift();
-      if (item === undefined) {
-        throw new Error('no held update');
-      }
-      if (failWith === undefined) {
-        item.apply();
-      } else {
-        item.reject(new Error(failWith));
-      }
     },
     held: () => queue.length,
   };
