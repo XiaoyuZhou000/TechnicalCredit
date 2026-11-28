@@ -3,7 +3,11 @@ import type {
   CacheLookup,
   ResultCache,
 } from '@/background/cache/resultCache';
-import type { Detector, DetectorResult } from '@/background/detector/detector';
+import type {
+  Detector,
+  DetectorResult,
+  SkipReason,
+} from '@/background/detector/detector';
 import type {
   FileClosedNotice,
   FileSnapshot,
@@ -145,9 +149,11 @@ export interface SchedulerStats {
  */
 export interface Latest {
   readonly source: 'detector' | 'cache';
-  /** `false` only for a failed, cancelled or timed-out request. */
+  /** `false` only for a failed, cancelled, timed-out or skipped request. */
   readonly ok: boolean;
   readonly findings?: number;
+  /** Card 14: set when the detector made no call on purpose; `ok` is then `false`. */
+  readonly skipped?: SkipReason;
   /** Document version the outcome is for. */
   readonly version: number;
   /** Its content and detector version still match the open file. */
@@ -168,6 +174,7 @@ interface LastOutcome {
   readonly source: 'detector' | 'cache';
   readonly ok: boolean;
   readonly findings?: number;
+  readonly skipped?: SkipReason;
   readonly version: number;
   readonly contentHash: string;
   readonly detectorVersion: string;
@@ -242,9 +249,22 @@ function describeOutcome(result: DetectorResult): string {
     return `done ${result.output.findings.length} findings`;
   }
   const { failure } = result;
-  return failure.kind === 'failed'
-    ? `failed: ${failure.message}`
-    : failure.kind;
+  switch (failure.kind) {
+    case 'failed':
+      return `failed: ${failure.message}`;
+    case 'skipped':
+      return `skipped: ${failure.reason.replace('-', ' ')}`;
+    case 'timeout':
+    case 'cancelled':
+      return failure.kind;
+  }
+}
+
+/** Card 14: a deliberate skip made no call, so it is not a completion (rule 10). */
+function skipReasonOf(result: DetectorResult): SkipReason | undefined {
+  return !result.ok && result.failure.kind === 'skipped'
+    ? result.failure.reason
+    : undefined;
 }
 
 function describeMiss(lookup: Exclude<CacheLookup, { hit: true }>): string {
@@ -460,6 +480,7 @@ export class Scheduler implements SnapshotSink {
       source: outcome.source,
       ok: outcome.ok,
       ...(outcome.findings !== undefined && { findings: outcome.findings }),
+      ...(outcome.skipped !== undefined && { skipped: outcome.skipped }),
       version: outcome.version,
       current:
         outcome.contentHash === state.latestHash &&
@@ -1071,15 +1092,21 @@ export class Scheduler implements SnapshotSink {
 
     state.active = undefined;
     this.runningCount--;
-    state.lastSettledAt = this.clock.now();
+    const at = this.clock.now();
+    const skipped = skipReasonOf(result);
+    // A skip made no call, so it starts no cooldown and leaves an earlier one as it was.
+    if (skipped === undefined) {
+      state.lastSettledAt = at;
+    }
     state.lastOutcome = {
       source: 'detector',
       ok: result.ok,
       ...(result.ok && { findings: result.output.findings.length }),
+      ...(skipped !== undefined && { skipped }),
       version: snapshot.version,
       contentHash: active.contentHash,
       detectorVersion: active.detectorVersion,
-      at: state.lastSettledAt,
+      at,
     };
     this.report({
       workspaceId: snapshot.workspaceId,
@@ -1095,8 +1122,8 @@ export class Scheduler implements SnapshotSink {
     });
 
     // Only the latest pending snapshot goes on, through the cache; the settled request itself
-    // is never retried here, even if it failed. This completion starts a cooldown, so work that
-    // isn't due keeps waiting, its wake-up moved to its next check if that changed. While other
+    // is never retried here, even if it failed. A completion starts a cooldown (a skip doesn't),
+    // so work that isn't due keeps waiting, its wake-up moved to its next check if that changed. While other
     // files wait for a slot, due follow-up work joins the back of their queue (rule 11).
     if (state.pending !== undefined) {
       if (this.advance(state)) {

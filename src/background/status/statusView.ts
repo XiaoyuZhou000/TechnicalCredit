@@ -76,6 +76,11 @@ function latestCell(file: FileStatus): string {
   if (latest === undefined) {
     return '—';
   }
+  if (latest.skipped !== undefined) {
+    return escapeHtml(
+      `skipped: ${latest.skipped.replace('-', ' ')} (v${latest.version})`,
+    );
+  }
   if (!latest.ok) {
     return escapeHtml(`failed (v${latest.version})`);
   }

@@ -190,6 +190,18 @@ describe('detector contract — failure outcomes are never cacheable', () => {
     );
     expect(outcome).toMatchObject({ kind: 'timeout', cacheable: false });
   });
+
+  // Card 14: a deliberate skip made no call, so there is nothing to cache.
+  test.each(['syntax-errors', 'live-disabled'] as const)(
+    'a skipped result (%s) is not cacheable',
+    (reason) => {
+      const result: DetectorResult = {
+        ok: false,
+        failure: { kind: 'skipped', reason },
+      };
+      expect(isCacheable(result)).toBe(false);
+    },
+  );
 });
 
 describe('detector contract — swapping detectors', () => {
@@ -215,6 +227,21 @@ describe('failureFromAbort', () => {
       ok: false,
       failure: { kind: 'cancelled' },
     });
+  });
+
+  test('an abort never maps to failed or skipped (card 14)', () => {
+    const reasons: unknown[] = [
+      undefined,
+      new Error('file closed'),
+      new DOMException('late', 'TimeoutError'),
+      'skipped',
+    ];
+    const kinds = reasons.map((reason) => {
+      const controller = new AbortController();
+      controller.abort(reason);
+      return failureFromAbort(controller.signal).failure.kind;
+    });
+    expect(kinds).toEqual(['cancelled', 'cancelled', 'timeout', 'cancelled']);
   });
 
   test('a custom abort reason maps to cancelled, not timeout', () => {

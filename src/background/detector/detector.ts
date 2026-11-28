@@ -34,10 +34,26 @@ export interface DetectorOutput {
   readonly findings: readonly DetectorFinding[];
 }
 
+/**
+ * Why a detector deliberately made no call for a snapshot (card 14): the parse reported syntax
+ * errors, or live calls are not permitted.
+ */
+export type SkipReason = 'syntax-errors' | 'live-disabled';
+
 export type DetectorFailure =
   | { readonly kind: 'timeout' }
   | { readonly kind: 'cancelled' }
-  | { readonly kind: 'failed'; readonly message: string };
+  | { readonly kind: 'failed'; readonly message: string }
+  /**
+   * Card 14: no call was made for this snapshot, on purpose. Never cacheable, and not a
+   * completion: the scheduler starts no cooldown for it.
+   */
+  | { readonly kind: 'skipped'; readonly reason: SkipReason };
+
+/** What an aborted signal maps to: never `failed` or `skipped`. */
+export type AbortFailure =
+  | { readonly kind: 'timeout' }
+  | { readonly kind: 'cancelled' };
 
 /**
  * Failures are returned rather than rejected: rejections cannot be typed, and a union
@@ -81,7 +97,10 @@ export function isCacheable(result: DetectorResult): boolean {
  * Maps an aborted signal to a failure. Callers own the timeout policy and usually combine
  * it with cancellation, e.g. `AbortSignal.any([controller.signal, AbortSignal.timeout(ms)])`.
  */
-export function failureFromAbort(signal: AbortSignal): DetectorResult {
+export function failureFromAbort(signal: AbortSignal): {
+  readonly ok: false;
+  readonly failure: AbortFailure;
+} {
   const reason: unknown = signal.reason;
   const timedOut =
     reason instanceof DOMException && reason.name === 'TimeoutError';

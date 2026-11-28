@@ -1,6 +1,7 @@
 import {
   failureFromAbort,
   type Detector,
+  type DetectorFailure,
   type DetectorFinding,
   type DetectorInput,
   type DetectorResult,
@@ -55,7 +56,8 @@ export type MockOutcome =
   | { readonly status: 'ok'; readonly findingCount: number }
   | {
       readonly status: 'failed';
-      readonly failure: 'timeout' | 'cancelled' | 'failed';
+      /** The mock never skips, but it records any kind a detector can return. */
+      readonly failure: DetectorFailure['kind'];
     };
 
 /** Deliberately excludes the file text, so records are safe to print in tests and demos. */
