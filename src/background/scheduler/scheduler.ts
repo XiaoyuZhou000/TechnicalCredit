@@ -14,6 +14,11 @@ import type {
   SnapshotSink,
 } from '@/background/events/fileEvents';
 import type { Clock } from '@/background/scheduler/clock';
+import type {
+  SchedulerObserver,
+  TransitionSubject,
+  WaitSplit,
+} from '@/background/scheduler/timeline';
 
 /** Card 06's initial quiet period; tunable in code for Sprint 1. */
 export const DEFAULT_QUIET_MS = 3000;
@@ -67,6 +72,11 @@ export interface SchedulerOptions {
   readonly maxConcurrent?: number;
   /** Called once per released request, after its store; tests and the later display use it. */
   readonly onSettled?: (event: SettledRequest) => void;
+  /**
+   * Card 15A: told about every transition, for timing. Observe-only: its calls are guarded and
+   * their results ignored, so no decision depends on it.
+   */
+  readonly observer?: SchedulerObserver;
 }
 
 /** Never carries file text, so it is safe to log or keep. */
@@ -305,6 +315,7 @@ export class Scheduler implements SnapshotSink {
   private readonly cooldownMs: number;
   private readonly maxConcurrent: number;
   private readonly onSettled?: (event: SettledRequest) => void;
+  private readonly observer?: SchedulerObserver;
   private readonly states = new Map<string, FileState>();
   private readonly listeners = new Set<() => void>();
   private notifyQueued = false;
@@ -345,6 +356,7 @@ export class Scheduler implements SnapshotSink {
       options.maxConcurrent ?? DEFAULT_MAX_CONCURRENT,
     );
     this.onSettled = options.onSettled;
+    this.observer = options.observer;
   }
 
   submit(snapshot: FileSnapshot): void {
@@ -384,6 +396,8 @@ export class Scheduler implements SnapshotSink {
       state.lastChangeAt = snapshot.observedAt;
       state.open = true;
     }
+    const subject = this.subjectOf(state, item);
+    this.observe((o) => o.changed?.(subject));
     if (state.active === undefined && this.isDue(state)) {
       if (state.pending !== undefined) {
         // Superseded by this snapshot, which starts now instead.
@@ -623,6 +637,57 @@ export class Scheduler implements SnapshotSink {
         }
       }
     });
+  }
+
+  /** Card 15A: an observer that throws is its own problem; the scheduler carries on. */
+  private observe(call: (observer: SchedulerObserver) => void): void {
+    if (this.observer === undefined) {
+      return;
+    }
+    try {
+      call(this.observer);
+    } catch {
+      // Observe-only: nothing here may change a decision, not even a failure.
+    }
+  }
+
+  private subjectOf(
+    state: FileState,
+    item: {
+      readonly snapshot: FileSnapshot;
+      readonly contentHash: string;
+      readonly detectorVersion: string;
+    },
+  ): TransitionSubject {
+    return {
+      key: state.key,
+      fileUri: state.fileUri,
+      version: item.snapshot.version,
+      sha8: item.contentHash.slice(0, 8),
+      detector: `${this.detector.id}@${item.detectorVersion}`,
+    };
+  }
+
+  /**
+   * Card 15A: how long the file's current work has waited since its last change, split by the
+   * deadlines that held it: the quiet period, then any cooldown, and the rest behind the file's
+   * own running request.
+   */
+  private waitSplit(state: FileState): WaitSplit {
+    const now = this.clock.now();
+    const total = Math.max(0, now - state.lastChangeAt);
+    const quietMs = this.quietMs === 0 ? 0 : Math.min(total, this.quietMs);
+    const cooldownEnd = this.cooldownDeadline(state);
+    let cooldownMs = 0;
+    if (
+      this.cooldownMs > 0 &&
+      cooldownEnd !== undefined &&
+      state.lastSettledAt !== undefined
+    ) {
+      const from = Math.max(state.lastChangeAt + quietMs, state.lastSettledAt);
+      cooldownMs = Math.max(0, Math.min(now, cooldownEnd) - from);
+    }
+    return { quietMs, cooldownMs, inFlightMs: total - quietMs - cooldownMs };
   }
 
   private quietDeadline(state: FileState): number {
@@ -885,6 +950,9 @@ export class Scheduler implements SnapshotSink {
         at: this.clock.now(),
       };
       this.line(`cache hit ${findings} findings ${this.suffix(item)}`);
+      const subject = this.subjectOf(state, item);
+      const wait = this.waitSplit(state);
+      this.observe((o) => o.cacheHit?.(subject, wait, findings));
       return true;
     }
     this.line(`cache miss (${describeMiss(lookup)}) ${this.suffix(item)}`);
@@ -901,6 +969,12 @@ export class Scheduler implements SnapshotSink {
     item: PendingSnapshot,
     fromQueue?: SlotWait,
   ): boolean {
+    // Due now. Work coming back from the slot queue already reported this when it first was.
+    if (fromQueue === undefined) {
+      const subject = this.subjectOf(state, item);
+      const wait = this.waitSplit(state);
+      this.observe((o) => o.due?.(subject, wait));
+    }
     // Looked up again because another window may have stored it meanwhile, but a miss that
     // queued this same work was already counted.
     const recheck =
@@ -939,6 +1013,8 @@ export class Scheduler implements SnapshotSink {
       return;
     }
     state.slotWait = { followUp: false, ...missed };
+    const subject = this.subjectOf(state, item);
+    this.observe((o) => o.slotWait?.(subject));
     this.slotQueue.push(state);
     this.counts.slotWaits++;
     this.line(
@@ -987,6 +1063,8 @@ export class Scheduler implements SnapshotSink {
     this.line(
       `${this.detector.id} start #${active.n} v${snapshot.version} ${snapshot.fileUri}`,
     );
+    const subject = this.subjectOf(state, active);
+    this.observe((o) => o.started?.(subject, active.n));
 
     let call: Promise<DetectorResult>;
     try {
@@ -1130,6 +1208,8 @@ export class Scheduler implements SnapshotSink {
       stored,
       eligible,
     });
+    const subject = this.subjectOf(state, active);
+    this.observe((o) => o.settled?.(subject, active.n, result));
 
     // Only the latest pending snapshot goes on, through the cache; the settled request itself
     // is never retried here, even if it failed. A completion starts a cooldown (a skip doesn't),
