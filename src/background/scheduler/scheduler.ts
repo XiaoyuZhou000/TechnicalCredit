@@ -1053,6 +1053,7 @@ export class Scheduler implements SnapshotSink {
           `cache store failed: ${outcome.message} ${this.suffix(active, active.detectorVersion)}`,
         );
       } else if (outcome.reason === 'protected') {
+        // Defensive: at most 2 protected hashes can't fill a scope of CACHE_CAPACITY (4).
         this.line(
           `cache not retained (protected) ${this.suffix(active, active.detectorVersion)}`,
         );
