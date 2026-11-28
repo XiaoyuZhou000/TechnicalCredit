@@ -54,3 +54,60 @@ export function throwingUpdateStore(message: string): CacheStore {
     },
   };
 }
+
+export interface DeferredCacheStore extends MemoryCacheStore {
+  /**
+   * Settles every held update, oldest first: each rejects with the next queued `failNext`
+   * message if there is one, and is applied otherwise.
+   */
+  flush(): void;
+  /**
+   * Queues a failure for the next update `flush` settles, whether it was made before or after
+   * this call. Calls queue up, one failure per settled update.
+   */
+  failNext(message: string): void;
+  /** Updates made but not yet applied. */
+  held(): number;
+}
+
+/**
+ * Like `createMemoryCacheStore`, but an `update` is only applied when the test calls `flush()`,
+ * so a test can observe reads that happen while a write is still in flight (card 16A).
+ */
+export function createDeferredCacheStore(): DeferredCacheStore {
+  const base = createMemoryCacheStore();
+  const queue: {
+    readonly apply: () => void;
+    readonly reject: (error: Error) => void;
+  }[] = [];
+  const failures: string[] = [];
+  return {
+    get: (key) => base.get(key),
+    update: (key, value) =>
+      new Promise<void>((resolve, reject) => {
+        queue.push({
+          apply: () => {
+            void base.update(key, value);
+            resolve();
+          },
+          reject,
+        });
+      }),
+    keys: () => base.keys(),
+    rawSet: (key, value) => base.rawSet(key, value),
+    flush: () => {
+      for (const item of queue.splice(0)) {
+        const failure = failures.shift();
+        if (failure === undefined) {
+          item.apply();
+        } else {
+          item.reject(new Error(failure));
+        }
+      }
+    },
+    failNext: (message) => {
+      failures.push(message);
+    },
+    held: () => queue.length,
+  };
+}

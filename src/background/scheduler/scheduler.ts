@@ -531,6 +531,21 @@ export class Scheduler implements SnapshotSink {
     return count;
   }
 
+  /**
+   * The contents whose cached results a store must not evict (card 16A): the file's latest
+   * snapshot and its pending work. A closed file has nothing current to keep.
+   */
+  private protectedHashes(state: FileState): string[] {
+    if (!state.open) {
+      return [];
+    }
+    const hashes = new Set([state.latestHash]);
+    if (state.pending !== undefined) {
+      hashes.add(state.pending.contentHash);
+    }
+    return [...hashes];
+  }
+
   private identityOf(
     item: PendingSnapshot,
     detectorVersion = this.detector.version,
@@ -1012,10 +1027,12 @@ export class Scheduler implements SnapshotSink {
     let eligible = false;
     if (result.ok) {
       // Stored under the content actually analysed, and before release, so the next lookup
-      // for this file already sees it. A stale result is still correct for its own content.
+      // for this file already sees it. A stale result is still correct for its own content,
+      // but must never evict the result for the file's current or pending content (card 16A).
       const outcome = await this.cache.store(
         this.identityOf(active, active.detectorVersion),
         result,
+        { protect: this.protectedHashes(state) },
       );
       if (!this.isCurrent(state, active)) {
         return;
@@ -1025,9 +1042,20 @@ export class Scheduler implements SnapshotSink {
         this.line(
           `cache stored ${result.output.findings.length} findings ${this.suffix(active, active.detectorVersion)}`,
         );
+        // Card 16A: a full scope made room by dropping its least recently used content.
+        if (outcome.evicted !== undefined) {
+          this.line(
+            `cache evicted sha ${outcome.evicted.slice(0, 8)} ${this.detector.id}@${active.detectorVersion} ${snapshot.fileUri}`,
+          );
+        }
       } else if (outcome.status === 'failed') {
         this.line(
           `cache store failed: ${outcome.message} ${this.suffix(active, active.detectorVersion)}`,
+        );
+      } else if (outcome.reason === 'protected') {
+        // Defensive: at most 2 protected hashes can't fill a scope of CACHE_CAPACITY (4).
+        this.line(
+          `cache not retained (protected) ${this.suffix(active, active.detectorVersion)}`,
         );
       }
       // Decided after the store, so snapshots that arrived while storing count too. Caching and

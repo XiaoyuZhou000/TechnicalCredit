@@ -10,11 +10,15 @@ import type { TCCategory, TCResult } from '@/comment/tcResult';
 
 /**
  * Bump whenever the stored shape changes. The key prefix, the stored `format` field and the
- * read check all derive from it, so entries in an old shape are never read.
+ * read check all derive from it, so entries in an old shape are never read as this one.
+ * Format 2 (card 16A) keeps up to `CACHE_CAPACITY` results per scope.
  */
-export const CACHE_FORMAT = 1;
+export const CACHE_FORMAT = 2;
 
 export const CACHE_KEY_PREFIX = `technicalCredit.resultCache.v${CACHE_FORMAT}:`;
+
+/** Results kept per workspace + file URI + detector id + detector version (card 16A). */
+export const CACHE_CAPACITY = 4;
 
 /**
  * SHA-256 of the exact text as UTF-8, as 64 lowercase hex characters. Line endings are not
@@ -42,7 +46,7 @@ export interface CacheIdentity {
   readonly detectorVersion: string;
 }
 
-/** The stored value. Never represents a failure: failures are never written. */
+/** The result a hit returns. Never represents a failure: failures are never written. */
 export interface CachedEntry {
   readonly format: typeof CACHE_FORMAT;
   readonly contentHash: string;
@@ -58,11 +62,22 @@ export type CacheLookup =
     }
   | { readonly hit: false; readonly reason: 'error'; readonly message: string };
 
+export interface StoreOptions {
+  /** Content hashes never evicted to make room: the file's current and pending content. */
+  readonly protect?: readonly string[];
+}
+
 export type StoreOutcome =
-  | { readonly status: 'stored' }
+  | {
+      readonly status: 'stored';
+      /** The same content was already stored; its entry was replaced, taking no extra slot. */
+      readonly replaced: boolean;
+      /** The content hash evicted to make room, when the scope was full. */
+      readonly evicted?: string;
+    }
   | {
       readonly status: 'skipped';
-      readonly reason: 'not-cacheable' | 'mismatch';
+      readonly reason: 'not-cacheable' | 'mismatch' | 'protected';
     }
   | { readonly status: 'failed'; readonly message: string };
 
@@ -71,8 +86,14 @@ export interface CacheStats {
   readonly hits: number;
   readonly misses: number;
   readonly stored: number;
+  /** Includes `notRetained`. */
   readonly skipped: number;
   readonly storeFailures: number;
+  readonly evicted: number;
+  /** Stale results not kept because every entry was protected. */
+  readonly notRetained: number;
+  /** Hits whose recency write failed; the hit itself still counted. */
+  readonly recencyFailures: number;
 }
 
 export interface ResultCacheOptions {
@@ -81,8 +102,8 @@ export interface ResultCacheOptions {
 }
 
 /**
- * The content hash is deliberately not in the key: each file and detector version keeps
- * only its latest result, so storage does not grow with every edit.
+ * One key per scope: the content hash is deliberately not in the key, so a scope's entries
+ * live in one value and storage per file and version stays bounded (card 16A).
  */
 function keyFor(identity: CacheIdentity): string {
   return (
@@ -95,6 +116,32 @@ function keyFor(identity: CacheIdentity): string {
     ])
   );
 }
+
+/** One stored result. `lastUse` is the scope's `uses` at its last store or hit. */
+interface StoredEntry {
+  readonly contentHash: string;
+  readonly storedAt: number;
+  readonly lastUse: number;
+  readonly output: DetectorOutput;
+}
+
+/**
+ * The persisted value of one scope. `uses` counts stores and hits, so recency is deterministic
+ * whatever the clock does, and survives restarts.
+ */
+interface StoredScope {
+  readonly format: typeof CACHE_FORMAT;
+  readonly uses: number;
+  readonly entries: readonly StoredEntry[];
+}
+
+type ScopeRead =
+  | { readonly kind: 'ok'; readonly scope: StoredScope }
+  | { readonly kind: 'absent' }
+  | { readonly kind: 'unreadable' }
+  | { readonly kind: 'error'; readonly message: string };
+
+const EMPTY_SCOPE: StoredScope = { format: CACHE_FORMAT, uses: 0, entries: [] };
 
 const HASH = /^[0-9a-f]{64}$/;
 
@@ -184,34 +231,21 @@ function parseFinding(value: unknown): DetectorFinding | undefined {
   return { line, result };
 }
 
-/**
- * Stored values come back from storage that other versions of the extension, or a crash, may
- * have written, so every field is checked and a fresh object is built rather than cast.
- */
-function parseEntry(
+/** The output must belong to the scope's detector and version, with every finding valid. */
+function parseOutput(
   value: unknown,
   identity: CacheIdentity,
-): CachedEntry | undefined {
-  if (!isRecord(value) || value.format !== CACHE_FORMAT) {
-    return undefined;
-  }
-  const contentHash = value.contentHash;
-  const storedAt = value.storedAt;
-  const output = value.output;
+): DetectorOutput | undefined {
   if (
-    typeof contentHash !== 'string' ||
-    !HASH.test(contentHash) ||
-    typeof storedAt !== 'number' ||
-    !Number.isFinite(storedAt) ||
-    !isRecord(output) ||
-    output.detectorId !== identity.detectorId ||
-    output.detectorVersion !== identity.detectorVersion ||
-    !isArray(output.findings)
+    !isRecord(value) ||
+    value.detectorId !== identity.detectorId ||
+    value.detectorVersion !== identity.detectorVersion ||
+    !isArray(value.findings)
   ) {
     return undefined;
   }
   const findings: DetectorFinding[] = [];
-  for (const raw of output.findings) {
+  for (const raw of value.findings) {
     const finding = parseFinding(raw);
     if (finding === undefined) {
       return undefined;
@@ -219,30 +253,99 @@ function parseEntry(
     findings.push(finding);
   }
   return {
-    format: CACHE_FORMAT,
-    contentHash,
-    storedAt,
-    output: {
-      detectorId: identity.detectorId,
-      detectorVersion: identity.detectorVersion,
-      findings,
-    },
+    detectorId: identity.detectorId,
+    detectorVersion: identity.detectorVersion,
+    findings,
   };
+}
+
+function isUse(value: unknown): value is number {
+  return Number.isSafeInteger(value) && typeof value === 'number' && value >= 1;
+}
+
+/**
+ * Stored values come back from storage that other versions of the extension, or a crash, may
+ * have written, so the whole scope is checked and fresh objects are built rather than cast.
+ * One bad entry makes the scope unreadable: the next store replaces it with a valid one.
+ */
+function parseScope(
+  value: unknown,
+  identity: CacheIdentity,
+): StoredScope | undefined {
+  if (
+    !isRecord(value) ||
+    value.format !== CACHE_FORMAT ||
+    !isUse(value.uses) ||
+    !isArray(value.entries) ||
+    value.entries.length < 1 ||
+    value.entries.length > CACHE_CAPACITY
+  ) {
+    return undefined;
+  }
+  const uses = value.uses;
+  const entries: StoredEntry[] = [];
+  for (const raw of value.entries) {
+    if (!isRecord(raw)) {
+      return undefined;
+    }
+    const { contentHash, storedAt, lastUse } = raw;
+    const output = parseOutput(raw.output, identity);
+    if (
+      typeof contentHash !== 'string' ||
+      !HASH.test(contentHash) ||
+      typeof storedAt !== 'number' ||
+      !Number.isFinite(storedAt) ||
+      !isUse(lastUse) ||
+      lastUse > uses ||
+      output === undefined ||
+      entries.some(
+        (e) => e.contentHash === contentHash || e.lastUse === lastUse,
+      )
+    ) {
+      return undefined;
+    }
+    entries.push({ contentHash, storedAt, lastUse, output });
+  }
+  return { format: CACHE_FORMAT, uses, entries };
+}
+
+/** The entry used least recently: the eviction victim when a scope is full. */
+function leastRecentlyUsed(
+  entries: readonly StoredEntry[],
+): StoredEntry | undefined {
+  let victim: StoredEntry | undefined;
+  for (const entry of entries) {
+    if (victim === undefined || entry.lastUse < victim.lastUse) {
+      victim = entry;
+    }
+  }
+  return victim;
 }
 
 /**
  * Reuses a successful detector output for identical content under the same detector version
- * (card 04). It never starts an analysis and never logs; callers log from the returned outcomes.
+ * (card 04), keeping up to `CACHE_CAPACITY` contents per file and version, least recently used
+ * evicted first (card 16A). It never starts an analysis and never logs; callers log from the
+ * returned outcomes.
  */
 export class ResultCache {
   private readonly storage: CacheStore;
   private readonly now: () => number;
+  /**
+   * Values whose `update` hasn't settled yet, read before storage, so operations on one scope
+   * always build on the newest value even if the store applies writes late (card 16A FR-012).
+   * Each write is its own slot, so only the write that set it may clear it.
+   */
+  private readonly inFlight = new Map<string, { readonly value: unknown }>();
   private readonly counts: Record<keyof CacheStats, number> = {
     hits: 0,
     misses: 0,
     stored: 0,
     skipped: 0,
     storeFailures: 0,
+    evicted: 0,
+    notRetained: 0,
+    recencyFailures: 0,
   };
 
   constructor(options: ResultCacheOptions) {
@@ -271,14 +374,21 @@ export class ResultCache {
   async store(
     identity: CacheIdentity,
     result: DetectorResult,
+    options: StoreOptions = {},
   ): Promise<StoreOutcome> {
-    const outcome = await this.write(identity, result);
+    const outcome = await this.write(identity, result, options);
     switch (outcome.status) {
       case 'stored':
         this.counts.stored++;
+        if (outcome.evicted !== undefined) {
+          this.counts.evicted++;
+        }
         break;
       case 'skipped':
         this.counts.skipped++;
+        if (outcome.reason === 'protected') {
+          this.counts.notRetained++;
+        }
         break;
       case 'failed':
         this.counts.storeFailures++;
@@ -291,28 +401,115 @@ export class ResultCache {
     return Object.freeze({ ...this.counts });
   }
 
-  private read(identity: CacheIdentity): CacheLookup {
+  /** Throws only if the store's `get` throws. */
+  private readValue(key: string): unknown {
+    const slot = this.inFlight.get(key);
+    return slot === undefined ? this.storage.get(key) : slot.value;
+  }
+
+  /**
+   * Must be called in the same synchronous turn as the read it builds on: the value is visible
+   * to every later read at once, before `update` settles. Resolves with a failure message, or
+   * `undefined` once written; never rejects.
+   */
+  private async writeValue(
+    key: string,
+    value: unknown,
+  ): Promise<string | undefined> {
+    const slot = { value };
+    this.inFlight.set(key, slot);
+    try {
+      // Inside the `try`, so an `update` that throws instead of rejecting is caught too.
+      await Promise.resolve(this.storage.update(key, value));
+      return undefined;
+    } catch (error) {
+      return messageOf(error);
+    } finally {
+      if (this.inFlight.get(key) === slot) {
+        this.inFlight.delete(key);
+      }
+    }
+  }
+
+  private readScope(identity: CacheIdentity): ScopeRead {
     let value: unknown;
     try {
-      value = this.storage.get(keyFor(identity));
+      value = this.readValue(keyFor(identity));
     } catch (error) {
-      return { hit: false, reason: 'error', message: messageOf(error) };
+      return { kind: 'error', message: messageOf(error) };
     }
     if (value === undefined) {
-      return { hit: false, reason: 'absent' };
+      return { kind: 'absent' };
     }
-    const entry = parseEntry(value, identity);
+    const scope = parseScope(value, identity);
+    return scope === undefined ? { kind: 'unreadable' } : { kind: 'ok', scope };
+  }
+
+  private read(identity: CacheIdentity): CacheLookup {
+    const read = this.readScope(identity);
+    switch (read.kind) {
+      case 'error':
+        return { hit: false, reason: 'error', message: read.message };
+      case 'absent':
+        return { hit: false, reason: 'absent' };
+      case 'unreadable':
+        return { hit: false, reason: 'unreadable' };
+      case 'ok':
+        break;
+    }
+    const entry = read.scope.entries.find(
+      (e) => e.contentHash === identity.contentHash,
+    );
     if (entry === undefined) {
-      return { hit: false, reason: 'unreadable' };
+      return { hit: false, reason: 'content-changed' };
     }
-    return entry.contentHash === identity.contentHash
-      ? { hit: true, entry }
-      : { hit: false, reason: 'content-changed' };
+    this.touch(identity, read.scope, entry);
+    return {
+      hit: true,
+      entry: {
+        format: CACHE_FORMAT,
+        contentHash: entry.contentHash,
+        storedAt: entry.storedAt,
+        output: entry.output,
+      },
+    };
+  }
+
+  /**
+   * A hit counts as use (card 16A), written at once so the order survives restarts. The write
+   * runs in the background, because `lookup` must answer synchronously; a failed write only
+   * leaves the order slightly older, so it is counted and never reported as an error.
+   * An entry that is already the most recent is not rewritten: the order wouldn't change, and
+   * every write rewrites the whole scope, which can also drop an entry another window just
+   * stored (known issue 27).
+   */
+  private touch(
+    identity: CacheIdentity,
+    scope: StoredScope,
+    used: StoredEntry,
+  ): void {
+    if (used.lastUse === scope.uses) {
+      return;
+    }
+    const uses = scope.uses + 1;
+    const touched: StoredScope = {
+      format: CACHE_FORMAT,
+      uses,
+      entries: scope.entries.map((e) =>
+        e === used ? { ...e, lastUse: uses } : e,
+      ),
+    };
+    void this.writeValue(keyFor(identity), touched).then((failure) => {
+      if (failure !== undefined) {
+        this.counts.recencyFailures++;
+      }
+    });
   }
 
   private async write(
     identity: CacheIdentity,
     result: DetectorResult,
+    options: StoreOptions,
   ): Promise<StoreOutcome> {
     // `isCacheable` owns the policy; the `ok` check only narrows the type.
     if (!isCacheable(result) || !result.ok) {
@@ -326,18 +523,50 @@ export class ResultCache {
     ) {
       return { status: 'skipped', reason: 'mismatch' };
     }
-    const entry: CachedEntry = {
-      format: CACHE_FORMAT,
+    const read = this.readScope(identity);
+    // Unknown contents can't be merged, and writing over them could discard valid entries.
+    if (read.kind === 'error') {
+      return { status: 'failed', message: read.message };
+    }
+    // An unreadable scope is replaced by a valid one.
+    const base = read.kind === 'ok' ? read.scope : EMPTY_SCOPE;
+    const uses = base.uses + 1;
+    const fresh: StoredEntry = {
       contentHash: identity.contentHash,
       storedAt: this.now(),
+      lastUse: uses,
       output: result.output,
     };
-    try {
-      // Inside the `try`, so an `update` that throws instead of rejecting is caught too.
-      await Promise.resolve(this.storage.update(keyFor(identity), entry));
-    } catch (error) {
-      return { status: 'failed', message: messageOf(error) };
+
+    let entries: readonly StoredEntry[];
+    let replaced = false;
+    let evicted: string | undefined;
+    if (base.entries.some((e) => e.contentHash === fresh.contentHash)) {
+      entries = base.entries.map((e) =>
+        e.contentHash === fresh.contentHash ? fresh : e,
+      );
+      replaced = true;
+    } else if (base.entries.length < CACHE_CAPACITY) {
+      entries = [...base.entries, fresh];
+    } else {
+      const protect = new Set(options.protect ?? []);
+      const victim = leastRecentlyUsed(
+        base.entries.filter((e) => !protect.has(e.contentHash)),
+      );
+      if (victim === undefined) {
+        return { status: 'skipped', reason: 'protected' };
+      }
+      entries = base.entries.map((e) => (e === victim ? fresh : e));
+      evicted = victim.contentHash;
     }
-    return { status: 'stored' };
+
+    const scope: StoredScope = { format: CACHE_FORMAT, uses, entries };
+    const failure = await this.writeValue(keyFor(identity), scope);
+    if (failure !== undefined) {
+      return { status: 'failed', message: failure };
+    }
+    return evicted === undefined
+      ? { status: 'stored', replaced }
+      : { status: 'stored', replaced, evicted };
   }
 }
