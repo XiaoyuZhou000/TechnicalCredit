@@ -238,6 +238,7 @@ describe('scheduler basics', () => {
     expect(scheduler.fileState(W, A_URI)).toBeUndefined();
     expect(scheduler.stats()).toEqual({
       started: 0,
+      skipped: 0,
       followUps: 0,
       duplicates: 0,
       pendingHeld: 0,
@@ -1033,6 +1034,7 @@ describe('inspection (US5)', () => {
 
     expect(scheduler.stats()).toEqual({
       started: 3,
+      skipped: 0,
       followUps: 1,
       duplicates: 3,
       pendingHeld: 3,
@@ -1470,6 +1472,7 @@ describe('event coalescing: inspection (card 05 US4)', () => {
 
     expect(scheduler.stats()).toEqual({
       started: 2,
+      skipped: 0,
       followUps: 0,
       duplicates: 3,
       pendingHeld: 2,

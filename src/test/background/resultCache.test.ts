@@ -466,3 +466,95 @@ describe('ResultCache stats', () => {
     expect(Object.isFrozen(stats)).toBe(true);
   });
 });
+
+describe('ResultCache.prune', () => {
+  it('deletes the scopes keep rejects and leaves the rest readable', async () => {
+    const { cache, store } = memory();
+    await cache.store(identity(), ok());
+    await cache.store(
+      identity({ detectorVersion: 'mock-2' }),
+      ok(undefined, 'mock-2'),
+    );
+    store.rawSet('technicalCredit.activeDetector.v1', { kept: true });
+    store.rawSet('technicalCredit.resultCache.v1:old', { kept: true });
+
+    const outcome = await cache.prune(
+      (scope) => scope.detectorVersion === 'mock-2',
+    );
+
+    expect(outcome).toEqual({ removed: 1, failures: 0 });
+    expect(cache.lookup(identity())).toEqual({ hit: false, reason: 'absent' });
+    expect(cache.lookup(identity({ detectorVersion: 'mock-2' })).hit).toBe(
+      true,
+    );
+    expect(store.keys()).toEqual(
+      expect.arrayContaining([
+        'technicalCredit.activeDetector.v1',
+        'technicalCredit.resultCache.v1:old',
+      ]),
+    );
+  });
+
+  it('hands keep every part of the scope key', async () => {
+    const { cache } = memory();
+    await cache.store(identity(), ok());
+    const seen: unknown[] = [];
+    await cache.prune((scope) => {
+      seen.push(scope);
+      return true;
+    });
+    expect(seen).toEqual([
+      {
+        workspaceId: 'file:///w',
+        fileUri: 'file:///w/Positive.java',
+        detectorId: 'mock',
+        detectorVersion: 'mock-1',
+      },
+    ]);
+  });
+
+  it('keeps a scope when keep throws, and ignores keys it cannot parse', async () => {
+    const { cache, store } = memory();
+    await cache.store(identity(), ok());
+    store.rawSet(`${CACHE_KEY_PREFIX}not json`, { kept: true });
+    store.rawSet(`${CACHE_KEY_PREFIX}["a","b"]`, { kept: true });
+
+    const outcome = await cache.prune(() => {
+      throw new Error('boom');
+    });
+
+    expect(outcome).toEqual({ removed: 0, failures: 0 });
+    expect(store.keys()).toHaveLength(3);
+  });
+
+  it('prunes nothing from a store that cannot list its keys', async () => {
+    const cache = new ResultCache({
+      store: rejectingUpdateStore('never written'),
+      now: () => 1234,
+    });
+    expect(await cache.prune(() => false)).toEqual({
+      removed: 0,
+      failures: 0,
+    });
+  });
+
+  it('counts a failed delete instead of rejecting', async () => {
+    const values = createMemoryCacheStore();
+    await new ResultCache({ store: values, now: () => 1 }).store(
+      identity(),
+      ok(),
+    );
+    const cache = new ResultCache({
+      store: {
+        get: (key) => values.get(key),
+        update: () => Promise.reject(new Error('read-only')),
+        keys: () => values.keys(),
+      },
+      now: () => 1,
+    });
+    expect(await cache.prune(() => false)).toEqual({
+      removed: 0,
+      failures: 1,
+    });
+  });
+});

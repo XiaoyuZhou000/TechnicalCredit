@@ -36,10 +36,13 @@ export interface DetectionRequest {
   readonly adrs: readonly AdrSummary[];
 }
 
+/** The service always makes its calls, so it never skips; only a `Detector` does (card 14). */
+export type DetectionFailure = Exclude<DetectorFailure, { kind: 'skipped' }>;
+
 /** Never a rejection: failures use card 10's vocabulary, so a `Detector` can return them as is. */
 export type DetectionOutcome =
   | { readonly ok: true; readonly findings: readonly TCResult[] }
-  | { readonly ok: false; readonly failure: DetectorFailure };
+  | { readonly ok: false; readonly failure: DetectionFailure };
 
 /** A failed call or unusable answer, named by its step. */
 class StepFailure extends Error {

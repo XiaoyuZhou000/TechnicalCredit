@@ -291,7 +291,7 @@ describe('background status model (card 09 US3)', () => {
       cache: run.cache,
       clock: run.clock,
       detector: run.detector,
-      label: LABEL,
+      label: () => LABEL,
       tracker: STILL_TRACKER,
       limit: 2,
     });
@@ -314,6 +314,7 @@ describe('background status model (card 09 US3)', () => {
       detector: 'scripted@1',
       session: {
         analyses: 1,
+        skipped: 0,
         followUps: 0,
         repeats: 0,
         cacheHits: 1,
@@ -324,6 +325,26 @@ describe('background status model (card 09 US3)', () => {
     expect(snap.files).toEqual(scheduler.files());
     expect(Object.isFrozen(snap)).toBe(true);
     expect(Object.isFrozen(snap.session)).toBe(true);
+  });
+
+  it('reads the label on every snapshot, so it follows a detector switch (card 14)', () => {
+    const run = harness();
+    let label = 'Sprint 1 mock detector';
+    const status = new BackgroundStatus({
+      scheduler: run.scheduler,
+      cache: run.cache,
+      clock: run.clock,
+      detector: run.detector,
+      label: () => label,
+      tracker: STILL_TRACKER,
+      limit: 2,
+    });
+    expect(status.snapshot().label).toBe('Sprint 1 mock detector');
+
+    label = 'Claude detector (live calls disabled: waits for card 15)';
+    expect(status.snapshot().label).toBe(
+      'Claude detector (live calls disabled: waits for card 15)',
+    );
   });
 
   it('points nextChangeAt at the earliest future deadline, including a kept record expiry', async () => {
@@ -381,7 +402,7 @@ describe('status page rendering (card 09 US3)', () => {
       cache: run.cache,
       clock: run.clock,
       detector: run.detector,
-      label: 'Sprint 1 mock detector',
+      label: () => 'Sprint 1 mock detector',
       tracker: STILL_TRACKER,
       limit: 2,
     });
@@ -469,7 +490,7 @@ describe('status feed: live and truthful (card 09 US4)', () => {
       cache: run.cache,
       clock: run.clock,
       detector: run.detector,
-      label: 'Sprint 1 mock detector',
+      label: () => 'Sprint 1 mock detector',
       tracker: STILL_TRACKER,
       limit: 2,
     });
@@ -557,7 +578,7 @@ describe('status feed: observes only, leaves nothing behind (card 09 US5)', () =
       cache: run.cache,
       clock: run.clock,
       detector: run.detector,
-      label: 'Sprint 1 mock detector',
+      label: () => 'Sprint 1 mock detector',
       tracker: STILL_TRACKER,
       limit: 2,
     });
@@ -741,7 +762,7 @@ describe('review fixes (PR #12)', () => {
       cache,
       clock,
       detector,
-      label: 'Sprint 1 mock detector',
+      label: () => 'Sprint 1 mock detector',
       tracker: STILL_TRACKER,
       limit: 2,
     });
@@ -816,7 +837,7 @@ describe('detector version change and call limit on the status page (card 11 US5
       cache,
       clock,
       detector,
-      label: 'Sprint 1 mock detector',
+      label: () => 'Sprint 1 mock detector',
       tracker,
       limit,
     });

@@ -2,11 +2,14 @@ import Anthropic from '@anthropic-ai/sdk';
 import dotenv from 'dotenv';
 import * as path from 'path';
 
-dotenv.config({ path: path.join(__dirname, '..', '.env') });
+import {
+  CLAUDE_MAX_TOKENS,
+  CLAUDE_MODEL,
+  CLAUDE_PRIMING_TURNS,
+  CLAUDE_TIMEOUT_MS,
+} from '@/utils/claudeConfig';
 
-const MODEL = 'claude-sonnet-4-6';
-const MAX_TOKENS = 4096;
-const TIMEOUT_MS = 30_000;
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 const claude = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -22,18 +25,16 @@ export async function callClaude<T>(
   userMessage: string,
   signal?: AbortSignal,
 ): Promise<T> {
-  const timeout = AbortSignal.timeout(TIMEOUT_MS);
+  const timeout = AbortSignal.timeout(CLAUDE_TIMEOUT_MS);
   let response: Anthropic.Message;
   try {
     response = await claude.messages.create(
       {
-        model: MODEL,
-        max_tokens: MAX_TOKENS,
+        model: CLAUDE_MODEL,
+        max_tokens: CLAUDE_MAX_TOKENS,
         system: systemPrompt,
         messages: [
-          // Mid-conversation assistant turn (not a last-turn prefill) primes raw JSON responses
-          { role: 'user', content: 'Respond only with a JSON object.' },
-          { role: 'assistant', content: '{"ok": true}' },
+          ...CLAUDE_PRIMING_TURNS,
           { role: 'user', content: userMessage },
         ],
       },

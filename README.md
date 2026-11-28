@@ -154,6 +154,32 @@ npm run compile
 
 The watch task recompiles automatically as you edit the extension's source.
 
+## Background Agent
+
+While Java files are open, the Background Agent analyses each file after you stop typing.
+It writes one line per decision to the **Technical Credit (Background)** output channel,
+and **Technical Credit: Show Background Status** opens a read-only status page. It never
+edits your file, and the manual **Analyse for TC** command is unaffected.
+
+The setting `technicalcredit.background.detector` (user settings) chooses the detector:
+
+- **`mock`** (default): the offline Sprint 1 mock. It never calls Claude.
+- **`real`**: the same detection as **Analyse for TC**, run for every top-level class,
+  interface and enum in the file. **Until live background analysis gets its enablement
+  and usage limits (card 15), real mode makes no Claude call.** Each analysis is logged as
+  `technicalcredit skipped: live disabled …`, and the status page says live calls are
+  disabled.
+
+Switching takes effect at once. Open Java files are analysed again under the other
+detector, and results from one are never reused for the other. In real mode, once live
+calls are permitted, a file with syntax errors is skipped
+(`technicalcredit skipped: syntax errors …`) until it parses cleanly again, and no cooldown
+starts. The mock analyses every snapshot, as in Sprint 1.
+
+After upgrading to this version, the first start logs one detector identity change
+(`mock@mock-1 → technicalcredit@mock:mock-1`) and analyses the open files once more.
+Background log lines start with `technicalcredit` rather than `mock`.
+
 ## Testing
 
 Tests are written with [Jest](https://jestjs.io/) (via `ts-jest`) and live alongside
@@ -202,8 +228,10 @@ src/
 │   ├── userPrompts.ts        # Builds the user message from context
 │   ├── adrPrompt.ts          # Prompt for matching a candidate to an ADR
 │   └── heuristics/           # 8 category-specific prompts
+├── background/               # Background Agent: events, scheduler, cache, detectors, status
 ├── utils/
-│   └── claude.ts             # Claude API client (model, timeout, JSON prefill)
+│   ├── claude.ts             # Claude API client (model, timeout, JSON prefill)
+│   └── claudeConfig.ts       # Model, max tokens, timeout and priming turns (no SDK)
 └── test/                     # Jest tests + Java fixtures
 ```
 

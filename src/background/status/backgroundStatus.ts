@@ -9,7 +9,9 @@ import type { FileStatus, Scheduler } from '@/background/scheduler/scheduler';
 
 /** This session's work; a restart starts every count again at 0 (card 09 US2). */
 export interface SessionCounts {
+  /** Requests that analysed; skips are counted apart, since they made no call (card 14). */
   readonly analyses: number;
+  readonly skipped: number;
   readonly followUps: number;
   readonly repeats: number;
   readonly cacheHits: number;
@@ -47,8 +49,11 @@ export interface BackgroundStatusOptions {
   readonly cache: ResultCache;
   readonly clock: Clock;
   readonly detector: Pick<Detector, 'id' | 'version'>;
-  /** "Sprint 1 mock detector" while the mock is in use (constitution VIII). */
-  readonly label: string;
+  /**
+   * Read on every snapshot, so it follows the active detector: "Sprint 1 mock detector" while
+   * the mock is in use (constitution VIII), and the real detector's label otherwise (card 14).
+   */
+  readonly label: () => string;
   /** Card 11's version tracker, for the last change and its notifications. */
   readonly tracker: Pick<DetectorVersionTracker, 'lastChange' | 'onChange'>;
   /** The scheduler's `maxConcurrent`, shown next to the running count. */
@@ -76,11 +81,12 @@ export class BackgroundStatus implements StatusSource {
         undefined,
       );
     return Object.freeze({
-      label,
+      label: label(),
       detector: `${detector.id}@${detector.version}`,
       takenAt,
       session: Object.freeze({
-        analyses: stats.started,
+        analyses: stats.started - stats.skipped,
+        skipped: stats.skipped,
         followUps: stats.followUps,
         repeats: stats.duplicates,
         cacheHits: cached.hits,

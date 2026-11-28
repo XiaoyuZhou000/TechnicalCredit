@@ -76,6 +76,11 @@ function latestCell(file: FileStatus): string {
   if (latest === undefined) {
     return '—';
   }
+  if (latest.skipped !== undefined) {
+    return escapeHtml(
+      `skipped: ${latest.skipped.replace('-', ' ')} (v${latest.version})`,
+    );
+  }
   if (!latest.ok) {
     return escapeHtml(`failed (v${latest.version})`);
   }
@@ -137,6 +142,7 @@ export function renderStatusHtml(
   const s = snapshot.session;
   const counters: readonly (readonly [string, number])[] = [
     ['Analyses', s.analyses],
+    ['Skipped (no call)', s.skipped],
     ['Follow-ups', s.followUps],
     ['Repeats ignored', s.repeats],
     ['Cache hits', s.cacheHits],

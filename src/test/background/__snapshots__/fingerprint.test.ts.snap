@@ -1,0 +1,3 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`currentFingerprintInputs the current fingerprint is acknowledged 1`] = `"fp-fd1967ca81397adc"`;
