@@ -205,7 +205,7 @@ describe('a skipped settlement (card 14, scheduler rule 10)', () => {
       cache: run.cache,
       clock: run.clock,
       detector: run.detector,
-      label: 'Sprint 1 mock detector',
+      label: () => 'Sprint 1 mock detector',
       tracker: {
         lastChange: (): VersionChange | undefined => undefined,
         onChange: (): (() => void) => () => undefined,

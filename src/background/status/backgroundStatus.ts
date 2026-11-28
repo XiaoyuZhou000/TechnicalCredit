@@ -47,8 +47,11 @@ export interface BackgroundStatusOptions {
   readonly cache: ResultCache;
   readonly clock: Clock;
   readonly detector: Pick<Detector, 'id' | 'version'>;
-  /** "Sprint 1 mock detector" while the mock is in use (constitution VIII). */
-  readonly label: string;
+  /**
+   * Read on every snapshot, so it follows the active detector: "Sprint 1 mock detector" while
+   * the mock is in use (constitution VIII), and the real detector's label otherwise (card 14).
+   */
+  readonly label: () => string;
   /** Card 11's version tracker, for the last change and its notifications. */
   readonly tracker: Pick<DetectorVersionTracker, 'lastChange' | 'onChange'>;
   /** The scheduler's `maxConcurrent`, shown next to the running count. */
@@ -76,7 +79,7 @@ export class BackgroundStatus implements StatusSource {
         undefined,
       );
     return Object.freeze({
-      label,
+      label: label(),
       detector: `${detector.id}@${detector.version}`,
       takenAt,
       session: Object.freeze({

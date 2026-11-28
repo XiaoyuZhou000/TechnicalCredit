@@ -2,10 +2,17 @@ import * as vscode from 'vscode';
 
 import { ResultCache, sha256Hex } from '@/background/cache/resultCache';
 import {
+  BackgroundDetector,
+  type DetectorMode,
+  type LiveCallGate,
+} from '@/background/detector/backgroundDetector';
+import type { DetectorInput } from '@/background/detector/detector';
+import {
   DEFAULT_MOCK_VERSION,
   MockDetector,
   versionProblem,
 } from '@/background/detector/mockDetector';
+import { RealDetector } from '@/background/detector/realDetector';
 import { DetectorVersionTracker } from '@/background/detector/versionTracker';
 import { startFileEventMonitor } from '@/background/events/fileEventMonitor';
 import {
@@ -21,6 +28,8 @@ import {
 } from '@/background/scheduler/scheduler';
 import { BackgroundStatus } from '@/background/status/backgroundStatus';
 import { BackgroundStatusPanel } from '@/background/status/statusPanel';
+import { findAdrs, type AdrSummary } from '@/context/findAdrs';
+import { callClaude } from '@/utils/claude';
 
 /** The one place real time is bound; core modules only ever see a `Clock`. */
 const realClock: Clock = {
@@ -33,6 +42,18 @@ const realClock: Clock = {
 
 const SETTINGS_SECTION = 'technicalcredit.background';
 const MOCK_VERSION_SETTING = 'mockDetectorVersion';
+const DETECTOR_SETTING = 'detector';
+const DEFAULT_MODE: DetectorMode = 'mock';
+
+/**
+ * Card 14: live background calls wait for card 15's enablement, credential and usage limits.
+ * Until then real mode is wired but inert: every real-mode call is skipped, and no Claude call
+ * is made. Card 15 replaces this gate.
+ */
+const LIVE_CALLS: LiveCallGate = {
+  permitted: false,
+  reason: 'live background analysis waits for card 15',
+};
 
 /** The mock's version from settings (card 11), or why the value can't be used. */
 function readMockVersion():
@@ -48,9 +69,35 @@ function readMockVersion():
   return problem === undefined ? { version: value } : { reason: problem };
 }
 
-function settingIgnored(log: (line: string) => void, reason: string): void {
+/** The background detector mode from settings (card 14), or why the value can't be used. */
+function readDetectorMode():
+  | { readonly mode: DetectorMode }
+  | { readonly reason: string } {
+  const value = vscode.workspace
+    .getConfiguration(SETTINGS_SECTION)
+    .get<unknown>(DETECTOR_SETTING);
+  return value === 'mock' || value === 'real'
+    ? { mode: value }
+    : {
+        reason: `${JSON.stringify(value)} is not "mock" or "real"`,
+      };
+}
+
+/** The ADRs of the snapshot's own workspace folder, read as the manual command reads them. */
+function adrsFor(input: DetectorInput): readonly AdrSummary[] {
+  const folder = vscode.workspace.workspaceFolders?.find(
+    (f) => f.uri.toString() === input.workspaceId,
+  );
+  return folder === undefined ? [] : findAdrs(folder.uri.fsPath);
+}
+
+function settingIgnored(
+  log: (line: string) => void,
+  setting: string,
+  reason: string,
+): void {
   log(
-    `${new Date(realClock.now()).toISOString()} detector version setting ignored: ${reason}`,
+    `${new Date(realClock.now()).toISOString()} ${setting} setting ignored: ${reason}`,
   );
 }
 
@@ -71,13 +118,47 @@ export function startBackgroundAgent(context: vscode.ExtensionContext): void {
   });
   const configured = readMockVersion();
   if ('reason' in configured) {
-    settingIgnored(log, `${configured.reason}; using ${DEFAULT_MOCK_VERSION}`);
+    settingIgnored(
+      log,
+      'detector version',
+      `${configured.reason}; using ${DEFAULT_MOCK_VERSION}`,
+    );
   }
-  const detector = new MockDetector({
+  const mock = new MockDetector({
     timers: realClock,
     version:
       'version' in configured ? configured.version : DEFAULT_MOCK_VERSION,
   });
+  const configuredMode = readDetectorMode();
+  if ('reason' in configuredMode) {
+    settingIgnored(
+      log,
+      'detector mode',
+      `${configuredMode.reason}; using ${DEFAULT_MODE}`,
+    );
+  }
+  // Card 14: the same detection core as the manual command. Its client is bound only here.
+  const real = new RealDetector({
+    client: (systemPrompt, userMessage, signal) =>
+      callClaude(systemPrompt, userMessage, signal),
+    adrsFor,
+    clock: realClock,
+    fileNameOf: (fileUri) => vscode.Uri.parse(fileUri).fsPath,
+  });
+  const detector = new BackgroundDetector({
+    mock,
+    real,
+    mode: 'mode' in configuredMode ? configuredMode.mode : DEFAULT_MODE,
+    liveCalls: () => LIVE_CALLS,
+  });
+  const logGate = (): void => {
+    if (detector.mode === 'real' && !LIVE_CALLS.permitted) {
+      log(
+        `${new Date(realClock.now()).toISOString()} real detector selected; no Claude call is made: ${LIVE_CALLS.reason}`,
+      );
+    }
+  };
+  logGate();
   // Cards 05–07 add coalescing, debounce and cooldown to this scheduler, not a second sink.
   const scheduler = new Scheduler({
     inner: createLoggingSink(log),
@@ -104,23 +185,43 @@ export function startBackgroundAgent(context: vscode.ExtensionContext): void {
     log(describeSinkError(error)),
   );
   tracker.startupScheduled(monitor.startupCount);
-  // A runtime version change for demos and tests (card 11): the mock announces, the tracker
-  // rescans the open files.
+  // A runtime version change (card 11) or detector switch (card 14): the background detector
+  // announces, and the tracker rescans the open files.
   const versionSetting = vscode.workspace.onDidChangeConfiguration((event) => {
     if (
-      !event.affectsConfiguration(`${SETTINGS_SECTION}.${MOCK_VERSION_SETTING}`)
+      event.affectsConfiguration(`${SETTINGS_SECTION}.${MOCK_VERSION_SETTING}`)
     ) {
-      return;
+      const next = readMockVersion();
+      if ('reason' in next) {
+        settingIgnored(
+          log,
+          'detector version',
+          `${next.reason}; keeping ${mock.version}`,
+        );
+      } else {
+        try {
+          mock.setVersion(next.version);
+        } catch (error) {
+          settingIgnored(
+            log,
+            'detector version',
+            `${messageOf(error)}; keeping ${mock.version}`,
+          );
+        }
+      }
     }
-    const next = readMockVersion();
-    if ('reason' in next) {
-      settingIgnored(log, `${next.reason}; keeping ${detector.version}`);
-      return;
-    }
-    try {
-      detector.setVersion(next.version);
-    } catch (error) {
-      settingIgnored(log, `${messageOf(error)}; keeping ${detector.version}`);
+    if (event.affectsConfiguration(`${SETTINGS_SECTION}.${DETECTOR_SETTING}`)) {
+      const next = readDetectorMode();
+      if ('reason' in next) {
+        settingIgnored(
+          log,
+          'detector mode',
+          `${next.reason}; keeping ${detector.mode}`,
+        );
+      } else if (next.mode !== detector.mode) {
+        detector.setMode(next.mode);
+        logGate();
+      }
     }
   });
   // Card 09's read-only status page; the output channel stays for diagnosis.
@@ -130,7 +231,7 @@ export function startBackgroundAgent(context: vscode.ExtensionContext): void {
       cache,
       clock: realClock,
       detector,
-      label: 'Sprint 1 mock detector',
+      label: () => detector.label,
       tracker,
       limit: DEFAULT_MAX_CONCURRENT,
     }),
@@ -150,6 +251,7 @@ export function startBackgroundAgent(context: vscode.ExtensionContext): void {
     statusPanel,
     tracker,
     scheduler,
+    { dispose: () => detector.dispose() },
     channel,
   );
   // Last, so a start that throws earlier keeps the old identity and is detected again (card 11).

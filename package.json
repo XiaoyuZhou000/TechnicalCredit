@@ -62,6 +62,20 @@
           "pattern": "^\\S(.*\\S)?$",
           "patternErrorMessage": "Must not be blank or start or end with whitespace.",
           "description": "Version reported by the background mock detector. Changing it makes open Java files re-analyse under the new version (testing and demos only)."
+        },
+        "technicalcredit.background.detector": {
+          "type": "string",
+          "scope": "application",
+          "enum": [
+            "mock",
+            "real"
+          ],
+          "enumDescriptions": [
+            "The offline Sprint 1 mock detector. Never calls Claude.",
+            "The real Claude detector, the same detection as \"Analyse for TC\". Makes no Claude call until live background analysis is enabled with usage limits (card 15)."
+          ],
+          "default": "mock",
+          "description": "Which detector background analysis uses. Switching makes open Java files re-analyse under the other detector; results never mix."
         }
       }
     }
