@@ -93,7 +93,8 @@
     "tsc:check": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "opro": "esbuild scripts/opro.ts --bundle --platform=node --external:@anthropic-ai/sdk --external:dotenv --outfile=dist/opro.js && node dist/opro.js"
+    "opro": "esbuild scripts/opro.ts --bundle --platform=node --external:@anthropic-ai/sdk --external:dotenv --outfile=dist/opro.js && node dist/opro.js",
+    "measure:live": "esbuild src/measurement/liveLatency.ts --bundle --platform=node --external:@anthropic-ai/sdk --external:dotenv --external:web-tree-sitter --outfile=dist/measure-live.js && node dist/measure-live.js"
   },
   "jest": {
     "preset": "ts-jest",

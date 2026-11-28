@@ -1,0 +1,90 @@
+{
+  "environment": {
+    "os": "Windows_NT 10.0.19045 x64",
+    "node": "v20.14.0",
+    "model": "claude-sonnet-4-6",
+    "date": "2026-11-28T09:40:08.815Z"
+  },
+  "budget": {
+    "analyses": 4,
+    "requests": 56
+  },
+  "used": {
+    "analyses": 4,
+    "requests": 56
+  },
+  "runs": [
+    {
+      "runId": "mx07ytbj-1",
+      "fixture": "OneA.java",
+      "chars": 528,
+      "sha8": "e80f7d16",
+      "constructs": 1,
+      "expectedRequests": 8,
+      "requests": 8,
+      "outcome": "done",
+      "findings": 4,
+      "detectorMs": 9070.304399999999,
+      "slotMs": 0.6172000000000111,
+      "quietMs": 0,
+      "cooldownMs": 0,
+      "inputTokens": 9103,
+      "outputTokens": 2005,
+      "costUsd": null
+    },
+    {
+      "runId": "mx07ytbj-2",
+      "fixture": "OneB.java",
+      "chars": 400,
+      "sha8": "2c6f9eb2",
+      "constructs": 1,
+      "expectedRequests": 8,
+      "requests": 8,
+      "outcome": "done",
+      "findings": 5,
+      "detectorMs": 8567.088800000001,
+      "slotMs": 0.057199999999284046,
+      "quietMs": 0,
+      "cooldownMs": 0,
+      "inputTokens": 7215,
+      "outputTokens": 2043,
+      "costUsd": null
+    },
+    {
+      "runId": "mx07ytbj-3",
+      "fixture": "Two.java",
+      "chars": 741,
+      "sha8": "a42abd13",
+      "constructs": 2,
+      "expectedRequests": 16,
+      "requests": 16,
+      "outcome": "done",
+      "findings": 9,
+      "detectorMs": 16029.676899999999,
+      "slotMs": 0.037000000000261934,
+      "quietMs": 0,
+      "cooldownMs": 0,
+      "inputTokens": 15710,
+      "outputTokens": 3736,
+      "costUsd": null
+    },
+    {
+      "runId": "mx07ytbj-4",
+      "fixture": "Three.java",
+      "chars": 766,
+      "sha8": "1485ba1d",
+      "constructs": 3,
+      "expectedRequests": 24,
+      "requests": 24,
+      "outcome": "done",
+      "findings": 3,
+      "detectorMs": 22538.938499999997,
+      "slotMs": 0.03700000000389991,
+      "quietMs": 0,
+      "cooldownMs": 0,
+      "inputTokens": 23373,
+      "outputTokens": 4355,
+      "costUsd": null
+    }
+  ]
+}
