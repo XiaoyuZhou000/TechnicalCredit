@@ -479,12 +479,18 @@ export class ResultCache {
    * A hit counts as use (card 16A), written at once so the order survives restarts. The write
    * runs in the background, because `lookup` must answer synchronously; a failed write only
    * leaves the order slightly older, so it is counted and never reported as an error.
+   * An entry that is already the most recent is not rewritten: the order wouldn't change, and
+   * every write rewrites the whole scope, which can also drop an entry another window just
+   * stored (known issue 27).
    */
   private touch(
     identity: CacheIdentity,
     scope: StoredScope,
     used: StoredEntry,
   ): void {
+    if (used.lastUse === scope.uses) {
+      return;
+    }
     const uses = scope.uses + 1;
     const touched: StoredScope = {
       format: CACHE_FORMAT,

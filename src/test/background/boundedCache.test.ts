@@ -188,9 +188,11 @@ describe('US2: up to four results per file survive restarts, least recently used
   it('still returns a hit when its recency write fails, and counts the failure', async () => {
     const store = createDeferredCacheStore();
     const cache = newCache(store);
-    const seeded = cache.store(id(1), ok());
-    store.flush();
-    await seeded;
+    for (const n of [1, 2]) {
+      const seeded = cache.store(id(n), ok());
+      store.flush();
+      await seeded;
+    }
 
     expect(cache.lookup(id(1)).hit).toBe(true);
     expect(store.held()).toBe(1);
@@ -200,10 +202,29 @@ describe('US2: up to four results per file survive restarts, least recently used
 
     expect(cache.stats()).toMatchObject({
       hits: 1,
-      stored: 1,
+      stored: 2,
       recencyFailures: 1,
     });
     expect(cache.lookup(id(1)).hit).toBe(true);
+  });
+
+  it('writes nothing for a hit on the most recently used content', async () => {
+    const store = createDeferredCacheStore();
+    const cache = newCache(store);
+    for (const n of [1, 2]) {
+      const seeded = cache.store(id(n), ok());
+      store.flush();
+      await seeded;
+    }
+
+    expect(cache.lookup(id(2)).hit).toBe(true);
+    expect(store.held()).toBe(0);
+
+    expect(cache.lookup(id(1)).hit).toBe(true);
+    expect(store.held()).toBe(1);
+    // Id 1 is now the most recent, read from the unsettled write: no second write.
+    expect(cache.lookup(id(1)).hit).toBe(true);
+    expect(store.held()).toBe(1);
   });
 });
 
