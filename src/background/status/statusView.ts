@@ -142,6 +142,7 @@ export function renderStatusHtml(
   const s = snapshot.session;
   const counters: readonly (readonly [string, number])[] = [
     ['Analyses', s.analyses],
+    ['Skipped (no call)', s.skipped],
     ['Follow-ups', s.followUps],
     ['Repeats ignored', s.repeats],
     ['Cache hits', s.cacheHits],

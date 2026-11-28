@@ -125,6 +125,11 @@ export interface FileStateView {
 export interface SchedulerStats {
   readonly started: number;
   /**
+   * Started requests the detector skipped without a call (card 14), so `started - skipped` is
+   * the requests that did analyse. Counted when the skip settles.
+   */
+  readonly skipped: number;
+  /**
    * Calls started for pending work when the file's running request settled: at once, or
    * (card 11) once a slot frees, if it went straight from that settlement into the slot queue.
    */
@@ -305,6 +310,7 @@ export class Scheduler implements SnapshotSink {
   private notifyQueued = false;
   private readonly counts: Record<keyof SchedulerStats, number> = {
     started: 0,
+    skipped: 0,
     followUps: 0,
     duplicates: 0,
     pendingHeld: 0,
@@ -1036,6 +1042,10 @@ export class Scheduler implements SnapshotSink {
     call: Promise<DetectorResult>,
   ): Promise<void> {
     const result = await call;
+    // Before the current check: a skip made no call whether or not its result is still wanted.
+    if (skipReasonOf(result) !== undefined) {
+      this.counts.skipped++;
+    }
     if (!this.isCurrent(state, active)) {
       return;
     }

@@ -220,4 +220,39 @@ describe('a skipped settlement (card 14, scheduler rule 10)', () => {
     expect(html).not.toContain('failed (v1)');
     expect(html).not.toContain(SECRET);
   });
+
+  test('is counted apart from analyses, since it made no call', async () => {
+    const run = setup([skipped('live-disabled'), OK, skipped('syntax-errors')]);
+    const status = new BackgroundStatus({
+      scheduler: run.scheduler,
+      cache: run.cache,
+      clock: run.clock,
+      detector: run.detector,
+      label: () => 'Claude detector',
+      tracker: {
+        lastChange: (): VersionChange | undefined => undefined,
+        onChange: (): (() => void) => () => undefined,
+      },
+      limit: 2,
+    });
+    for (const [content, version] of [
+      ['x', 1],
+      ['y', 2],
+      ['z', 3],
+    ] as const) {
+      run.scheduler.submit(rev(content, version));
+      await settle();
+      run.clock.advance(60_000);
+      await settle();
+    }
+
+    expect(run.scheduler.stats()).toMatchObject({ started: 3, skipped: 2 });
+    expect(status.snapshot().session).toMatchObject({
+      analyses: 1,
+      skipped: 2,
+    });
+    expect(renderStatusHtml(status.snapshot(), { nonce: 'N' })).toContain(
+      'Skipped (no call)',
+    );
+  });
 });

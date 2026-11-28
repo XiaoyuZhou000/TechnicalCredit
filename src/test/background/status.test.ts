@@ -314,6 +314,7 @@ describe('background status model (card 09 US3)', () => {
       detector: 'scripted@1',
       session: {
         analyses: 1,
+        skipped: 0,
         followUps: 0,
         repeats: 0,
         cacheHits: 1,

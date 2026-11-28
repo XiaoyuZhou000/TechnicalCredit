@@ -9,7 +9,9 @@ import type { FileStatus, Scheduler } from '@/background/scheduler/scheduler';
 
 /** This session's work; a restart starts every count again at 0 (card 09 US2). */
 export interface SessionCounts {
+  /** Requests that analysed; skips are counted apart, since they made no call (card 14). */
   readonly analyses: number;
+  readonly skipped: number;
   readonly followUps: number;
   readonly repeats: number;
   readonly cacheHits: number;
@@ -83,7 +85,8 @@ export class BackgroundStatus implements StatusSource {
       detector: `${detector.id}@${detector.version}`,
       takenAt,
       session: Object.freeze({
-        analyses: stats.started,
+        analyses: stats.started - stats.skipped,
+        skipped: stats.skipped,
         followUps: stats.followUps,
         repeats: stats.duplicates,
         cacheHits: cached.hits,
