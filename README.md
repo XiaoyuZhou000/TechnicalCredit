@@ -126,17 +126,18 @@ npm run compile
 
 ### Available scripts
 
-| Script               | Description                                                  |
-| -------------------- | ------------------------------------------------------------ |
-| `npm run compile`    | Type-check, lint, and bundle with esbuild                    |
-| `npm run watch`      | Watch mode — runs `tsc` and esbuild in parallel              |
-| `npm run package`    | Production build (minified, no sourcemaps)                   |
-| `npm test`           | Run the Jest test suite                                      |
-| `npm run lint:check` | Lint with zero-warning enforcement                           |
-| `npm run lint:fix`   | Auto-fix lint issues                                         |
-| `npm run tsc:check`  | Type-check only                                              |
-| `npm run format`     | Format the codebase with Prettier                            |
-| `npm run opro`       | Run the OPRO script to optimize heuristic detection criteria |
+| Script                 | Description                                                  |
+| ---------------------- | ------------------------------------------------------------ |
+| `npm run compile`      | Type-check, lint, and bundle with esbuild                    |
+| `npm run watch`        | Watch mode — runs `tsc` and esbuild in parallel              |
+| `npm run package`      | Production build (minified, no sourcemaps)                   |
+| `npm test`             | Run the Jest test suite                                      |
+| `npm run lint:check`   | Lint with zero-warning enforcement                           |
+| `npm run lint:fix`     | Auto-fix lint issues                                         |
+| `npm run tsc:check`    | Type-check only                                              |
+| `npm run format`       | Format the codebase with Prettier                            |
+| `npm run opro`         | Run the OPRO script to optimize heuristic detection criteria |
+| `npm run measure:live` | Billed, opt-in live latency sample (see below)               |
 
 ## Running the Extension
 
@@ -179,6 +180,31 @@ starts. The mock analyses every snapshot, as in Sprint 1.
 After upgrading to this version, the first start logs one detector identity change
 (`mock@mock-1 → technicalcredit@mock:mock-1`) and analyses the open files once more.
 Background log lines start with `technicalcredit` rather than `mock`.
+
+After each analysis or cache hit, the channel also shows a `timing …` line. It splits the
+wait into the quiet period, the cooldown, time behind the file's own running request, and
+time waiting for a free slot, and gives the detector's own time separately. For example:
+`timing #3 v8 … wait quiet=3000 cooldown=0 inflight=0 slot=0 detector=12550 outcome=done findings=4 delivery=n/a …`.
+Cache hits read `timing hit … detector=0`. No file text is logged.
+
+### Measuring live latency
+
+`npm run measure:live` runs a small live sample through the real scheduler and detector:
+4 fixtures in `src/test/measurement/fixtures/`, at most 56 Claude requests, and no ADRs.
+**It is billed**, so run it only after the person paying approves it, with
+`TC_LIVE_MEASURE=1` and an explicit `TC_LIVE_BUDGET` (1–56). It stops on the budget, a rate
+limit, an unexpected request count or repeated failures. It never runs from `npm test`, the
+compile or the extension.
+
+Results go to `measurements/`:
+
+- `ba-15a-live-runs.json`;
+- `ba-15a-replay.json`, the offline replay of edit patterns over candidate timings,
+  regenerated with `UPDATE_REPLAY=1 npx jest src/test/measurement/replay.test.ts`;
+- `ba-15a-latency.md`, the report and the timing recommendation.
+
+The 2026-11-28 sample measured 8.6–22.5 s per file (about 8 s per top-level type), and kept the
+3 s quiet period and the 30 s cooldown.
 
 ## Testing
 
@@ -229,10 +255,12 @@ src/
 │   ├── adrPrompt.ts          # Prompt for matching a candidate to an ADR
 │   └── heuristics/           # 8 category-specific prompts
 ├── background/               # Background Agent: events, scheduler, cache, detectors, status
+├── measurement/              # Timing replay + opt-in live latency sample (not in the extension)
 ├── utils/
 │   ├── claude.ts             # Claude API client (model, timeout, JSON prefill)
 │   └── claudeConfig.ts       # Model, max tokens, timeout and priming turns (no SDK)
 └── test/                     # Jest tests + Java fixtures
+measurements/                 # Card 15A evidence: live runs, replay table, latency report
 ```
 
 ## Next Steps
