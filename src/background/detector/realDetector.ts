@@ -79,7 +79,8 @@ function messageOf(error: unknown): string {
  * original full text. Inner classes are analysed only inside their outer type.
  *
  * The file succeeds only if every type does: the first failure, timeout or cancellation stops
- * the file and is its outcome, so a partial result is never cacheable. The scheduler's signal
+ * the file and is its outcome, so a partial result is never cacheable. A snapshot whose parse
+ * reports syntax errors is skipped as a whole (`skipped: syntax-errors`). The scheduler's signal
  * and the file's own time limit (`fileTimeoutMs`) reach every call in flight. Never touches `vscode`,
  * the manual command or the labeling UI, and never rejects.
  */
@@ -143,6 +144,14 @@ export class RealDetector implements Detector {
     }
     if (signal.aborted) {
       return failureFromAbort(signal);
+    }
+    // Card 12 rule 7: with a syntax error anywhere, types may be missing or misplaced, so even
+    // "complete" ones could carry guessed context. Nothing is sent, cached or treated as deleted.
+    if (enumeration.hasSyntaxErrors) {
+      return {
+        ok: false,
+        failure: { kind: 'skipped', reason: 'syntax-errors' },
+      };
     }
     const { constructs } = enumeration;
     if (constructs.length === 0) {
