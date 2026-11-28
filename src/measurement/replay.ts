@@ -33,10 +33,12 @@ export const REPLAY_GRID = {
 } as const;
 
 /**
- * Detector service times used until the live sample measures them: an assumption, stated in
- * the table, and replaced by the measured low end, median and high end afterwards (card 15A).
+ * Detector service times, measured by the live sample on 2026-11-28
+ * (`measurements/ba-15a-live-runs.json`): the low end, median and high end of the per-file
+ * detector time over its 4 runs (1, 1, 2 and 3 top-level types). Before that run the replay
+ * used assumed values of 10, 20 and 40 s.
  */
-export const ASSUMED_SERVICE_MS: readonly number[] = [10_000, 20_000, 40_000];
+export const SERVICE_MS: readonly number[] = [8567, 12_550, 22_539];
 
 /** Matches the extension's default limit on calls running at once. */
 const MAX_CONCURRENT = 2;
@@ -306,7 +308,7 @@ export async function replayCell(
 
 /** Every trace × candidate × service time, in a fixed order. */
 export async function runReplay(
-  serviceMs: readonly number[] = ASSUMED_SERVICE_MS,
+  serviceMs: readonly number[] = SERVICE_MS,
   traces: readonly EditTrace[] = TRACES,
 ): Promise<ReplayTable> {
   const cells: ReplayCell[] = [];
@@ -321,9 +323,9 @@ export async function runReplay(
   }
   return {
     note:
-      serviceMs === ASSUMED_SERVICE_MS
-        ? 'serviceMs values are assumptions until the live sample measures them (card 15A)'
-        : 'serviceMs values are the live sample’s low end, median and high end (card 15A)',
+      serviceMs === SERVICE_MS
+        ? 'serviceMs values are the low end, median and high end of per-file detector time measured by the live sample on 2026-11-28 (card 15A)'
+        : 'serviceMs values were supplied by the caller (card 15A)',
     serviceMs: [...serviceMs],
     grid: {
       quietMs: [...REPLAY_GRID.quietMs],

@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import {
-  ASSUMED_SERVICE_MS,
+  SERVICE_MS,
   REPLAY_FILE,
   REPLAY_GRID,
   replayCell,
@@ -97,7 +97,7 @@ describe('runReplay (US2-3, US2-4)', () => {
       TRACES.length *
         REPLAY_GRID.quietMs.length *
         REPLAY_GRID.cooldownMs.length *
-        ASSUMED_SERVICE_MS.length,
+        SERVICE_MS.length,
     );
     expect(
       table.cells.some(
