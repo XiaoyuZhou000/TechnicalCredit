@@ -1,3 +1,4 @@
+import { ResultCache, sha256Hex } from '@/background/cache/resultCache';
 import type {
   DetectorInput,
   DetectorResult,
@@ -11,15 +12,20 @@ import {
   RealDetector,
   type RealDetectorOptions,
 } from '@/background/detector/realDetector';
+import { Scheduler } from '@/background/scheduler/scheduler';
 import type { AdrSummary } from '@/context/findAdrs';
+import type { ClaudeClient } from '@/detection/detectTechnicalCredit';
 import { createFakeTimers } from '@/test/background/fakeTimers';
+import { createMemoryCacheStore } from '@/test/background/memoryCacheStore';
 import { initParser } from '@/test/context/parserSetup';
 import {
   answer,
   candidate,
   candidateResult,
   createFakeClaude,
+  heuristicSystemPrompt,
   hold,
+  type FakeClaude,
   type RecordedCall,
   type Script,
 } from '@/test/detection/fakeClaude';
@@ -83,7 +89,11 @@ function input(content: string): DetectorInput {
 
 /** The top-level type a call was made for, read from its "Class source" section. */
 function typeOf(call: RecordedCall): TypeName {
-  const source = call.user.split('Class source:\n')[1] ?? '';
+  return typeOfUser(call.user);
+}
+
+function typeOfUser(user: string): TypeName {
+  const source = user.split('Class source:\n')[1] ?? '';
   const match =
     /^(?:@\w+\s+)?(?:public\s+)?(class|interface|enum)\s+(\w+)/.exec(source);
   const name = match?.[2];
@@ -336,6 +346,251 @@ describe('RealDetector over a clean snapshot (US1)', () => {
       ok: false,
       failure: { kind: 'failed', message: 'real detector: parser exploded' },
     });
+  });
+});
+
+/** Records each timer delay, so the file limit itself can be checked. */
+function timedSetup(
+  client: (claude: FakeClaude) => ClaudeClient = (claude) => claude.client,
+  script: Script = {},
+) {
+  const claude = createFakeClaude(script);
+  const timers = createFakeTimers();
+  const delays: number[] = [];
+  const clock = {
+    setTimeout: (callback: () => void, ms: number) => {
+      delays.push(ms);
+      return timers.setTimeout(callback, ms);
+    },
+    clearTimeout: (handle: unknown) => timers.clearTimeout(handle),
+  };
+  const detector = new RealDetector({
+    client: client(claude),
+    adrsFor: () => [],
+    clock,
+    fileNameOf: () => 'Shapes.java',
+  });
+  return { claude, timers, delays, detector };
+}
+
+/** Fails one heuristic call of one type, and passes every other call to the fake. */
+function failing(
+  type: TypeName,
+  fail: () => Promise<unknown>,
+): (claude: FakeClaude) => ClaudeClient {
+  return (claude) => (system, user, signal) =>
+    typeOfUser(user) === type && system === heuristicSystemPrompt('modularity')
+      ? fail()
+      : claude.client(system, user, signal);
+}
+
+const THREE_TYPES = `class A {}
+
+class I {}
+
+class B { String s = "${SECRET}"; }
+`;
+
+const SIX_TYPES = Array.from({ length: 6 }, (_, i) => `class T${i} {}`).join(
+  '\n',
+);
+
+describe('RealDetector failures, cancellation and time limits (US2)', () => {
+  test('a signal aborted before the call is cancelled, with no call and no timer', async () => {
+    const { claude, timers, detector } = timedSetup();
+    const controller = new AbortController();
+    controller.abort();
+
+    const result = await detector.analyse(input(FOUR_TYPES), controller.signal);
+
+    expect(result).toEqual({ ok: false, failure: { kind: 'cancelled' } });
+    expect(claude.calls).toHaveLength(0);
+    expect(timers.pendingCount).toBe(0);
+  });
+
+  test('an abort while the first type runs reaches its calls and stops the file (US2-1)', async () => {
+    const { claude, timers, detector } = timedSetup(undefined, {
+      modularity: hold(candidate('modularity')),
+    });
+    const controller = new AbortController();
+    const pending = detector.analyse(input(FOUR_TYPES), controller.signal);
+    await settle();
+    expect(claude.held()).toBe(1);
+
+    controller.abort();
+    const result = await pending;
+
+    expect(result).toEqual({ ok: false, failure: { kind: 'cancelled' } });
+    expect(claude.calls.every((c) => c.signal.aborted)).toBe(true);
+    expect(new Set(claude.calls.map(typeOf))).toEqual(new Set(['A']));
+    expect(timers.pendingCount).toBe(0);
+  });
+
+  test('an abort that arrives as the last answers do is still cancelled, never a success', async () => {
+    const { claude, detector } = timedSetup(undefined, {
+      modularity: hold(candidate('modularity')),
+    });
+    const controller = new AbortController();
+    const pending = detector.analyse(input(FOUR_TYPES), controller.signal);
+    for (let round = 0; round < 3; round++) {
+      await settle();
+      claude.releaseAll();
+    }
+    await settle();
+    expect(new Set(claude.calls.map(typeOf)).has('B')).toBe(true);
+
+    claude.releaseAll();
+    controller.abort();
+
+    expect(await pending).toEqual({
+      ok: false,
+      failure: { kind: 'cancelled' },
+    });
+  });
+
+  test('a client that never answers times out at 60 s per type, and no later type starts (US2-2)', async () => {
+    const { claude, timers, delays, detector } = timedSetup(undefined, {
+      modularity: hold(candidate('modularity'), true),
+    });
+    let result: DetectorResult | undefined;
+    void detector
+      .analyse(input(FOUR_TYPES), new AbortController().signal)
+      .then((r) => {
+        result = r;
+      });
+    await settle();
+    expect(delays).toEqual([4 * 60_000]);
+
+    timers.advance(4 * 60_000 - 1);
+    await settle();
+    expect(result).toBeUndefined();
+
+    timers.advance(1);
+    await settle();
+    expect(result).toEqual({ ok: false, failure: { kind: 'timeout' } });
+    expect(new Set(claude.calls.map(typeOf))).toEqual(new Set(['A']));
+    expect(timers.pendingCount).toBe(0);
+  });
+
+  test('the file limit is capped at 5 minutes', async () => {
+    const { delays, detector } = timedSetup();
+    await detector.analyse(input(SIX_TYPES), new AbortController().signal);
+
+    expect(delays).toEqual([300_000]);
+  });
+
+  test("the client's own TimeoutError is a timeout", async () => {
+    const { timers, detector } = timedSetup(undefined, {
+      abstraction: {
+        kind: 'reject',
+        error: new DOMException('call timed out', 'TimeoutError'),
+      },
+    });
+
+    const result = await detector.analyse(
+      input(FOUR_TYPES),
+      new AbortController().signal,
+    );
+
+    expect(result).toEqual({ ok: false, failure: { kind: 'timeout' } });
+    expect(timers.pendingCount).toBe(0);
+  });
+
+  test.each([
+    ['rejects', () => Promise.reject(new Error('overloaded')), 'overloaded'],
+    [
+      'answers malformed output',
+      () => Promise.resolve({ is_tc_candidate: 'yes' }),
+      'heuristic "modularity"',
+    ],
+  ])(
+    'a middle type that %s fails the file, and the next type makes no call (US2-3)',
+    async (_name, fail, expected) => {
+      const { claude, timers, detector } = timedSetup(failing('I', fail), {
+        abstraction: answer(candidate('abstraction')),
+      });
+
+      const result = await detector.analyse(
+        input(THREE_TYPES),
+        new AbortController().signal,
+      );
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.failure.kind).toBe('failed');
+        if (result.failure.kind === 'failed') {
+          expect(result.failure.message).toContain('heuristic "modularity"');
+          expect(result.failure.message).toContain(expected);
+          expect(result.failure.message).not.toContain(SECRET);
+        }
+      }
+      expect(claude.calls.some((c) => typeOf(c) === 'B')).toBe(false);
+      expect(timers.pendingCount).toBe(0);
+    },
+  );
+
+  test('a client that throws synchronously fails the file', async () => {
+    const { detector } = timedSetup(undefined, {
+      automation: { kind: 'throw', error: new Error('no network') },
+    });
+
+    const result = await detector.analyse(
+      input(FOUR_TYPES),
+      new AbortController().signal,
+    );
+
+    expect(result).toMatchObject({ ok: false, failure: { kind: 'failed' } });
+  });
+
+  test('through the scheduler, a failed file stores nothing and misses again (US2-3, SC-004)', async () => {
+    const { detector } = timedSetup(
+      failing('A', () => Promise.reject(new Error('overloaded'))),
+    );
+    const clock = createFakeTimers();
+    const cache = new ResultCache({
+      store: createMemoryCacheStore(),
+      now: () => 0,
+    });
+    const lines: string[] = [];
+    const scheduler = new Scheduler({
+      inner: { submit: () => undefined, closed: () => undefined },
+      detector,
+      cache,
+      hash: sha256Hex,
+      log: (line) => lines.push(line),
+      clock,
+      quietMs: 0,
+      cooldownMs: 0,
+    });
+    const content = FOUR_TYPES;
+    scheduler.submit({
+      workspaceId: W,
+      fileUri: URI,
+      languageId: 'java',
+      version: 1,
+      content,
+      trigger: 'edit',
+      observedAt: 0,
+    });
+    for (let i = 0; i < 5; i++) {
+      await settle();
+    }
+
+    expect(
+      lines.some((l) => l.includes('claude failed: heuristic "modularity"')),
+    ).toBe(true);
+    expect(cache.stats().stored).toBe(0);
+    expect(
+      cache.lookup({
+        workspaceId: W,
+        fileUri: URI,
+        contentHash: sha256Hex(content),
+        detectorId: detector.id,
+        detectorVersion: detector.version,
+      }).hit,
+    ).toBe(false);
+    expect(lines.join('\n')).not.toContain(SECRET);
+    scheduler.dispose();
   });
 });
 

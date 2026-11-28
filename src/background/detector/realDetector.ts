@@ -1,6 +1,7 @@
 import { fileURLToPath } from 'url';
 
 import {
+  failureFromAbort,
   type Detector,
   type DetectorFinding,
   type DetectorInput,
@@ -23,6 +24,19 @@ import {
 } from '@/detection/detectTechnicalCredit';
 
 export const REAL_DETECTOR_ID = 'claude';
+
+/**
+ * One type is a parallel heuristic phase, then a parallel ADR phase, each bounded by the
+ * client's 30 s per-call timeout, so about 60 s at worst.
+ */
+export const PER_TYPE_TIMEOUT_MS = 60_000;
+/** Keeps a file with many types from holding a call slot for longer. */
+export const FILE_TIMEOUT_CAP_MS = 300_000;
+
+/** The file's limit: `PER_TYPE_TIMEOUT_MS` per type, at most `FILE_TIMEOUT_CAP_MS`. */
+export function fileTimeoutMs(typeCount: number): number {
+  return Math.min(PER_TYPE_TIMEOUT_MS * typeCount, FILE_TIMEOUT_CAP_MS);
+}
 
 export interface RealDetectorOptions {
   /** Bound to `callClaude` only in the composition root; tests pass a fake. */
@@ -65,7 +79,8 @@ function messageOf(error: unknown): string {
  * original full text. Inner classes are analysed only inside their outer type.
  *
  * The file succeeds only if every type does: the first failure, timeout or cancellation stops
- * the file and is its outcome, so a partial result is never cacheable. Never touches `vscode`,
+ * the file and is its outcome, so a partial result is never cacheable. The scheduler's signal
+ * and the file's own time limit (`fileTimeoutMs`) reach every call in flight. Never touches `vscode`,
  * the manual command or the labeling UI, and never rejects.
  */
 export class RealDetector implements Detector {
@@ -75,9 +90,11 @@ export class RealDetector implements Detector {
   private readonly adrsFor: (input: DetectorInput) => readonly AdrSummary[];
   private readonly fileNameOf: (fileUri: string) => string;
   private readonly enumerate: NonNullable<RealDetectorOptions['enumerate']>;
+  private readonly clock: RealDetectorOptions['clock'];
 
   constructor(options: RealDetectorOptions) {
     this.client = options.client;
+    this.clock = options.clock;
     this.adrsFor = options.adrsFor;
     this.fileNameOf = options.fileNameOf ?? defaultFileName;
     this.enumerate = options.enumerate ?? enumerateConstructs;
@@ -107,6 +124,9 @@ export class RealDetector implements Detector {
     input: DetectorInput,
     signal: AbortSignal,
   ): Promise<DetectorResult> {
+    if (signal.aborted) {
+      return failureFromAbort(signal);
+    }
     const enumeration = await this.enumerate(
       input.content,
       this.fileNameOf(input.fileUri),
@@ -121,14 +141,35 @@ export class RealDetector implements Detector {
         },
       };
     }
-    const findings: DetectorFinding[] = [];
-    if (enumeration.constructs.length > 0) {
-      const adrs = this.adrsFor(input);
-      for (const construct of enumeration.constructs) {
+    if (signal.aborted) {
+      return failureFromAbort(signal);
+    }
+    const { constructs } = enumeration;
+    if (constructs.length === 0) {
+      return this.success([]);
+    }
+
+    const adrs = this.adrsFor(input);
+    // A timeout reason, so the service and `failureFromAbort` report `timeout`, not `cancelled`.
+    const timer = new AbortController();
+    const handle = this.clock.setTimeout(
+      () =>
+        timer.abort(
+          new DOMException('file analysis timed out', 'TimeoutError'),
+        ),
+      fileTimeoutMs(constructs.length),
+    );
+    const callSignal = AbortSignal.any([signal, timer.signal]);
+    try {
+      const findings: DetectorFinding[] = [];
+      for (const construct of constructs) {
+        if (callSignal.aborted) {
+          return failureFromAbort(callSignal);
+        }
         const outcome = await detectTechnicalCredit(
           { context: construct.context, adrs },
           this.client,
-          signal,
+          callSignal,
         );
         if (!outcome.ok) {
           return outcome;
@@ -137,7 +178,17 @@ export class RealDetector implements Detector {
           findings.push({ line: construct.line, result });
         }
       }
+      // An abort as the last answers arrive still wins: the run is no longer wanted.
+      if (callSignal.aborted) {
+        return failureFromAbort(callSignal);
+      }
+      return this.success(findings);
+    } finally {
+      this.clock.clearTimeout(handle);
     }
+  }
+
+  private success(findings: readonly DetectorFinding[]): DetectorResult {
     return {
       ok: true,
       output: {
