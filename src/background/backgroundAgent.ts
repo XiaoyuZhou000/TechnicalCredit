@@ -261,4 +261,19 @@ export function startBackgroundAgent(context: vscode.ExtensionContext): void {
   );
   // Last, so a start that throws earlier keeps the old identity and is detected again (card 11).
   void tracker.confirmStarted();
+  // Scopes of an earlier detector id or version can never be read again, and nothing else
+  // deletes them. Either mode's current version is kept, so switching mode loses nothing.
+  const wanted = new Set(detector.versions);
+  void cache
+    .prune(
+      (scope) =>
+        scope.detectorId === detector.id && wanted.has(scope.detectorVersion),
+    )
+    .then(({ removed, failures }) => {
+      if (removed > 0 || failures > 0) {
+        log(
+          `${new Date(realClock.now()).toISOString()} cache pruned ${removed} old scopes${failures > 0 ? `, ${failures} failed` : ''}`,
+        );
+      }
+    });
 }

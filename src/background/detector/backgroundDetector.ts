@@ -22,6 +22,10 @@ export interface BackgroundDetectorOptions {
   readonly liveCalls: () => LiveCallGate;
 }
 
+function versionOf(inner: Detector): string {
+  return `${inner.id}:${inner.version}`;
+}
+
 const MOCK_LABEL = 'Sprint 1 mock detector';
 const REAL_LABEL = 'Claude detector';
 
@@ -67,8 +71,12 @@ export class BackgroundDetector implements Detector {
   }
 
   get version(): string {
-    const inner = this.active();
-    return `${inner.id}:${inner.version}`;
+    return versionOf(this.active());
+  }
+
+  /** The version each mode would report now: every version whose results are still wanted. */
+  get versions(): readonly string[] {
+    return [versionOf(this.mock), versionOf(this.real)];
   }
 
   /** For the status page; read-only. */

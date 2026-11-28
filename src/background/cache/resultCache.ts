@@ -35,6 +35,16 @@ export function sha256Hex(content: string): string {
 export interface CacheStore {
   get(key: string): unknown;
   update(key: string, value: unknown): PromiseLike<void>;
+  /** Only `prune` lists keys; a store without it is never pruned. */
+  keys?(): readonly string[];
+}
+
+/** What a scope's key names: everything in `CacheIdentity` but the content. */
+export type ScopeIdentity = Omit<CacheIdentity, 'contentHash'>;
+
+export interface PruneOutcome {
+  readonly removed: number;
+  readonly failures: number;
 }
 
 /** Everything a lookup must match before a stored result may be reused. */
@@ -105,7 +115,7 @@ export interface ResultCacheOptions {
  * One key per scope: the content hash is deliberately not in the key, so a scope's entries
  * live in one value and storage per file and version stays bounded (card 16A).
  */
-function keyFor(identity: CacheIdentity): string {
+function keyFor(identity: ScopeIdentity): string {
   return (
     CACHE_KEY_PREFIX +
     JSON.stringify([
@@ -115,6 +125,24 @@ function keyFor(identity: CacheIdentity): string {
       identity.detectorVersion,
     ])
   );
+}
+
+/** The scope a key of this format names; `undefined` for any other key. */
+function scopeOfKey(key: string): ScopeIdentity | undefined {
+  if (!key.startsWith(CACHE_KEY_PREFIX)) {
+    return undefined;
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(key.slice(CACHE_KEY_PREFIX.length));
+  } catch {
+    return undefined;
+  }
+  if (!isStringArray(parsed) || parsed.length !== 4) {
+    return undefined;
+  }
+  const [workspaceId, fileUri, detectorId, detectorVersion] = parsed;
+  return { workspaceId, fileUri, detectorId, detectorVersion };
 }
 
 /** One stored result. `lastUse` is the scope's `uses` at its last store or hit. */
@@ -309,6 +337,18 @@ function parseScope(
   return { format: CACHE_FORMAT, uses, entries };
 }
 
+/** A `keep` that throws keeps the scope: deleting results is never the safe default. */
+function keepSafely(
+  keep: (scope: ScopeIdentity) => boolean,
+  scope: ScopeIdentity,
+): boolean {
+  try {
+    return keep(scope);
+  } catch {
+    return true;
+  }
+}
+
 /** The entry used least recently: the eviction victim when a scope is full. */
 function leastRecentlyUsed(
   entries: readonly StoredEntry[],
@@ -399,6 +439,32 @@ export class ResultCache {
 
   stats(): CacheStats {
     return Object.freeze({ ...this.counts });
+  }
+
+  /**
+   * Deletes every scope of this format that `keep` rejects. A scope's key names its detector
+   * version, so scopes of a version no longer in use would otherwise stay in storage forever.
+   * Keys are listed and deletes issued in one synchronous turn, so a store made after this
+   * call is never deleted by it. Keys of other formats are left alone. Never rejects.
+   */
+  async prune(keep: (scope: ScopeIdentity) => boolean): Promise<PruneOutcome> {
+    let keys: readonly string[];
+    try {
+      keys = this.storage.keys?.() ?? [];
+    } catch {
+      return { removed: 0, failures: 1 };
+    }
+    const deletes: Promise<string | undefined>[] = [];
+    for (const key of keys) {
+      const scope = scopeOfKey(key);
+      if (scope !== undefined && !keepSafely(keep, scope)) {
+        deletes.push(this.writeValue(key, undefined));
+      }
+    }
+    const failures = (await Promise.all(deletes)).filter(
+      (failure) => failure !== undefined,
+    ).length;
+    return { removed: deletes.length - failures, failures };
   }
 
   /** Throws only if the store's `get` throws. */

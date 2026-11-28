@@ -122,6 +122,21 @@ describe('BackgroundDetector identity (US3)', () => {
     expect(detector.version).toBe('claude:fp-0123456789abcdef');
   });
 
+  test('versions lists both modes as they are now, whichever is active', () => {
+    const { detector, mock } = setup();
+    expect(detector.versions).toEqual([
+      'mock:mock-1',
+      'claude:fp-0123456789abcdef',
+    ]);
+
+    detector.setMode('real');
+    mock.setVersion('mock-2');
+    expect(detector.versions).toEqual([
+      'mock:mock-2',
+      'claude:fp-0123456789abcdef',
+    ]);
+  });
+
   test('a switch announces once, after the version changed; the same mode is a no-op', () => {
     const { detector, announced } = setup();
 
