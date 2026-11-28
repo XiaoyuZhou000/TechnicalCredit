@@ -171,9 +171,10 @@ The setting `technicalcredit.background.detector` (user settings) chooses the de
   disabled.
 
 Switching takes effect at once. Open Java files are analysed again under the other
-detector, and results from one are never reused for the other. While a file has syntax
-errors, analysis is skipped (`technicalcredit skipped: syntax errors …`) until it parses
-cleanly again, and no cooldown starts.
+detector, and results from one are never reused for the other. In real mode, once live
+calls are permitted, a file with syntax errors is skipped
+(`technicalcredit skipped: syntax errors …`) until it parses cleanly again, and no cooldown
+starts. The mock analyses every snapshot, as in Sprint 1.
 
 After upgrading to this version, the first start logs one detector identity change
 (`mock@mock-1 → technicalcredit@mock:mock-1`) and analyses the open files once more.

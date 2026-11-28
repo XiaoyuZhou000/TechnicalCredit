@@ -76,6 +76,11 @@ function readDetectorMode():
   const value = vscode.workspace
     .getConfiguration(SETTINGS_SECTION)
     .get<unknown>(DETECTOR_SETTING);
+  // Unset reads as undefined when the host hasn't registered the contributed default (seen in
+  // an Extension Development Host started before the setting existed); that is the default.
+  if (value === undefined) {
+    return { mode: DEFAULT_MODE };
+  }
   return value === 'mock' || value === 'real'
     ? { mode: value }
     : {
