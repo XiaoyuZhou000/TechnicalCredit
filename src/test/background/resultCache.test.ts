@@ -5,7 +5,6 @@ import {
   CACHE_CAPACITY,
   CACHE_FORMAT,
   CACHE_KEY_PREFIX,
-  LEGACY_KEY_PREFIX,
   ResultCache,
   sha256Hex,
   type CacheIdentity,
@@ -75,10 +74,9 @@ describe('sha256Hex', () => {
 });
 
 describe('cache format', () => {
-  it('stores format 2 under its own prefix, and knows the v1 prefix it migrates (card 16A)', () => {
+  it('stores format 2 under its own prefix (card 16A)', () => {
     expect(CACHE_FORMAT).toBe(2);
     expect(CACHE_KEY_PREFIX).toBe('technicalCredit.resultCache.v2:');
-    expect(LEGACY_KEY_PREFIX).toBe('technicalCredit.resultCache.v1:');
     expect(CACHE_CAPACITY).toBe(4);
   });
 });
@@ -238,7 +236,6 @@ describe('ResultCache across restarts and bad storage', () => {
       storeFailures: 0,
       evicted: 0,
       notRetained: 0,
-      migrated: 0,
       recencyFailures: 0,
     });
     const lookup = after.lookup(identity());
@@ -464,7 +461,6 @@ describe('ResultCache stats', () => {
       storeFailures: 1,
       evicted: 0,
       notRetained: 0,
-      migrated: 0,
       recencyFailures: 0,
     });
     expect(Object.isFrozen(stats)).toBe(true);
