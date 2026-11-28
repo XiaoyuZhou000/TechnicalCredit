@@ -41,7 +41,7 @@ export function fileTimeoutMs(typeCount: number): number {
 export interface RealDetectorOptions {
   /** Bound to `callClaude` only in the composition root; tests pass a fake. */
   readonly client: ClaudeClient;
-  /** The ADRs of the snapshot's workspace, read by the caller; empty skips ADR matching. */
+  /** The ADRs to match against, read by the caller; empty skips ADR matching. */
   readonly adrsFor: (input: DetectorInput) => readonly AdrSummary[];
   /** For the file time limit (card 14 US2), so tests can drive it with fake timers. */
   readonly clock: Pick<Clock, 'setTimeout' | 'clearTimeout'>;

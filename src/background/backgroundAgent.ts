@@ -6,7 +6,6 @@ import {
   type DetectorMode,
   type LiveCallGate,
 } from '@/background/detector/backgroundDetector';
-import type { DetectorInput } from '@/background/detector/detector';
 import {
   DEFAULT_MOCK_VERSION,
   MockDetector,
@@ -88,12 +87,37 @@ function readDetectorMode():
       };
 }
 
-/** The ADRs of the snapshot's own workspace folder, read as the manual command reads them. */
-function adrsFor(input: DetectorInput): readonly AdrSummary[] {
-  const folder = vscode.workspace.workspaceFolders?.find(
-    (f) => f.uri.toString() === input.workspaceId,
+/**
+ * The ADRs the manual command reads: those of the first workspace folder, whichever folder the
+ * file is in, so both find the same matches. `findAdrs` reads the disk synchronously on the
+ * extension host, so the answer is kept until something under a `docs` folder changes or the
+ * first folder does.
+ */
+function createAdrReader(): vscode.Disposable & {
+  readonly read: () => readonly AdrSummary[];
+} {
+  let cached:
+    | { readonly root: string; readonly adrs: readonly AdrSummary[] }
+    | undefined;
+  const watcher = vscode.workspace.createFileSystemWatcher(
+    '{**/docs,**/docs/**}',
   );
-  return folder === undefined ? [] : findAdrs(folder.uri.fsPath);
+  const forget = (): void => {
+    cached = undefined;
+  };
+  watcher.onDidCreate(forget);
+  watcher.onDidChange(forget);
+  watcher.onDidDelete(forget);
+  return {
+    read: () => {
+      const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '';
+      if (cached?.root !== root) {
+        cached = { root, adrs: root === '' ? [] : findAdrs(root) };
+      }
+      return cached.adrs;
+    },
+    dispose: () => watcher.dispose(),
+  };
 }
 
 function settingIgnored(
@@ -143,10 +167,11 @@ export function startBackgroundAgent(context: vscode.ExtensionContext): void {
     );
   }
   // Card 14: the same detection core as the manual command. Its client is bound only here.
+  const adrs = createAdrReader();
   const real = new RealDetector({
     client: (systemPrompt, userMessage, signal) =>
       callClaude(systemPrompt, userMessage, signal),
-    adrsFor,
+    adrsFor: () => adrs.read(),
     clock: realClock,
     fileNameOf: (fileUri) => vscode.Uri.parse(fileUri).fsPath,
   });
@@ -257,6 +282,7 @@ export function startBackgroundAgent(context: vscode.ExtensionContext): void {
     tracker,
     scheduler,
     { dispose: () => detector.dispose() },
+    adrs,
     channel,
   );
   // Last, so a start that throws earlier keeps the old identity and is detected again (card 11).
