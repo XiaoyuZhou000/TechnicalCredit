@@ -19,8 +19,10 @@ import {
 /**
  * Bump when detection logic that can't be rendered changes findings: what `validateAnswer.ts`
  * accepts, the set of calls `detectTechnicalCredit` makes, or how `realDetector.ts` selects
- * types and maps findings. Prompt, template and model changes need no bump: they change the
- * fingerprint on their own.
+ * types and maps findings. Also bump when the context sent for real code changes:
+ * `buildContext.ts`, `enumerateConstructs.ts` or the `javaParser/` extraction they share. The user
+ * prompt sample renders a fixed `TcContext`, so it never sees those changes. Prompt, template
+ * and model changes need no bump: they change the fingerprint on their own.
  */
 export const DETECTION_LOGIC_REVISION = 1;
 
