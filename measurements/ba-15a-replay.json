@@ -1,0 +1,2424 @@
+{
+  "note": "serviceMs values are assumptions until the live sample measures them (card 15A)",
+  "serviceMs": [
+    10000,
+    20000,
+    40000
+  ],
+  "grid": {
+    "quietMs": [
+      1000,
+      2000,
+      3000,
+      5000
+    ],
+    "cooldownMs": [
+      0,
+      10000,
+      30000,
+      60000
+    ]
+  },
+  "cells": [
+    {
+      "trace": "burst-pause",
+      "quietMs": 1000,
+      "cooldownMs": 0,
+      "serviceMs": 10000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 11000,
+      "waitMs": 2000
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 1000,
+      "cooldownMs": 0,
+      "serviceMs": 20000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 28600,
+      "waitMs": 9600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 1000,
+      "cooldownMs": 0,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 68600,
+      "waitMs": 29600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 1000,
+      "cooldownMs": 10000,
+      "serviceMs": 10000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 18600,
+      "waitMs": 9600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 1000,
+      "cooldownMs": 10000,
+      "serviceMs": 20000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 38600,
+      "waitMs": 19600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 1000,
+      "cooldownMs": 10000,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 78600,
+      "waitMs": 39600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 1000,
+      "cooldownMs": 30000,
+      "serviceMs": 10000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 38600,
+      "waitMs": 29600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 1000,
+      "cooldownMs": 30000,
+      "serviceMs": 20000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 58600,
+      "waitMs": 39600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 1000,
+      "cooldownMs": 30000,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 98600,
+      "waitMs": 59600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 1000,
+      "cooldownMs": 60000,
+      "serviceMs": 10000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 68600,
+      "waitMs": 59600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 1000,
+      "cooldownMs": 60000,
+      "serviceMs": 20000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 88600,
+      "waitMs": 69600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 1000,
+      "cooldownMs": 60000,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 128600,
+      "waitMs": 89600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 2000,
+      "cooldownMs": 0,
+      "serviceMs": 10000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 12000,
+      "waitMs": 4000
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 2000,
+      "cooldownMs": 0,
+      "serviceMs": 20000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 29600,
+      "waitMs": 11600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 2000,
+      "cooldownMs": 0,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 69600,
+      "waitMs": 31600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 2000,
+      "cooldownMs": 10000,
+      "serviceMs": 10000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 19600,
+      "waitMs": 11600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 2000,
+      "cooldownMs": 10000,
+      "serviceMs": 20000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 39600,
+      "waitMs": 21600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 2000,
+      "cooldownMs": 10000,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 79600,
+      "waitMs": 41600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 2000,
+      "cooldownMs": 30000,
+      "serviceMs": 10000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 39600,
+      "waitMs": 31600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 2000,
+      "cooldownMs": 30000,
+      "serviceMs": 20000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 59600,
+      "waitMs": 41600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 2000,
+      "cooldownMs": 30000,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 99600,
+      "waitMs": 61600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 2000,
+      "cooldownMs": 60000,
+      "serviceMs": 10000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 69600,
+      "waitMs": 61600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 2000,
+      "cooldownMs": 60000,
+      "serviceMs": 20000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 89600,
+      "waitMs": 71600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 2000,
+      "cooldownMs": 60000,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 129600,
+      "waitMs": 91600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 3000,
+      "cooldownMs": 0,
+      "serviceMs": 10000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 13000,
+      "waitMs": 6000
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 3000,
+      "cooldownMs": 0,
+      "serviceMs": 20000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 30600,
+      "waitMs": 13600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 3000,
+      "cooldownMs": 0,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 70600,
+      "waitMs": 33600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 3000,
+      "cooldownMs": 10000,
+      "serviceMs": 10000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 20600,
+      "waitMs": 13600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 3000,
+      "cooldownMs": 10000,
+      "serviceMs": 20000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 40600,
+      "waitMs": 23600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 3000,
+      "cooldownMs": 10000,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 80600,
+      "waitMs": 43600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 3000,
+      "cooldownMs": 30000,
+      "serviceMs": 10000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 40600,
+      "waitMs": 33600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 3000,
+      "cooldownMs": 30000,
+      "serviceMs": 20000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 60600,
+      "waitMs": 43600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 3000,
+      "cooldownMs": 30000,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 100600,
+      "waitMs": 63600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 3000,
+      "cooldownMs": 60000,
+      "serviceMs": 10000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 70600,
+      "waitMs": 63600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 3000,
+      "cooldownMs": 60000,
+      "serviceMs": 20000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 90600,
+      "waitMs": 73600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 3000,
+      "cooldownMs": 60000,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 130600,
+      "waitMs": 93600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 5000,
+      "cooldownMs": 0,
+      "serviceMs": 10000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 15000,
+      "waitMs": 10000
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 5000,
+      "cooldownMs": 0,
+      "serviceMs": 20000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 32600,
+      "waitMs": 17600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 5000,
+      "cooldownMs": 0,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 72600,
+      "waitMs": 37600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 5000,
+      "cooldownMs": 10000,
+      "serviceMs": 10000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 22600,
+      "waitMs": 17600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 5000,
+      "cooldownMs": 10000,
+      "serviceMs": 20000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 42600,
+      "waitMs": 27600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 5000,
+      "cooldownMs": 10000,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 82600,
+      "waitMs": 47600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 5000,
+      "cooldownMs": 30000,
+      "serviceMs": 10000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 42600,
+      "waitMs": 37600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 5000,
+      "cooldownMs": 30000,
+      "serviceMs": 20000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 62600,
+      "waitMs": 47600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 5000,
+      "cooldownMs": 30000,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 102600,
+      "waitMs": 67600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 5000,
+      "cooldownMs": 60000,
+      "serviceMs": 10000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 72600,
+      "waitMs": 67600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 5000,
+      "cooldownMs": 60000,
+      "serviceMs": 20000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 92600,
+      "waitMs": 77600
+    },
+    {
+      "trace": "burst-pause",
+      "quietMs": 5000,
+      "cooldownMs": 60000,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 132600,
+      "waitMs": 97600
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 1000,
+      "cooldownMs": 0,
+      "serviceMs": 10000,
+      "calls": 4,
+      "stale": 3,
+      "toCurrentMs": 12000,
+      "waitMs": 5000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 1000,
+      "cooldownMs": 0,
+      "serviceMs": 20000,
+      "calls": 3,
+      "stale": 2,
+      "toCurrentMs": 32000,
+      "waitMs": 14000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 1000,
+      "cooldownMs": 0,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 51000,
+      "waitMs": 12000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 1000,
+      "cooldownMs": 10000,
+      "serviceMs": 10000,
+      "calls": 3,
+      "stale": 2,
+      "toCurrentMs": 21000,
+      "waitMs": 13500
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 1000,
+      "cooldownMs": 10000,
+      "serviceMs": 20000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 21000,
+      "waitMs": 2000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 1000,
+      "cooldownMs": 10000,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 61000,
+      "waitMs": 22000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 1000,
+      "cooldownMs": 30000,
+      "serviceMs": 10000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 21000,
+      "waitMs": 12000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 1000,
+      "cooldownMs": 30000,
+      "serviceMs": 20000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 41000,
+      "waitMs": 22000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 1000,
+      "cooldownMs": 30000,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 81000,
+      "waitMs": 42000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 1000,
+      "cooldownMs": 60000,
+      "serviceMs": 10000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 51000,
+      "waitMs": 42000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 1000,
+      "cooldownMs": 60000,
+      "serviceMs": 20000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 71000,
+      "waitMs": 52000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 1000,
+      "cooldownMs": 60000,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 111000,
+      "waitMs": 72000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 2000,
+      "cooldownMs": 0,
+      "serviceMs": 10000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 12000,
+      "waitMs": 2000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 2000,
+      "cooldownMs": 0,
+      "serviceMs": 20000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 22000,
+      "waitMs": 2000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 2000,
+      "cooldownMs": 0,
+      "serviceMs": 40000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 42000,
+      "waitMs": 2000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 2000,
+      "cooldownMs": 10000,
+      "serviceMs": 10000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 12000,
+      "waitMs": 2000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 2000,
+      "cooldownMs": 10000,
+      "serviceMs": 20000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 22000,
+      "waitMs": 2000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 2000,
+      "cooldownMs": 10000,
+      "serviceMs": 40000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 42000,
+      "waitMs": 2000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 2000,
+      "cooldownMs": 30000,
+      "serviceMs": 10000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 12000,
+      "waitMs": 2000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 2000,
+      "cooldownMs": 30000,
+      "serviceMs": 20000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 22000,
+      "waitMs": 2000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 2000,
+      "cooldownMs": 30000,
+      "serviceMs": 40000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 42000,
+      "waitMs": 2000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 2000,
+      "cooldownMs": 60000,
+      "serviceMs": 10000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 12000,
+      "waitMs": 2000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 2000,
+      "cooldownMs": 60000,
+      "serviceMs": 20000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 22000,
+      "waitMs": 2000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 2000,
+      "cooldownMs": 60000,
+      "serviceMs": 40000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 42000,
+      "waitMs": 2000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 3000,
+      "cooldownMs": 0,
+      "serviceMs": 10000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 13000,
+      "waitMs": 3000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 3000,
+      "cooldownMs": 0,
+      "serviceMs": 20000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 23000,
+      "waitMs": 3000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 3000,
+      "cooldownMs": 0,
+      "serviceMs": 40000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 43000,
+      "waitMs": 3000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 3000,
+      "cooldownMs": 10000,
+      "serviceMs": 10000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 13000,
+      "waitMs": 3000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 3000,
+      "cooldownMs": 10000,
+      "serviceMs": 20000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 23000,
+      "waitMs": 3000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 3000,
+      "cooldownMs": 10000,
+      "serviceMs": 40000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 43000,
+      "waitMs": 3000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 3000,
+      "cooldownMs": 30000,
+      "serviceMs": 10000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 13000,
+      "waitMs": 3000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 3000,
+      "cooldownMs": 30000,
+      "serviceMs": 20000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 23000,
+      "waitMs": 3000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 3000,
+      "cooldownMs": 30000,
+      "serviceMs": 40000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 43000,
+      "waitMs": 3000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 3000,
+      "cooldownMs": 60000,
+      "serviceMs": 10000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 13000,
+      "waitMs": 3000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 3000,
+      "cooldownMs": 60000,
+      "serviceMs": 20000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 23000,
+      "waitMs": 3000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 3000,
+      "cooldownMs": 60000,
+      "serviceMs": 40000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 43000,
+      "waitMs": 3000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 5000,
+      "cooldownMs": 0,
+      "serviceMs": 10000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 15000,
+      "waitMs": 5000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 5000,
+      "cooldownMs": 0,
+      "serviceMs": 20000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 25000,
+      "waitMs": 5000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 5000,
+      "cooldownMs": 0,
+      "serviceMs": 40000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 45000,
+      "waitMs": 5000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 5000,
+      "cooldownMs": 10000,
+      "serviceMs": 10000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 15000,
+      "waitMs": 5000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 5000,
+      "cooldownMs": 10000,
+      "serviceMs": 20000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 25000,
+      "waitMs": 5000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 5000,
+      "cooldownMs": 10000,
+      "serviceMs": 40000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 45000,
+      "waitMs": 5000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 5000,
+      "cooldownMs": 30000,
+      "serviceMs": 10000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 15000,
+      "waitMs": 5000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 5000,
+      "cooldownMs": 30000,
+      "serviceMs": 20000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 25000,
+      "waitMs": 5000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 5000,
+      "cooldownMs": 30000,
+      "serviceMs": 40000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 45000,
+      "waitMs": 5000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 5000,
+      "cooldownMs": 60000,
+      "serviceMs": 10000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 15000,
+      "waitMs": 5000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 5000,
+      "cooldownMs": 60000,
+      "serviceMs": 20000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 25000,
+      "waitMs": 5000
+    },
+    {
+      "trace": "slow-typing",
+      "quietMs": 5000,
+      "cooldownMs": 60000,
+      "serviceMs": 40000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 45000,
+      "waitMs": 5000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 1000,
+      "cooldownMs": 0,
+      "serviceMs": 10000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 9000,
+      "waitMs": 11000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 1000,
+      "cooldownMs": 0,
+      "serviceMs": 20000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 5000,
+      "waitMs": 1000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 1000,
+      "cooldownMs": 0,
+      "serviceMs": 40000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 25000,
+      "waitMs": 1000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 1000,
+      "cooldownMs": 10000,
+      "serviceMs": 10000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 1000,
+      "waitMs": 2000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 1000,
+      "cooldownMs": 10000,
+      "serviceMs": 20000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 5000,
+      "waitMs": 1000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 1000,
+      "cooldownMs": 10000,
+      "serviceMs": 40000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 25000,
+      "waitMs": 1000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 1000,
+      "cooldownMs": 30000,
+      "serviceMs": 10000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 1000,
+      "waitMs": 2000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 1000,
+      "cooldownMs": 30000,
+      "serviceMs": 20000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 5000,
+      "waitMs": 1000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 1000,
+      "cooldownMs": 30000,
+      "serviceMs": 40000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 25000,
+      "waitMs": 1000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 1000,
+      "cooldownMs": 60000,
+      "serviceMs": 10000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 1000,
+      "waitMs": 2000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 1000,
+      "cooldownMs": 60000,
+      "serviceMs": 20000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 5000,
+      "waitMs": 1000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 1000,
+      "cooldownMs": 60000,
+      "serviceMs": 40000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 25000,
+      "waitMs": 1000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 2000,
+      "cooldownMs": 0,
+      "serviceMs": 10000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 10000,
+      "waitMs": 14000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 2000,
+      "cooldownMs": 0,
+      "serviceMs": 20000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 6000,
+      "waitMs": 2000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 2000,
+      "cooldownMs": 0,
+      "serviceMs": 40000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 26000,
+      "waitMs": 2000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 2000,
+      "cooldownMs": 10000,
+      "serviceMs": 10000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 2000,
+      "waitMs": 4000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 2000,
+      "cooldownMs": 10000,
+      "serviceMs": 20000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 6000,
+      "waitMs": 2000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 2000,
+      "cooldownMs": 10000,
+      "serviceMs": 40000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 26000,
+      "waitMs": 2000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 2000,
+      "cooldownMs": 30000,
+      "serviceMs": 10000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 2000,
+      "waitMs": 4000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 2000,
+      "cooldownMs": 30000,
+      "serviceMs": 20000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 6000,
+      "waitMs": 2000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 2000,
+      "cooldownMs": 30000,
+      "serviceMs": 40000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 26000,
+      "waitMs": 2000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 2000,
+      "cooldownMs": 60000,
+      "serviceMs": 10000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 2000,
+      "waitMs": 4000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 2000,
+      "cooldownMs": 60000,
+      "serviceMs": 20000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 6000,
+      "waitMs": 2000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 2000,
+      "cooldownMs": 60000,
+      "serviceMs": 40000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 26000,
+      "waitMs": 2000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 3000,
+      "cooldownMs": 0,
+      "serviceMs": 10000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 3000,
+      "waitMs": 6000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 3000,
+      "cooldownMs": 0,
+      "serviceMs": 20000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 7000,
+      "waitMs": 3000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 3000,
+      "cooldownMs": 0,
+      "serviceMs": 40000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 27000,
+      "waitMs": 3000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 3000,
+      "cooldownMs": 10000,
+      "serviceMs": 10000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 3000,
+      "waitMs": 6000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 3000,
+      "cooldownMs": 10000,
+      "serviceMs": 20000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 7000,
+      "waitMs": 3000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 3000,
+      "cooldownMs": 10000,
+      "serviceMs": 40000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 27000,
+      "waitMs": 3000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 3000,
+      "cooldownMs": 30000,
+      "serviceMs": 10000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 3000,
+      "waitMs": 6000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 3000,
+      "cooldownMs": 30000,
+      "serviceMs": 20000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 7000,
+      "waitMs": 3000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 3000,
+      "cooldownMs": 30000,
+      "serviceMs": 40000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 27000,
+      "waitMs": 3000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 3000,
+      "cooldownMs": 60000,
+      "serviceMs": 10000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 3000,
+      "waitMs": 6000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 3000,
+      "cooldownMs": 60000,
+      "serviceMs": 20000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 7000,
+      "waitMs": 3000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 3000,
+      "cooldownMs": 60000,
+      "serviceMs": 40000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 27000,
+      "waitMs": 3000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 5000,
+      "cooldownMs": 0,
+      "serviceMs": 10000,
+      "calls": 1,
+      "stale": 1,
+      "toCurrentMs": 5000,
+      "waitMs": 10000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 5000,
+      "cooldownMs": 0,
+      "serviceMs": 20000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 9000,
+      "waitMs": 5000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 5000,
+      "cooldownMs": 0,
+      "serviceMs": 40000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 29000,
+      "waitMs": 5000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 5000,
+      "cooldownMs": 10000,
+      "serviceMs": 10000,
+      "calls": 1,
+      "stale": 1,
+      "toCurrentMs": 5000,
+      "waitMs": 10000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 5000,
+      "cooldownMs": 10000,
+      "serviceMs": 20000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 9000,
+      "waitMs": 5000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 5000,
+      "cooldownMs": 10000,
+      "serviceMs": 40000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 29000,
+      "waitMs": 5000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 5000,
+      "cooldownMs": 30000,
+      "serviceMs": 10000,
+      "calls": 1,
+      "stale": 1,
+      "toCurrentMs": 5000,
+      "waitMs": 10000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 5000,
+      "cooldownMs": 30000,
+      "serviceMs": 20000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 9000,
+      "waitMs": 5000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 5000,
+      "cooldownMs": 30000,
+      "serviceMs": 40000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 29000,
+      "waitMs": 5000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 5000,
+      "cooldownMs": 60000,
+      "serviceMs": 10000,
+      "calls": 1,
+      "stale": 1,
+      "toCurrentMs": 5000,
+      "waitMs": 10000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 5000,
+      "cooldownMs": 60000,
+      "serviceMs": 20000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 9000,
+      "waitMs": 5000
+    },
+    {
+      "trace": "undo-back",
+      "quietMs": 5000,
+      "cooldownMs": 60000,
+      "serviceMs": 40000,
+      "calls": 1,
+      "stale": 0,
+      "toCurrentMs": 29000,
+      "waitMs": 5000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 1000,
+      "cooldownMs": 0,
+      "serviceMs": 10000,
+      "calls": 7,
+      "stale": 6,
+      "toCurrentMs": 16000,
+      "waitMs": 12000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 1000,
+      "cooldownMs": 0,
+      "serviceMs": 20000,
+      "calls": 4,
+      "stale": 3,
+      "toCurrentMs": 26000,
+      "waitMs": 9000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 1000,
+      "cooldownMs": 0,
+      "serviceMs": 40000,
+      "calls": 3,
+      "stale": 2,
+      "toCurrentMs": 66000,
+      "waitMs": 28000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 1000,
+      "cooldownMs": 10000,
+      "serviceMs": 10000,
+      "calls": 4,
+      "stale": 3,
+      "toCurrentMs": 16000,
+      "waitMs": 9000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 1000,
+      "cooldownMs": 10000,
+      "serviceMs": 20000,
+      "calls": 3,
+      "stale": 2,
+      "toCurrentMs": 26000,
+      "waitMs": 8000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 1000,
+      "cooldownMs": 10000,
+      "serviceMs": 40000,
+      "calls": 3,
+      "stale": 2,
+      "toCurrentMs": 86000,
+      "waitMs": 48000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 1000,
+      "cooldownMs": 30000,
+      "serviceMs": 10000,
+      "calls": 3,
+      "stale": 2,
+      "toCurrentMs": 36000,
+      "waitMs": 28000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 1000,
+      "cooldownMs": 30000,
+      "serviceMs": 20000,
+      "calls": 3,
+      "stale": 2,
+      "toCurrentMs": 66000,
+      "waitMs": 48000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 1000,
+      "cooldownMs": 30000,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 56000,
+      "waitMs": 17000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 1000,
+      "cooldownMs": 60000,
+      "serviceMs": 10000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 26000,
+      "waitMs": 17000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 1000,
+      "cooldownMs": 60000,
+      "serviceMs": 20000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 46000,
+      "waitMs": 27000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 1000,
+      "cooldownMs": 60000,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 86000,
+      "waitMs": 47000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 2000,
+      "cooldownMs": 0,
+      "serviceMs": 10000,
+      "calls": 7,
+      "stale": 6,
+      "toCurrentMs": 17000,
+      "waitMs": 19000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 2000,
+      "cooldownMs": 0,
+      "serviceMs": 20000,
+      "calls": 4,
+      "stale": 3,
+      "toCurrentMs": 27000,
+      "waitMs": 13000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 2000,
+      "cooldownMs": 0,
+      "serviceMs": 40000,
+      "calls": 3,
+      "stale": 2,
+      "toCurrentMs": 67000,
+      "waitMs": 31000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 2000,
+      "cooldownMs": 10000,
+      "serviceMs": 10000,
+      "calls": 4,
+      "stale": 3,
+      "toCurrentMs": 17000,
+      "waitMs": 13000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 2000,
+      "cooldownMs": 10000,
+      "serviceMs": 20000,
+      "calls": 3,
+      "stale": 2,
+      "toCurrentMs": 27000,
+      "waitMs": 11000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 2000,
+      "cooldownMs": 10000,
+      "serviceMs": 40000,
+      "calls": 3,
+      "stale": 2,
+      "toCurrentMs": 87000,
+      "waitMs": 51000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 2000,
+      "cooldownMs": 30000,
+      "serviceMs": 10000,
+      "calls": 3,
+      "stale": 2,
+      "toCurrentMs": 37000,
+      "waitMs": 31000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 2000,
+      "cooldownMs": 30000,
+      "serviceMs": 20000,
+      "calls": 3,
+      "stale": 2,
+      "toCurrentMs": 67000,
+      "waitMs": 51000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 2000,
+      "cooldownMs": 30000,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 57000,
+      "waitMs": 19000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 2000,
+      "cooldownMs": 60000,
+      "serviceMs": 10000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 27000,
+      "waitMs": 19000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 2000,
+      "cooldownMs": 60000,
+      "serviceMs": 20000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 47000,
+      "waitMs": 29000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 2000,
+      "cooldownMs": 60000,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 87000,
+      "waitMs": 49000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 3000,
+      "cooldownMs": 0,
+      "serviceMs": 10000,
+      "calls": 7,
+      "stale": 6,
+      "toCurrentMs": 18000,
+      "waitMs": 26000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 3000,
+      "cooldownMs": 0,
+      "serviceMs": 20000,
+      "calls": 4,
+      "stale": 3,
+      "toCurrentMs": 28000,
+      "waitMs": 17000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 3000,
+      "cooldownMs": 0,
+      "serviceMs": 40000,
+      "calls": 3,
+      "stale": 2,
+      "toCurrentMs": 68000,
+      "waitMs": 34000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 3000,
+      "cooldownMs": 10000,
+      "serviceMs": 10000,
+      "calls": 4,
+      "stale": 3,
+      "toCurrentMs": 18000,
+      "waitMs": 17000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 3000,
+      "cooldownMs": 10000,
+      "serviceMs": 20000,
+      "calls": 3,
+      "stale": 2,
+      "toCurrentMs": 28000,
+      "waitMs": 14000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 3000,
+      "cooldownMs": 10000,
+      "serviceMs": 40000,
+      "calls": 3,
+      "stale": 2,
+      "toCurrentMs": 88000,
+      "waitMs": 54000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 3000,
+      "cooldownMs": 30000,
+      "serviceMs": 10000,
+      "calls": 3,
+      "stale": 2,
+      "toCurrentMs": 38000,
+      "waitMs": 34000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 3000,
+      "cooldownMs": 30000,
+      "serviceMs": 20000,
+      "calls": 3,
+      "stale": 2,
+      "toCurrentMs": 68000,
+      "waitMs": 54000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 3000,
+      "cooldownMs": 30000,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 58000,
+      "waitMs": 21000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 3000,
+      "cooldownMs": 60000,
+      "serviceMs": 10000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 28000,
+      "waitMs": 21000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 3000,
+      "cooldownMs": 60000,
+      "serviceMs": 20000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 48000,
+      "waitMs": 31000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 3000,
+      "cooldownMs": 60000,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 88000,
+      "waitMs": 51000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 5000,
+      "cooldownMs": 0,
+      "serviceMs": 10000,
+      "calls": 5,
+      "stale": 4,
+      "toCurrentMs": 15000,
+      "waitMs": 25000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 5000,
+      "cooldownMs": 0,
+      "serviceMs": 20000,
+      "calls": 4,
+      "stale": 3,
+      "toCurrentMs": 40000,
+      "waitMs": 35000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 5000,
+      "cooldownMs": 0,
+      "serviceMs": 40000,
+      "calls": 3,
+      "stale": 2,
+      "toCurrentMs": 75000,
+      "waitMs": 45000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 5000,
+      "cooldownMs": 10000,
+      "serviceMs": 10000,
+      "calls": 4,
+      "stale": 3,
+      "toCurrentMs": 20000,
+      "waitMs": 25000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 5000,
+      "cooldownMs": 10000,
+      "serviceMs": 20000,
+      "calls": 3,
+      "stale": 2,
+      "toCurrentMs": 30000,
+      "waitMs": 20000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 5000,
+      "cooldownMs": 10000,
+      "serviceMs": 40000,
+      "calls": 3,
+      "stale": 2,
+      "toCurrentMs": 90000,
+      "waitMs": 60000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 5000,
+      "cooldownMs": 30000,
+      "serviceMs": 10000,
+      "calls": 3,
+      "stale": 2,
+      "toCurrentMs": 40000,
+      "waitMs": 40000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 5000,
+      "cooldownMs": 30000,
+      "serviceMs": 20000,
+      "calls": 3,
+      "stale": 2,
+      "toCurrentMs": 70000,
+      "waitMs": 60000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 5000,
+      "cooldownMs": 30000,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 60000,
+      "waitMs": 25000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 5000,
+      "cooldownMs": 60000,
+      "serviceMs": 10000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 30000,
+      "waitMs": 25000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 5000,
+      "cooldownMs": 60000,
+      "serviceMs": 20000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 50000,
+      "waitMs": 35000
+    },
+    {
+      "trace": "save-heavy",
+      "quietMs": 5000,
+      "cooldownMs": 60000,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 90000,
+      "waitMs": 55000
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 1000,
+      "cooldownMs": 0,
+      "serviceMs": 10000,
+      "calls": 3,
+      "stale": 0,
+      "toCurrentMs": 11000,
+      "waitMs": 4000
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 1000,
+      "cooldownMs": 0,
+      "serviceMs": 20000,
+      "calls": 3,
+      "stale": 1,
+      "toCurrentMs": 21000,
+      "waitMs": 4935
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 1000,
+      "cooldownMs": 0,
+      "serviceMs": 40000,
+      "calls": 3,
+      "stale": 2,
+      "toCurrentMs": 65600,
+      "waitMs": 48535
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 1000,
+      "cooldownMs": 10000,
+      "serviceMs": 10000,
+      "calls": 3,
+      "stale": 0,
+      "toCurrentMs": 11000,
+      "waitMs": 4935
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 1000,
+      "cooldownMs": 10000,
+      "serviceMs": 20000,
+      "calls": 3,
+      "stale": 1,
+      "toCurrentMs": 25600,
+      "waitMs": 19535
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 1000,
+      "cooldownMs": 10000,
+      "serviceMs": 40000,
+      "calls": 3,
+      "stale": 2,
+      "toCurrentMs": 85600,
+      "waitMs": 78535
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 1000,
+      "cooldownMs": 30000,
+      "serviceMs": 10000,
+      "calls": 3,
+      "stale": 0,
+      "toCurrentMs": 35600,
+      "waitMs": 49535
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 1000,
+      "cooldownMs": 30000,
+      "serviceMs": 20000,
+      "calls": 3,
+      "stale": 2,
+      "toCurrentMs": 65600,
+      "waitMs": 78535
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 1000,
+      "cooldownMs": 30000,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 55600,
+      "waitMs": 17600
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 1000,
+      "cooldownMs": 60000,
+      "serviceMs": 10000,
+      "calls": 2,
+      "stale": 0,
+      "toCurrentMs": 25600,
+      "waitMs": 17600
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 1000,
+      "cooldownMs": 60000,
+      "serviceMs": 20000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 45600,
+      "waitMs": 27600
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 1000,
+      "cooldownMs": 60000,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 85600,
+      "waitMs": 47600
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 2000,
+      "cooldownMs": 0,
+      "serviceMs": 10000,
+      "calls": 3,
+      "stale": 0,
+      "toCurrentMs": 12000,
+      "waitMs": 6000
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 2000,
+      "cooldownMs": 0,
+      "serviceMs": 20000,
+      "calls": 3,
+      "stale": 1,
+      "toCurrentMs": 22000,
+      "waitMs": 6935
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 2000,
+      "cooldownMs": 0,
+      "serviceMs": 40000,
+      "calls": 3,
+      "stale": 2,
+      "toCurrentMs": 66600,
+      "waitMs": 51535
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 2000,
+      "cooldownMs": 10000,
+      "serviceMs": 10000,
+      "calls": 3,
+      "stale": 0,
+      "toCurrentMs": 12000,
+      "waitMs": 6935
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 2000,
+      "cooldownMs": 10000,
+      "serviceMs": 20000,
+      "calls": 3,
+      "stale": 1,
+      "toCurrentMs": 26600,
+      "waitMs": 21535
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 2000,
+      "cooldownMs": 10000,
+      "serviceMs": 40000,
+      "calls": 3,
+      "stale": 2,
+      "toCurrentMs": 86600,
+      "waitMs": 81535
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 2000,
+      "cooldownMs": 30000,
+      "serviceMs": 10000,
+      "calls": 3,
+      "stale": 0,
+      "toCurrentMs": 36600,
+      "waitMs": 51535
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 2000,
+      "cooldownMs": 30000,
+      "serviceMs": 20000,
+      "calls": 3,
+      "stale": 2,
+      "toCurrentMs": 66600,
+      "waitMs": 81535
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 2000,
+      "cooldownMs": 30000,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 56600,
+      "waitMs": 18600
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 2000,
+      "cooldownMs": 60000,
+      "serviceMs": 10000,
+      "calls": 2,
+      "stale": 0,
+      "toCurrentMs": 26600,
+      "waitMs": 18600
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 2000,
+      "cooldownMs": 60000,
+      "serviceMs": 20000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 46600,
+      "waitMs": 28600
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 2000,
+      "cooldownMs": 60000,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 86600,
+      "waitMs": 48600
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 3000,
+      "cooldownMs": 0,
+      "serviceMs": 10000,
+      "calls": 3,
+      "stale": 0,
+      "toCurrentMs": 13000,
+      "waitMs": 9000
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 3000,
+      "cooldownMs": 0,
+      "serviceMs": 20000,
+      "calls": 3,
+      "stale": 1,
+      "toCurrentMs": 23000,
+      "waitMs": 9935
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 3000,
+      "cooldownMs": 0,
+      "serviceMs": 40000,
+      "calls": 3,
+      "stale": 2,
+      "toCurrentMs": 67600,
+      "waitMs": 54535
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 3000,
+      "cooldownMs": 10000,
+      "serviceMs": 10000,
+      "calls": 3,
+      "stale": 0,
+      "toCurrentMs": 13000,
+      "waitMs": 9935
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 3000,
+      "cooldownMs": 10000,
+      "serviceMs": 20000,
+      "calls": 3,
+      "stale": 1,
+      "toCurrentMs": 27600,
+      "waitMs": 24535
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 3000,
+      "cooldownMs": 10000,
+      "serviceMs": 40000,
+      "calls": 3,
+      "stale": 2,
+      "toCurrentMs": 87600,
+      "waitMs": 84535
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 3000,
+      "cooldownMs": 30000,
+      "serviceMs": 10000,
+      "calls": 3,
+      "stale": 0,
+      "toCurrentMs": 37600,
+      "waitMs": 54535
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 3000,
+      "cooldownMs": 30000,
+      "serviceMs": 20000,
+      "calls": 3,
+      "stale": 2,
+      "toCurrentMs": 67600,
+      "waitMs": 84535
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 3000,
+      "cooldownMs": 30000,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 57600,
+      "waitMs": 20600
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 3000,
+      "cooldownMs": 60000,
+      "serviceMs": 10000,
+      "calls": 2,
+      "stale": 0,
+      "toCurrentMs": 27600,
+      "waitMs": 20600
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 3000,
+      "cooldownMs": 60000,
+      "serviceMs": 20000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 47600,
+      "waitMs": 30600
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 3000,
+      "cooldownMs": 60000,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 87600,
+      "waitMs": 50600
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 5000,
+      "cooldownMs": 0,
+      "serviceMs": 10000,
+      "calls": 3,
+      "stale": 0,
+      "toCurrentMs": 15000,
+      "waitMs": 15000
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 5000,
+      "cooldownMs": 0,
+      "serviceMs": 20000,
+      "calls": 3,
+      "stale": 1,
+      "toCurrentMs": 25000,
+      "waitMs": 15935
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 5000,
+      "cooldownMs": 0,
+      "serviceMs": 40000,
+      "calls": 3,
+      "stale": 2,
+      "toCurrentMs": 69600,
+      "waitMs": 60535
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 5000,
+      "cooldownMs": 10000,
+      "serviceMs": 10000,
+      "calls": 3,
+      "stale": 0,
+      "toCurrentMs": 15000,
+      "waitMs": 15935
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 5000,
+      "cooldownMs": 10000,
+      "serviceMs": 20000,
+      "calls": 3,
+      "stale": 2,
+      "toCurrentMs": 29600,
+      "waitMs": 30535
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 5000,
+      "cooldownMs": 10000,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 45000,
+      "waitMs": 10000
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 5000,
+      "cooldownMs": 30000,
+      "serviceMs": 10000,
+      "calls": 3,
+      "stale": 1,
+      "toCurrentMs": 39600,
+      "waitMs": 60535
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 5000,
+      "cooldownMs": 30000,
+      "serviceMs": 20000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 25000,
+      "waitMs": 10000
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 5000,
+      "cooldownMs": 30000,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 59600,
+      "waitMs": 24600
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 5000,
+      "cooldownMs": 60000,
+      "serviceMs": 10000,
+      "calls": 2,
+      "stale": 0,
+      "toCurrentMs": 29600,
+      "waitMs": 24600
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 5000,
+      "cooldownMs": 60000,
+      "serviceMs": 20000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 49600,
+      "waitMs": 34600
+    },
+    {
+      "trace": "recorded-f5",
+      "quietMs": 5000,
+      "cooldownMs": 60000,
+      "serviceMs": 40000,
+      "calls": 2,
+      "stale": 1,
+      "toCurrentMs": 89600,
+      "waitMs": 54600
+    }
+  ]
+}
