@@ -1,3 +1,4 @@
+import { performance } from 'perf_hooks';
 import * as vscode from 'vscode';
 
 import { ResultCache, sha256Hex } from '@/background/cache/resultCache';
@@ -25,6 +26,7 @@ import {
   DEFAULT_QUIET_MS,
   Scheduler,
 } from '@/background/scheduler/scheduler';
+import { RequestTimeline } from '@/background/scheduler/timeline';
 import { BackgroundStatus } from '@/background/status/backgroundStatus';
 import { BackgroundStatusPanel } from '@/background/status/statusPanel';
 import { findAdrs, type AdrSummary } from '@/context/findAdrs';
@@ -189,6 +191,12 @@ export function startBackgroundAgent(context: vscode.ExtensionContext): void {
     }
   };
   logGate();
+  // Card 15A: one `timing` line per request or cache hit. Durations use the monotonic clock,
+  // so a wall-clock jump can't distort them; the line keeps the channel's ISO prefix.
+  const timeline = new RequestTimeline({
+    now: () => performance.now(),
+    log: (line) => log(`${new Date(realClock.now()).toISOString()} ${line}`),
+  });
   // Cards 05–07 add coalescing, debounce and cooldown to this scheduler, not a second sink.
   const scheduler = new Scheduler({
     inner: createLoggingSink(log),
@@ -200,6 +208,7 @@ export function startBackgroundAgent(context: vscode.ExtensionContext): void {
     quietMs: DEFAULT_QUIET_MS,
     cooldownMs: DEFAULT_COOLDOWN_MS,
     maxConcurrent: DEFAULT_MAX_CONCURRENT,
+    observer: timeline,
   });
   // Compared before the startup scan, so the change is known when its count is logged. Only
   // the settings listener below can announce a change, and it exists only once the monitor does.
