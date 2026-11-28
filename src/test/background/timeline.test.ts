@@ -169,6 +169,7 @@ describe('RequestTimeline (card 15A US1)', () => {
         quietMs: 3000,
         cooldownMs: 0,
         inFlightMs: 0,
+        lateMs: 0,
         slotMs: 0,
         detectorMs: 2000,
         outcome: 'done',
@@ -177,7 +178,7 @@ describe('RequestTimeline (card 15A US1)', () => {
       },
     ]);
     expect(timingLines(lines)).toEqual([
-      `timing #1 v4 scripted@1 wait quiet=3000 cooldown=0 inflight=0 slot=0 detector=2000 outcome=done findings=2 delivery=n/a ${A}`,
+      `timing #1 v4 scripted@1 wait quiet=3000 cooldown=0 inflight=0 late=0 slot=0 detector=2000 outcome=done findings=2 delivery=n/a ${A}`,
     ]);
   });
 
@@ -210,6 +211,7 @@ describe('RequestTimeline (card 15A US1)', () => {
       quietMs: 1000,
       cooldownMs: 3000,
       inFlightMs: 0,
+      lateMs: 0,
       slotMs: 2000,
       detectorMs: 1000,
       outcome: 'done',
@@ -246,7 +248,7 @@ describe('RequestTimeline (card 15A US1)', () => {
     expect(timeline.records()[0].n).toBeUndefined();
     expect(scheduler.stats().started).toBe(0);
     expect(timingLines(lines)).toEqual([
-      `timing hit v1 scripted@1 wait quiet=3000 cooldown=0 inflight=0 slot=0 detector=0 outcome=hit findings=3 delivery=n/a ${A}`,
+      `timing hit v1 scripted@1 wait quiet=3000 cooldown=0 inflight=0 late=0 slot=0 detector=0 outcome=hit findings=3 delivery=n/a ${A}`,
     ]);
   });
 
@@ -323,6 +325,7 @@ describe('RequestTimeline (card 15A US1)', () => {
         quietMs: 3000,
         cooldownMs: 0,
         inFlightMs: 0,
+        lateMs: 0,
         slotMs: 0.4,
         detectorMs: 12_345.6,
         outcome: 'skipped',
@@ -330,7 +333,7 @@ describe('RequestTimeline (card 15A US1)', () => {
         delivery: 'n/a',
       }),
     ).toBe(
-      `timing #7 v3 technicalcredit@claude:fp-1 wait quiet=3000 cooldown=0 inflight=0 slot=0 detector=12346 outcome=skipped:live-disabled delivery=n/a ${A}`,
+      `timing #7 v3 technicalcredit@claude:fp-1 wait quiet=3000 cooldown=0 inflight=0 late=0 slot=0 detector=12346 outcome=skipped:live-disabled delivery=n/a ${A}`,
     );
   });
 });

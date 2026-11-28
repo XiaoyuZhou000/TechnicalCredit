@@ -59,7 +59,7 @@ export interface ReplayCell {
    * hit for that content); `null` if none did by the end of the replay.
    */
   readonly toCurrentMs: number | null;
-  /** Quiet, cooldown, in-flight and slot waiting, summed over every request and hit. */
+  /** Quiet, cooldown, in-flight, late and slot waiting, summed over every request and hit. */
   readonly waitMs: number;
 }
 
@@ -300,7 +300,8 @@ export async function replayCell(
     stale,
     toCurrentMs: currentAt === undefined ? null : currentAt - lastAt,
     waitMs: records.reduce(
-      (sum, r) => sum + r.quietMs + r.cooldownMs + r.inFlightMs + r.slotMs,
+      (sum, r) =>
+        sum + r.quietMs + r.cooldownMs + r.inFlightMs + r.lateMs + r.slotMs,
       0,
     ),
   };

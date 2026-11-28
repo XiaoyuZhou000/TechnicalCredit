@@ -153,7 +153,7 @@ describe('the scheduler notifies an optional observer (card 15A)', () => {
       [
         'due',
         'A.java v1 scripted@1',
-        { quietMs: QUIET, cooldownMs: 0, inFlightMs: 0 },
+        { quietMs: QUIET, cooldownMs: 0, inFlightMs: 0, lateMs: 0 },
       ],
       ['started', 'A.java v1 scripted@1', 1],
       ['settled', 'A.java v1 scripted@1', 1, true],
@@ -176,8 +176,45 @@ describe('the scheduler notifies an optional observer (card 15A)', () => {
     expect(events.find((e) => e[0] === 'due' && e[1].includes('v2'))).toEqual([
       'due',
       'A.java v2 scripted@1',
-      { quietMs: QUIET, cooldownMs: 26_000, inFlightMs: 0 },
+      { quietMs: QUIET, cooldownMs: 26_000, inFlightMs: 0, lateMs: 0 },
     ]);
+  });
+
+  // Found in F5: a startup wake-up ran 5 s late and showed as in flight with nothing running.
+  test('counts a wake-up the host ran late as late, not in flight', () => {
+    const { events, observer } = recorder();
+    const fake = createFakeTimers();
+    const lateBy = 5145;
+    const clock = {
+      now: () => fake.now(),
+      setTimeout: (callback: () => void, ms: number) =>
+        fake.setTimeout(callback, ms + lateBy),
+      clearTimeout: (handle: unknown) => fake.clearTimeout(handle),
+    };
+    const scheduler = new Scheduler({
+      inner: { submit: () => undefined, closed: () => undefined },
+      detector: new ScriptedDetector(),
+      cache: new ResultCache({
+        store: createMemoryCacheStore(),
+        now: () => fake.now(),
+      }),
+      hash: sha256Hex,
+      log: () => undefined,
+      clock,
+      quietMs: QUIET,
+      cooldownMs: COOLDOWN,
+      observer,
+    });
+
+    scheduler.submit(snap(fake, A, 'a', 1));
+    fake.advance(QUIET + lateBy);
+
+    expect(events.find((e) => e[0] === 'due')).toEqual([
+      'due',
+      'A.java v1 scripted@1',
+      { quietMs: QUIET, cooldownMs: 0, inFlightMs: 0, lateMs: lateBy },
+    ]);
+    scheduler.dispose();
   });
 
   test('counts the time behind the file’s own running request as in flight', async () => {
@@ -196,7 +233,7 @@ describe('the scheduler notifies an optional observer (card 15A)', () => {
     expect(events.find((e) => e[0] === 'due' && e[1].includes('v2'))).toEqual([
       'due',
       'A.java v2 scripted@1',
-      { quietMs: 0, cooldownMs: 0, inFlightMs: 5000 },
+      { quietMs: 0, cooldownMs: 0, inFlightMs: 5000, lateMs: 0 },
     ]);
     expect(events.filter((e) => e[0] === 'changed').map((e) => e[1])).toEqual([
       'A.java v1 scripted@1',
@@ -229,12 +266,12 @@ describe('the scheduler notifies an optional observer (card 15A)', () => {
       [
         'due',
         'A.java v1 scripted@1',
-        { quietMs: QUIET, cooldownMs: 0, inFlightMs: 0 },
+        { quietMs: QUIET, cooldownMs: 0, inFlightMs: 0, lateMs: 0 },
       ],
       [
         'cacheHit',
         'A.java v1 scripted@1',
-        { quietMs: QUIET, cooldownMs: 0, inFlightMs: 0 },
+        { quietMs: QUIET, cooldownMs: 0, inFlightMs: 0, lateMs: 0 },
         0,
       ],
     ]);

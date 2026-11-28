@@ -471,7 +471,11 @@ Since card 08, `backgroundAgent.ts` plugs in the `Scheduler`, which wraps `loggi
     - **`WaitSplit`** comes from the scheduler's own deadlines, measured from the file's last change:
       - `quietMs` (the quiet period);
       - `cooldownMs` (the part of the cooldown after it);
-      - `inFlightMs`, the rest, time spent behind the file's own running request.
+      - `inFlightMs`, time behind the file's own running request (one that settled after the change);
+      - `lateMs`, anything left: the extension host ran the wake-up after its deadline, as it can while busy at startup.
+
+      The four parts add up to the time since the last change.
+
     - **Timing defaults:** `DEFAULT_QUIET_MS` (3000) and `DEFAULT_COOLDOWN_MS` (30 000) were measured on card 15A and kept (`measurements/ba-15a-latency.md`).
 
 ### Status interface (card 09)
@@ -631,8 +635,8 @@ export function detectTechnicalCredit(
 
 1. **Timeline**: `backgroundAgent.ts` binds a `RequestTimeline` as the scheduler's observer in both mock and real mode. Detector and slot times use `performance.now()`, so a wall-clock jump can't distort them. It logs one line per request or cache hit, with no file text:
    ```
-   timing #<n> v<ver> <id>@<version> wait quiet=<ms> cooldown=<ms> inflight=<ms> slot=<ms> detector=<ms> outcome=<done|failed|timeout|cancelled|skipped:<reason>> [findings=<n>] delivery=n/a <uri>
-   timing hit v<ver> <id>@<version> wait quiet=<ms> cooldown=<ms> inflight=<ms> slot=0 detector=0 outcome=hit findings=<n> delivery=n/a <uri>
+   timing #<n> v<ver> <id>@<version> wait quiet=<ms> cooldown=<ms> inflight=<ms> late=<ms> slot=<ms> detector=<ms> outcome=<done|failed|timeout|cancelled|skipped:<reason>> [findings=<n>] delivery=n/a <uri>
+   timing hit v<ver> <id>@<version> wait quiet=<ms> cooldown=<ms> inflight=<ms> late=<ms> slot=0 detector=0 outcome=hit findings=<n> delivery=n/a <uri>
    ```
    `delivery` stays `n/a` until card 17. The timeline keeps the last 200 records.
 2. **Replay**: `src/measurement/replay.ts` runs the real scheduler on a discrete-event clock over 5 edit traces (timings only; one recorded from a real F5 session).

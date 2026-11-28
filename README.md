@@ -182,9 +182,9 @@ After upgrading to this version, the first start logs one detector identity chan
 Background log lines start with `technicalcredit` rather than `mock`.
 
 After each analysis or cache hit, the channel also shows a `timing …` line. It splits the
-wait into the quiet period, the cooldown, time behind the file's own running request, and
-time waiting for a free slot, and gives the detector's own time separately. For example:
-`timing #3 v8 … wait quiet=3000 cooldown=0 inflight=0 slot=0 detector=12550 outcome=done findings=4 delivery=n/a …`.
+wait into the quiet period, the cooldown, time behind the file's own running request, time
+the busy host ran late (common at startup), and time waiting for a free slot, and gives the detector's own time separately. For example:
+`timing #3 v8 … wait quiet=3000 cooldown=0 inflight=0 late=0 slot=0 detector=12550 outcome=done findings=4 delivery=n/a …`.
 Cache hits read `timing hit … detector=0`. No file text is logged.
 
 ### Measuring live latency

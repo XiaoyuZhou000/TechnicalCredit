@@ -669,25 +669,33 @@ export class Scheduler implements SnapshotSink {
   }
 
   /**
-   * Card 15A: how long the file's current work has waited since its last change, split by the
-   * deadlines that held it: the quiet period, then any cooldown, and the rest behind the file's
-   * own running request.
+   * Card 15A: how long the file's current work has waited since its last change, split by what
+   * held it: the quiet period; the file's own running request, if one settled after the change
+   * (only one runs per file, so it was running when the change came); the cooldown that
+   * followed; and anything left, which is the host being late to run the wake-up.
    */
   private waitSplit(state: FileState): WaitSplit {
     const now = this.clock.now();
     const total = Math.max(0, now - state.lastChangeAt);
     const quietMs = this.quietMs === 0 ? 0 : Math.min(total, this.quietMs);
+    const quietEnd = state.lastChangeAt + quietMs;
+    const settledAt = state.lastSettledAt;
+    const inFlightMs =
+      settledAt !== undefined && settledAt > quietEnd
+        ? Math.min(now, settledAt) - quietEnd
+        : 0;
     const cooldownEnd = this.cooldownDeadline(state);
     let cooldownMs = 0;
     if (
       this.cooldownMs > 0 &&
       cooldownEnd !== undefined &&
-      state.lastSettledAt !== undefined
+      settledAt !== undefined
     ) {
-      const from = Math.max(state.lastChangeAt + quietMs, state.lastSettledAt);
+      const from = Math.max(quietEnd, settledAt);
       cooldownMs = Math.max(0, Math.min(now, cooldownEnd) - from);
     }
-    return { quietMs, cooldownMs, inFlightMs: total - quietMs - cooldownMs };
+    const lateMs = Math.max(0, total - quietMs - inFlightMs - cooldownMs);
+    return { quietMs, cooldownMs, inFlightMs, lateMs };
   }
 
   private quietDeadline(state: FileState): number {

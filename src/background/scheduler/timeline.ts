@@ -4,14 +4,18 @@ import type {
 } from '@/background/detector/detector';
 
 /**
- * How long a file's work waited, split by the scheduler's own deadlines (card 15A): the quiet
- * period, the cooldown, and the time spent behind the file's own running request (anything
- * else up to the moment the work became due).
+ * How long a file's work waited before it became due, split by what held it (card 15A). The
+ * four parts always add up to the time since the file's last change.
  */
 export interface WaitSplit {
+  /** The quiet period after the last change. */
   readonly quietMs: number;
+  /** The cooldown after the file's last completion. */
   readonly cooldownMs: number;
+  /** Behind the file's own running request. */
   readonly inFlightMs: number;
+  /** Past every deadline: the extension host ran the wake-up late (busy, e.g. at startup). */
+  readonly lateMs: number;
 }
 
 /** What a transition is about. Never carries file text. */
@@ -63,6 +67,7 @@ export interface TimingRecord {
   readonly quietMs: number;
   readonly cooldownMs: number;
   readonly inFlightMs: number;
+  readonly lateMs: number;
   /** From due (or the slot wait) to the start, on the monotonic clock. */
   readonly slotMs: number;
   /** From start to settle, on the monotonic clock; 0 for a cache hit. */
@@ -94,7 +99,12 @@ export interface RequestTimelineOptions {
   readonly limit?: number;
 }
 
-const NO_WAIT: WaitSplit = { quietMs: 0, cooldownMs: 0, inFlightMs: 0 };
+const NO_WAIT: WaitSplit = {
+  quietMs: 0,
+  cooldownMs: 0,
+  inFlightMs: 0,
+  lateMs: 0,
+};
 
 interface Waiting {
   readonly wait: WaitSplit;
@@ -136,7 +146,7 @@ export function formatTiming(record: TimingRecord): string {
     record.findings === undefined ? '' : ` findings=${record.findings}`;
   return [
     `${head} v${record.version} ${record.detector}`,
-    `wait quiet=${ms(record.quietMs)} cooldown=${ms(record.cooldownMs)} inflight=${ms(record.inFlightMs)} slot=${ms(record.slotMs)}`,
+    `wait quiet=${ms(record.quietMs)} cooldown=${ms(record.cooldownMs)} inflight=${ms(record.inFlightMs)} late=${ms(record.lateMs)} slot=${ms(record.slotMs)}`,
     `detector=${ms(record.detectorMs)} outcome=${outcome}${findings}`,
     `delivery=${record.delivery} ${record.fileUri}`,
   ].join(' ');
